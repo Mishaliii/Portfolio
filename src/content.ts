@@ -40,7 +40,7 @@ export const ui = {
   backToOverview: "Back to overview",
   copyright: "(c) 2026 MISHAL",
   istLabel: "IST",
-  scrollHint: "Scroll / ↓ / 1–6",
+  scrollHint: "Scroll / ↓ / 1-6",
 };
 
 export const pages = [
@@ -76,10 +76,10 @@ export const about = {
   bio: "I build machine learning and computer vision systems and serve them through tested Python APIs.",
   portraitAlt: "Portrait of Muhammed Mishal",
   seeWorks: "See works",
-  poseCue: "LOOKS UP — LOOKS AT YOU",
+  poseCue: "LOOKS UP: LOOKS AT YOU",
   facts: [
-    { label: "EDUCATION", bold: "MCA · CGPA 8.33", text: " · TKM College of Engineering, Kollam · 2024–26", secondary: "BCA · Musaliar College of Arts and Science · 2021–24" },
-    { label: "EXPERIENCE", bold: "AI / ML Intern, DDSS", text: " · Bluecast Technologies · Jan–Apr 2026", secondary: "Built a dermatology decision-support system using DINOv2 case retrieval" },
+    { label: "EDUCATION", bold: "MCA · CGPA 8.33", text: " · TKM College of Engineering, Kollam · 2024-26", secondary: "BCA · Musaliar College of Arts and Science · 2021-24" },
+    { label: "EXPERIENCE", bold: "AI / ML Intern, DDSS", text: " · Bluecast Technologies · Jan-Apr 2026", secondary: "Built a dermatology decision-support system using DINOv2 case retrieval" },
     { label: "STACK", text: "Python, FastAPI, Django, PyTorch, FAISS, scikit-learn, PostgreSQL" },
     { label: "STATUS", bold: "Open to work, 2026", text: " · Kerala / Remote", live: true },
   ],
@@ -215,7 +215,7 @@ export const works = {
     ] as RetrievalSample[],
   },
   caseStudy: {
-    eyebrow: "CASE STUDY // BLUECAST TECHNOLOGIES · JAN–APR 2026",
+    eyebrow: "CASE STUDY // BLUECAST TECHNOLOGIES · JAN-APR 2026",
     title: ["DERMATOLOGY", "DECISION SUPPORT."],
     lede: "A clinical assistant that turns a skin photo into a ranked differential: likely conditions with confidence bands, a severity score and an editable treatment plan. The doctor always makes the final call.",
     close: "Close",
@@ -251,7 +251,7 @@ export const works = {
     ],
     role: [
       { k: "Role", v: "AI / ML Intern" },
-      { k: "Duration", v: "Jan–Apr 2026" },
+      { k: "Duration", v: "Jan-Apr 2026" },
       { k: "Dataset", v: "SD-198 · 198 conditions" },
       { k: "Backbone", v: "DINOv2 ViT-B · 768-d" },
     ],
@@ -344,9 +344,9 @@ export const works = {
 export const journey = {
   heading: "ACADEMIC & INDUSTRY JOURNEY.",
   timeline: [
-    { when: "2021–24", what: "BCA", where: "Musaliar College of Arts and Science, Pathanamthitta" }, // VERIFY years
-    { when: "2024–26", what: "MCA · CGPA 8.33", where: "TKM College of Engineering, Kollam" }, // VERIFY years
-    { when: "Jan–Apr 2026", what: "AI / ML Intern, DDSS", where: "Bluecast Technologies" },
+    { when: "2021-24", what: "BCA", where: "Musaliar College of Arts and Science, Pathanamthitta" }, // VERIFY years
+    { when: "2024-26", what: "MCA · CGPA 8.33", where: "TKM College of Engineering, Kollam" }, // VERIFY years
+    { when: "Jan-Apr 2026", what: "AI / ML Intern, DDSS", where: "Bluecast Technologies" },
     { when: "2026", what: "AI / ML Engineer", where: "Open to work" },
   ],
   stream: ["embed -> 768-d", "search -> top-k", "rank -> 3 cases"],
@@ -364,6 +364,7 @@ export const connect = {
   sub: "Backend, ML or retrieval work. I reply within two days.",
   mailto: "Write an email",
   greetings: ["Hello", "Namaskaram", "Marhaba", "Namaste"],
+  namePrefix: "· ",
 };
 
 export const palette = [

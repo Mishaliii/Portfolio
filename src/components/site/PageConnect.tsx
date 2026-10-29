@@ -17,7 +17,7 @@ export function PageConnect({ copyEmail, go }: { copyEmail: () => void; go: (id:
       <div className="flex flex-1 flex-col justify-center">
         <div className="mono mb-[2.5dvh] flex items-center gap-3" data-fade>
           <Greeting lines={connect.greetings} />
-          <span className="muted">— {site.name}</span>
+          <span className="muted">{connect.namePrefix}{site.name}</span>
         </div>
         <HeadlineDissolve bg="var(--ink)" ink="var(--cream)" auto>
           <h2 className="display" style={{ fontSize: "clamp(56px, min(13vw, 22dvh), 300px)", lineHeight: 0.9 }}>

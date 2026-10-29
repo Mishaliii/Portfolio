@@ -1,29 +1,45 @@
-# Welcome to your Lovable project
+# Muhammed Mishal: AI / ML Engineer Portfolio
 
-This project was built with [Lovable](https://lovable.dev).
+Interactive portfolio showcasing computer vision, RAG, and production backend systems.
 
-## Build with Lovable
+## Tech Stack
 
-Open your project in the [Lovable editor](https://lovable.dev) and keep building.
+- TanStack Start and TanStack Router
+- React 19 and TypeScript
+- GSAP Observer and motion ticker
+- Tailwind CSS
 
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: connect the project to GitHub and every change made in Lovable is committed straight to your repository.
-- **Full ownership**: this code is yours. Push to your repository and your changes sync back into Lovable, ready for your next prompt.
+## Architecture
+
+- Paged state machine on desktop via GSAP Observer.
+- Natural smooth scroll on mobile via Lenis and ScrollTrigger.
+- Zero mixed-blend or filter paint penalties on full-screen layers.
+- Content-driven architecture centered in `src/content.ts`.
 
 ## Development
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+Install dependencies:
 
 ```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
-npm run dev
+bun install
 ```
 
-## Built with
+Start the development server:
 
-- TanStack Start
-- TypeScript
-- React
-- Tailwind CSS
+```sh
+bun run dev
+```
+
+## Production Build
+
+Build for production:
+
+```sh
+bun run build
+```
+
+Run the production server:
+
+```sh
+node .output/server/index.mjs
+```

@@ -151,7 +151,7 @@ export function CaseStudy({ open, onClose }: { open: boolean; onClose: () => voi
               <div key={b.t} data-cs className="border-l pl-5" style={{ borderColor: i ? "var(--gold)" : "var(--line)" }}>
                 <div className="mono" style={{ color: i ? "var(--gold-text)" : "var(--muted)" }}>{b.t}</div>
                 <ul className="mt-3 space-y-2 text-[16px]">
-                  {b.points.map((p) => <li key={p} className="flex gap-3"><span className="mono" style={{ color: i ? "var(--gold-text)" : "var(--muted)" }}>{i ? "+" : "–"}</span><span className={i ? "" : "muted"}>{p}</span></li>)}
+                  {b.points.map((p) => <li key={p} className="flex gap-3"><span className="mono" style={{ color: i ? "var(--gold-text)" : "var(--muted)" }}>{i ? "+" : "-"}</span><span className={i ? "" : "muted"}>{p}</span></li>)}
                 </ul>
               </div>
             ))}

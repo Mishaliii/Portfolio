@@ -1,13 +1,6 @@
-<!-- LOVABLE:BEGIN -->
 > [!IMPORTANT]
-> This project is connected to [Lovable](https://lovable.dev). Avoid rewriting
-> published git history — force pushing, or rebasing/amending/squashing commits
-> that are already pushed — as it rewrites history on Lovable's side and the
-> user will likely lose their project history.
->
-> Commits you push to the connected branch sync back to Lovable and show up in
-> the editor, so keep the branch in a working state.
-<!-- LOVABLE:END -->
+> Avoid rewriting published git history (force pushing, or rebasing/amending/squashing
+> commits that are already pushed). Keep commits clean and the branch in a working state.
 
 - All site copy, links and project data live in src/content.ts; components never hard-code copy (single place to edit).
 - Desktop uses a paged state machine in src/components/site/Site.tsx (GSAP Observer); small screens use natural scroll (Lenis + ScrollTrigger) — keep both paths when adding pages.
@@ -18,7 +11,7 @@
 - Preload and decode DDSS screenshots when Works mounts; keep the previous gallery image visible until the requested image is ready to prevent blank switches.
 - Public retrieval uses content.ts query/reference records and supplied precomputed matches via a pure helper shared by Works and Deep Dive; optional scores/metadata remain absent when not supplied, and placeholder queries cannot return results, preventing invented evidence without a backend.
 
-- Portfolio images use bundled file imports rather than hosted pointer URLs so exported projects render without Lovable asset infrastructure.
+- Portfolio images use bundled file imports rather than hosted pointer URLs so exported projects render without external asset infrastructure.
 - Opening shot has no overlay: Intro tweens the shared stage uniforms (lib/stage.ts) and boot() reports weighted real progress (lib/intro.ts), so loader and hero are one continuous camera shot.
 - Overview hero is one shared SceneStage mounted once in Site.tsx behind all pages: WebGL draws only the opening shot (light/zoom from lib/stage.ts), then hands off to the native looping <video> with transform-only parallax and an opacity dim layer — hardware-decoded playback stays smooth, and nothing re-uploads video frames per tick.
 - Page wipes, cursor and parallax animate transform/opacity only (no clip-path on full-screen layers, no mix-blend-mode cursor): those forced full-page repaints and caused lag.
