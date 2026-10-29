@@ -35,7 +35,7 @@ export const ui = {
   pull: "Pull",
   skip: "Skip intro",
   paletteTitle: "Command palette",
-  palettePlaceholder: "Type a command…",
+  palettePlaceholder: "Type a command...",
   paletteHint: "Ctrl K",
   backToOverview: "Back to overview",
   copyright: "(c) 2026 MISHAL",
@@ -129,70 +129,103 @@ export const expertise = {
   ] as Skill[],
 };
 
+export type ImportanceItem = { label: string; value: number };
+export type PipelineStep = { label: string; shot: string };
+export type StatusLogItem = { text: string; status: "done" | "wip" | "pending" };
+export type PipelineBox = { label: string; built: boolean };
+
 export type Project = {
   id: string;
   title: string;
-  context: string;
-  stack: string[];
-  problem: string;
-  approach: string;
-  result: string;
-  limitations: string;
+  sentence: string;
+  line: string;
+  mutedLine?: string;
+  buttonLabel?: string;
+  badge?: string;
+  pipelineSteps?: PipelineStep[];
+  importance?: ImportanceItem[];
+  fallbackPipeline?: string[];
+  statusLog?: StatusLogItem[];
+  pipelineBoxes?: PipelineBox[];
   links: { live?: string; github?: string; video?: string };
   metrics: { label: string; value: string }[];
-  demo?: boolean;
-  flagship?: boolean;
-  pipeline?: string[];
-  status?: string;
-  flow?: string[];
+  problem?: string;
+  approach?: string;
+  result?: string;
+  limitations?: string;
+  stack?: string[];
 };
 
 export const works = {
   heading: "SELECTED WORKS.",
-  labels: { problem: "Problem", approach: "Approach", result: "Result", limitations: "Limitations", live: "Live", github: "GitHub", video: "Demo video", demo: "Product preview", flagship: "Flagship project", status: "Status", deepDive: "Deep Dive" },
+  labels: { problem: "Problem", approach: "Approach", result: "Result", limitations: "Limitations", live: "Live", github: "GitHub", video: "Demo video", demo: "Product preview", status: "Status", deepDive: "Deep Dive" },
+  playDemo: "Play demo",
+  featureImportancePending: "Feature importance chart to be added.",
   projects: [
     {
       id: "ddss",
-      title: "DERMATOLOGY DECISION SUPPORT",
-      context: "Primary internship work · Vision retrieval",
-      stack: ["DINOv2 ViT-B", "PyTorch", "FAISS", "pgvector"],
-      problem: "A single-label skin classifier is unsafe: doctors need a ranked differential with evidence, not one confident guess.",
-      approach: "{{DINOv2|underline-draw}} 768-d embeddings over 198 conditions (SD-198), cosine search, confidence bands, then a rule-based severity score.",
-      result: "Ranked conditions with High / Moderate / Low confidence, severity and an editable prescription.",
-      limitations: "Not medically fine-tuned; look-alike conditions overlap. Support, not diagnosis.",
+      title: "Dermatology Decision Support",
+      sentence: "A doctor gets a ranked list of similar cases with the evidence, not one confident guess.",
+      line: "DINOv2 embeddings and FAISS similarity search. Built at Bluecast Technologies.",
+      mutedLine: "Support, not diagnosis.",
+      buttonLabel: "Deep Dive",
+      pipelineSteps: [
+        { label: "Image", shot: "ddss-6" },
+        { label: "Embedding", shot: "ddss-7" },
+        { label: "Similarity search", shot: "ddss-8" },
+        { label: "Ranked cases", shot: "ddss-8" },
+      ],
       links: {},
       metrics: [],
-      demo: true,
-      status: "Completed (internship prototype)",
-      pipeline: ["Input Image", "DINOv2 Embedding", "Similarity Retrieval", "Retrieved Cases"],
+      problem: "A doctor gets a ranked list of similar cases with the evidence, not one confident guess.",
+      approach: "DINOv2 embeddings and FAISS similarity search. Built at Bluecast Technologies.",
+      result: "Support, not diagnosis.",
+      stack: ["DINOv2 ViT-B", "PyTorch", "FAISS", "pgvector"],
     },
     {
       id: "role",
-      title: "PRODUCTIVITY & ROLE PREDICTION",
-      context: "Academic study · Classical ML & feature importance",
-      stack: ["scikit-learn", "Python", "pandas"],
-      problem: "Predict suitable roles and productivity signals from work data.",
-      approach: "Feature engineering and classical classifiers with cross-validation.",
-      result: "An interpretable model with per-feature importance.",
-      limitations: "Small dataset; results are indicative.",
-      status: "Completed",
-      flow: ["Work data", "Feature engineering", "Classifiers + cross-validation", "Predicted role", "Per-feature importance"],
+      title: "Productivity and Role Prediction",
+      sentence: "Predicts how productive a worker is and groups workers by behaviour.",
+      line: "Random Forest regression for the productivity score, K-Means for the worker groups, served in a Streamlit app.",
+      // Paste real feature importance numbers here when available, e.g. [{ label: "Overtime", value: 0.28 }, ...]
+      importance: [] as ImportanceItem[],
+      fallbackPipeline: [
+        "Worker data",
+        "Pandas preparation",
+        "Random Forest and K-Means",
+        "Streamlit app",
+      ],
       links: {},
       metrics: [],
+      problem: "Predicts how productive a worker is and groups workers by behaviour.",
+      approach: "Random Forest regression for the productivity score, K-Means for the worker groups, served in a Streamlit app.",
+      stack: ["scikit-learn", "Python", "pandas", "Streamlit"],
     },
     {
       id: "careerlens",
-      title: "CAREERLENS AI",
-      context: "Prototype · RAG & LLM architecture",
-      stack: ["FastAPI", "Python", "SQLite", "Sentence Transformers", "FAISS", "Gemini API"],
-      problem: "Job seekers cannot see which skills separate them from a target role.",
-      approach: "Sentence Transformers embeddings of resumes and roles, {{FAISS|underline-draw}} search, Gemini to explain the gap.",
-      result: "A skill-gap view with matched and missing skills per role.",
-      limitations: "Quality depends on job description coverage.",
-      status: "Backend built",
-      flow: ["Resume + target role", "Sentence Transformers embeddings", "FAISS similarity search", "Gemini gap explanation", "Skill-gap view"],
+      title: "CareerLens AI",
+      sentence: "Reads a resume, answers questions from it with evidence, and scores it against a job description.",
+      line: "Backend built, 281 tests passing.",
+      badge: "Backend built and tested",
+      statusLog: [
+        { text: "Backend: built, 281 tests passing", status: "done" as const },
+        { text: "Front end: being rebuilt", status: "wip" as const },
+        { text: "Deployment: pending", status: "pending" as const },
+      ],
+      pipelineBoxes: [
+        { label: "Resume PDF", built: true },
+        { label: "Profile extraction", built: true },
+        { label: "Chunks and embeddings with FAISS", built: true },
+        { label: "Gemini answer with citations", built: true },
+        { label: "Job match and skill gaps", built: true },
+        { label: "Front end", built: false },
+        { label: "Deployment", built: false },
+      ],
       links: {},
       metrics: [],
+      problem: "Reads a resume, answers questions from it with evidence, and scores it against a job description.",
+      approach: "Sentence Transformers embeddings of resumes and roles, FAISS similarity search, Gemini gap explanation.",
+      stack: ["FastAPI", "Python", "SQLite", "Sentence Transformers", "FAISS", "Gemini API"],
     },
   ] as Project[],
   ddssDemo: {
@@ -205,7 +238,7 @@ export const works = {
     badge: "PRECOMPUTED DEMO",
     intro: "DDSS compares a skin image with reference images using visual embeddings. This public demo presents prepared examples from the research workflow, without running the model.",
     disclaimer: "This is an experimental research demonstration using precomputed image-similarity results. Similarity does not establish a diagnosis and should not replace evaluation by a qualified healthcare professional.",
-    placeholderNote: "Placeholder illustration · approved query images and actual retrieval results have not been supplied yet.",
+    sampleNote: "Sample illustration · approved query images and actual retrieval results have not been supplied yet.",
     queryLabel: "Query image",
     resultsLabel: "Similar reference cases",
     referenceLabel: "Reference image",
@@ -214,9 +247,9 @@ export const works = {
     empty: "No reference matches for this sample.",
     references: [] as ReferenceCase[],
     samples: [
-      { id: "sample-a", label: "Placeholder A", image: sampleA, placeholder: true, matches: [] },
-      { id: "sample-b", label: "Placeholder B", image: sampleB, placeholder: true, matches: [] },
-      { id: "sample-c", label: "Placeholder C", image: sampleC, placeholder: true, matches: [] },
+      { id: "sample-a", label: "Example 1", image: sampleA, placeholder: true, matches: [] },
+      { id: "sample-b", label: "Example 2", image: sampleB, placeholder: true, matches: [] },
+      { id: "sample-c", label: "Example 3", image: sampleC, placeholder: true, matches: [] },
     ] as RetrievalSample[],
   },
   caseStudy: {
@@ -252,7 +285,7 @@ export const works = {
       { t: "Product evidence", d: "The ten supplied captures show the implemented patient-to-prescription workflow, including differential review and a GAGS score of 20 shown as Moderate." },
       { t: "Evaluation evidence", d: "The documentation describes a held-out SD-198 test split, but no measured top-k recall, diagnostic accuracy or search latency was supplied. Dataset coverage is not a performance result." },
       { t: "Index implementation", d: "FAISS and pgvector both appear in the documentation. Their exact roles in the final deployed system still need confirmation; this brief does not claim a measured comparison." },
-      { t: "Portfolio retrieval demo", d: "The client-side demo is prepared for approved query images and their actual precomputed reference matches. Current images are identified as placeholder illustrations; no scores or medical metadata are invented. It does not run model inference or access the private dataset." },
+      { t: "Portfolio retrieval demo", d: "The client-side demo is prepared for approved query images and their actual precomputed reference matches. Current images are identified as sample illustrations; no scores or medical metadata are invented. It does not run model inference or access the private dataset." },
     ],
     role: [
       { k: "Role", v: "AI / ML Intern" },

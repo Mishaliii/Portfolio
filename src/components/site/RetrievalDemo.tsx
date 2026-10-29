@@ -5,6 +5,8 @@ import { retrieveSample } from "@/lib/retrieval";
 
 const c = works.retrievalDemo;
 export function RetrievalDemo({ compact = false }: { compact?: boolean }) {
+  const hasRealSamples = c.samples.some((s) => !s.placeholder);
+  if (!hasRealSamples) return null;
   const choices = useRef<HTMLDivElement>(null);
   const [selected, setSelected] = useState(c.samples[0]?.id);
   const sample = c.samples.find((s) => s.id === selected);
@@ -22,7 +24,7 @@ export function RetrievalDemo({ compact = false }: { compact?: boolean }) {
       <div aria-live="polite" aria-atomic="true" className="min-h-0">
         {!compact && <figure className="mb-6"><img src={sample.image} alt={sample.label} width={768} height={768} className="h-48 w-48 max-w-full rounded-sm object-cover" /><figcaption className="mono muted mt-2">{c.queryLabel} · {sample.label}</figcaption></figure>}
         <div className="mono muted mb-2">{c.resultsLabel} · {sample.label}</div>
-        {matches.length === 0 ? <p className="muted text-[15px] leading-snug">{sample.placeholder ? c.placeholderNote : c.empty}</p> : <ol key={sample.id} className="space-y-2">
+        {matches.length === 0 ? <p className="muted text-[15px] leading-snug">{sample.placeholder ? c.sampleNote : c.empty}</p> : <ol key={sample.id} className="space-y-2">
           {matches.map((m, i) => <li key={m.reference.id} className="greet-in flex items-center gap-3 border-t hair pt-2">
             <span className="mono goldt shrink-0">{String(i + 1).padStart(2, "0")}</span>
             <img src={m.reference.image} alt={m.reference.label ?? c.referenceLabel} width={768} height={768} loading="lazy" className={compact ? "h-12 w-12 rounded-sm object-cover" : "h-20 w-20 rounded-sm object-cover"} />

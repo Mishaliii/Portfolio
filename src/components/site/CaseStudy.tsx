@@ -115,7 +115,21 @@ export function CaseStudy({ open, onClose }: { open: boolean; onClose: () => voi
         <p data-cs className="mt-8 max-w-[60ch] leading-snug" style={{ fontSize: "clamp(18px, 1.5vw, 24px)" }}>{c.lede}</p>
 
         <nav className="mt-8 flex flex-wrap gap-3" aria-label={c.eyebrow}>
-          {c.navigation.map((item) => <a key={item.id} className="btn" href={`#ddss-${item.id}`} onClick={(e) => { e.preventDefault(); document.getElementById(`ddss-${item.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }); }}>{item.label}</a>)}
+          {c.navigation
+            .filter((item) => item.id !== "demo" || works.retrievalDemo.samples.some((s) => !s.placeholder))
+            .map((item) => (
+              <a
+                key={item.id}
+                className="btn"
+                href={`#ddss-${item.id}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  document.getElementById(`ddss-${item.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+                }}
+              >
+                {item.label}
+              </a>
+            ))}
         </nav>
 
         <section id="ddss-product" className="mt-12 scroll-mt-6">
@@ -124,10 +138,12 @@ export function CaseStudy({ open, onClose }: { open: boolean; onClose: () => voi
           <ScreenshotGallery />
         </section>
 
-        <section id="ddss-demo" className="mt-16 scroll-mt-6">
-          <H n="01a" t={works.retrievalDemo.title} />
-          <RetrievalDemo />
-        </section>
+        {works.retrievalDemo.samples.some((s) => !s.placeholder) && (
+          <section id="ddss-demo" className="mt-16 scroll-mt-6">
+            <H n="01a" t={works.retrievalDemo.title} />
+            <RetrievalDemo />
+          </section>
+        )}
 
         <dl data-cs className="mt-12 grid grid-cols-2 gap-6 border-t hair pt-6 md:grid-cols-4">
           {c.role.map((r) => <div key={r.k}><dt className="mono muted">{r.k}</dt><dd className="mt-1 text-[15px]">{r.v}</dd></div>)}
