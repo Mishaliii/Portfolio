@@ -96,8 +96,14 @@ export const expertise = {
   heading: "MY EXPERTISE.",
   intro: "Hover a skill to see where I used it.",
   idle: "Hover a skill",
-  core: "core skill, used day to day",
-  dockerCore: "core skill, from college work",
+  core: "Core skill, used day to day.",
+  dockerCore: "Core skill, from college work.",
+  usedWithPrefix: "Used with ",
+  legend: {
+    used: "Used in a project",
+    building: "Building",
+    core: "Core skill",
+  },
   clusters: ["BACKEND & DATA", "ML & VISION", "RETRIEVAL & RAG", "ENGINEERING"],
   skills: [
     { id: "py", name: "Python", cluster: 0, x: .15, y: .24, note: "" },

@@ -1,8 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { expertise } from "@/content";
-import { linkedSkills, projectsForSkill } from "./expertise";
+import { linkedSkills, projectsForSkill, skillState } from "./expertise";
 
 describe("Expertise evidence rules", () => {
+  it("computes skillState: 2 for completed/live projects, 1 for in progress only, 0 for core", () => {
+    expect(skillState("FastAPI")).toBe(2);
+    expect(skillState("DINOv2")).toBe(2);
+    expect(skillState("Gemini API")).toBe(1);
+    expect(skillState("BGE-M3")).toBe(1);
+    expect(skillState("OpenCV")).toBe(0);
+    expect(skillState("Docker")).toBe(0);
+  });
   it("has the requested 6, 5, 5, 5 skills and no HTMX", () => {
     expect(expertise.clusters.map((_, i) => expertise.skills.filter((s) => s.cluster === i).length)).toEqual([6, 5, 5, 5]);
     expect(expertise.skills.some((s) => s.name === "HTMX")).toBe(false);
