@@ -151,7 +151,9 @@ export const expertise = {
 };
 
 export type ImportanceItem = { label: string; value: number };
-export type PipelineStep = { label: string; shot: string };
+export type PipelineStep = { label: string; shot: string; zoom?: boolean };
+export type PipelineRow = { label: string; shot: string; zoom?: boolean };
+export type FilmstripItem = { k: string; t: string };
 export type PipelineBox = { label: string; caption: string; built: boolean };
 
 export type TableRow = {
@@ -173,6 +175,8 @@ export type Project = {
   buttonLabel?: string;
   badge?: string;
   pipelineSteps?: PipelineStep[] | string[];
+  pipelineRows?: PipelineRow[];
+  filmstrip?: FilmstripItem[];
   importance?: ImportanceItem[];
   table?: {
     columns: string[];
@@ -195,6 +199,7 @@ export type CaseStudySection = {
   title: string;
   text?: string;
   shot?: string;
+  shots?: string[];
   shotCaption?: string;
   methods?: { name: string; desc: string }[];
   points?: string[];
@@ -223,8 +228,24 @@ export const works = {
       line: "DINOv2 embeddings and FAISS similarity search. Built at Bluecast Technologies.",
       mutedLine: "Support, not diagnosis.",
       buttonLabel: "Deep Dive",
+      pipelineRows: [
+        { label: "Photo", shot: "ddss-6", zoom: false },
+        { label: "Embedding", shot: "ddss-7", zoom: false },
+        { label: "Similarity search", shot: "ddss-8", zoom: false },
+        { label: "Ranked cases", shot: "ddss-8", zoom: true },
+      ],
+      filmstrip: [
+        { k: "ddss-2", t: "Dashboard" },
+        { k: "ddss-4", t: "Add patient" },
+        { k: "ddss-5", t: "Patient history" },
+        { k: "ddss-6", t: "Photo" },
+        { k: "ddss-7", t: "Embedding" },
+        { k: "ddss-8", t: "Similarity" },
+        { k: "ddss-9", t: "Severity" },
+        { k: "ddss-10", t: "Plan" },
+      ],
       pipelineSteps: [
-        { label: "Image", shot: "ddss-6" },
+        { label: "Photo", shot: "ddss-6" },
         { label: "Embedding", shot: "ddss-7" },
         { label: "Similarity search", shot: "ddss-8" },
         { label: "Ranked cases", shot: "ddss-8" },
@@ -336,50 +357,50 @@ export const works = {
       { id: "what-it-does", label: "What it does" },
       { id: "how-it-works", label: "How it works" },
       { id: "what-i-built", label: "What I built" },
-      { id: "retrieval-methods", label: "Retrieval methods" },
-      { id: "limitations", label: "Limitations" },
+      { id: "retrieval-methods", label: "Retrieval methods compared" },
+      { id: "limits", label: "Limits" },
     ],
     sections: [
       {
         id: "what-it-does",
-        num: "a",
+        num: "1",
         title: "What it does",
-        text: "A doctor uploads a lesion photo and gets a ranked list of similar past cases with the evidence. Support, not diagnosis.",
+        text: "A doctor uploads a lesion photo and gets ranked similar past cases with the evidence. It supports a decision, it does not make one.",
       },
       {
         id: "how-it-works",
-        num: "b",
+        num: "2",
         title: "How it works",
-        text: "Image preprocessing, DINOv2 768-d embedding, cosine similarity, FAISS index, ranked cases with similarity bars.",
+        text: "Preprocessing, DINOv2 768-d embedding, cosine similarity, FAISS index, ranked cases shown as similarity bars.",
         shot: "ddss-8",
-        shotCaption: "Ranked differential diagnosis suggestions with similarity scores.",
+        shotCaption: "Ranked cases shown as similarity bars.",
       },
       {
         id: "what-i-built",
-        num: "c",
+        num: "3",
         title: "What I built",
-        text: "Django + PostgreSQL backend, patient and case history, GASI severity calculator, treatment plan and prescription saving, dashboard with disease and severity charts, login. Built at Bluecast Technologies.",
-        shot: "ddss-10",
-        shotCaption: "Treatment plan and prescription saving.",
+        text: "The backend (Django, PostgreSQL), patient and case history, GASI severity calculator, treatment plan and prescription saving, dashboard with disease and severity charts, login. Built at Bluecast Technologies.",
+        shots: ["ddss-10", "ddss-2"],
+        shotCaption: "Treatment plan and clinician dashboard.",
       },
       {
         id: "retrieval-methods",
-        num: "d",
+        num: "4",
         title: "Retrieval methods compared",
         methods: [
           { name: "MV-Mean", desc: "Averages feature vectors across multiple views of the same lesion into one centroid." },
-          { name: "MV-CLS", desc: "CLS token pooling across multiple views to preserve visual transformer attention." },
+          { name: "MV-CLS", desc: "Pools CLS token embeddings across multiple views to preserve visual transformer attention." },
           { name: "KNN", desc: "Nearest-neighbour lookup over indexed reference cases using cosine similarity." },
         ],
       },
       {
-        id: "limitations",
-        num: "e",
-        title: "Limitations",
+        id: "limits",
+        num: "5",
+        title: "Limits",
         points: [
-          "Retrieval not classification: candidate cases are retrieved for clinician review rather than predicting an autonomous diagnostic decision.",
-          "Reference set dependency: retrieval quality depends on the range and coverage of the indexed reference images.",
-          "Clinical review required: a doctor always makes the final call and confirms the treatment plan.",
+          "It retrieves, it does not classify.",
+          "It depends on the reference image set.",
+          "It needs clinical review.",
         ],
       },
     ] as CaseStudySection[],

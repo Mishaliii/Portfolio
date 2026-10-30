@@ -13,6 +13,7 @@ function DDSSCard({ p, active }: { p: Project; active: boolean }) {
   const [showVideo, setShowVideo] = useState(true);
   const [videoFailed, setVideoFailed] = useState(false);
   const [selectedShot, setSelectedShot] = useState<string | null>(null);
+  const [isZoomed, setIsZoomed] = useState(false);
 
   const shots = works.caseStudy.shots;
   const activeShotKey = selectedShot ?? shots[0]?.k ?? "ddss";
@@ -40,137 +41,196 @@ function DDSSCard({ p, active }: { p: Project; active: boolean }) {
     return () => document.removeEventListener("visibilitychange", onVisChange);
   }, [active, showVideo, videoFailed]);
 
-  const pipeline = (p.pipelineSteps ?? []) as PipelineStep[];
+  const filmstrip = p.filmstrip ?? [
+    { k: "ddss-2", t: "Dashboard" },
+    { k: "ddss-4", t: "Add patient" },
+    { k: "ddss-5", t: "Patient history" },
+    { k: "ddss-6", t: "Photo" },
+    { k: "ddss-7", t: "Embedding" },
+    { k: "ddss-8", t: "Similarity" },
+    { k: "ddss-9", t: "Severity" },
+    { k: "ddss-10", t: "Plan" },
+  ];
+
+  const pipelineRows = p.pipelineRows ?? [
+    { label: "Photo", shot: "ddss-6", zoom: false },
+    { label: "Embedding", shot: "ddss-7", zoom: false },
+    { label: "Similarity search", shot: "ddss-8", zoom: false },
+    { label: "Ranked cases", shot: "ddss-8", zoom: true },
+  ];
 
   return (
     <article
-      className="flex h-full flex-col-reverse justify-center gap-8 lg:grid lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:gap-[4vw] items-center"
+      className="flex flex-col max-[899px]:gap-6 min-[900px]:grid min-[900px]:grid-cols-[5fr_7fr] min-[900px]:gap-[56px] items-center px-4 sm:px-8 lg:px-[64px] w-full max-w-[1440px] mx-auto min-h-0"
       aria-label={p.title}
     >
       {/* Left text column */}
-      <div className="flex min-w-0 flex-col justify-center">
+      <div className="min-w-0 flex flex-col justify-center max-[899px]:order-2">
         <h3
-          className="display tracking-tight text-[var(--ink)]"
-          style={{ fontSize: "clamp(28px, min(3.6vw, 5.5dvh), 60px)", lineHeight: 0.95 }}
+          className="display text-[#0B0B0B] tracking-tight"
+          style={{ fontSize: "clamp(40px, 5.2vw, 76px)", lineHeight: 0.95 }}
         >
-          <span className="block"><SplitReveal text="DERMATOLOGY" /></span>
-          <span className="block"><SplitReveal text="DECISION SUPPORT." /></span>
+          <span className="block"><SplitReveal text="Dermatology" /></span>
+          <span className="block"><SplitReveal text="Decision Support" /></span>
         </h3>
 
-        <p className="mt-[2.2dvh] max-w-[46ch] text-[16px] sm:text-[17px] leading-snug text-[var(--ink)]" data-fade>
+        <p className="mt-4 text-[18px] sm:text-[20px] leading-snug text-[#0B0B0B] max-w-[46ch]" data-fade>
           {p.sentence}
         </p>
 
         {p.line && (
-          <p className="mt-3 text-[14px] sm:text-[15px] leading-snug text-[var(--ink)]" data-fade>
+          <p className="mt-3 text-[15px] leading-snug text-[#6B645A]" data-fade>
             {p.line}
           </p>
         )}
 
         {p.mutedLine && (
-          <p className="muted mt-2 text-[13px] sm:text-[14px]" data-fade>
+          <p className="mt-1 text-[15px] italic text-[#6B645A]" data-fade>
             {p.mutedLine}
           </p>
         )}
 
         <div className="mt-6" data-fade>
-          <button className="btn" onClick={() => setCs(true)} aria-haspopup="dialog">
-            {p.buttonLabel ?? "Deep Dive"} →
+          <button
+            type="button"
+            onClick={() => setCs(true)}
+            aria-haspopup="dialog"
+            className="inline-flex items-center justify-center h-[52px] px-8 rounded-full bg-[#0B0B0B] text-[#E8DED0] font-mono text-[13px] tracking-wider uppercase transition-opacity hover:opacity-90 cursor-pointer"
+          >
+            {p.buttonLabel ?? "Deep Dive"}
           </button>
         </div>
 
-        {/* 4-step pipeline */}
-        <ol className="mt-8 flex flex-wrap items-center gap-2 text-[12px] mono" data-fade aria-label="Pipeline steps">
-          {pipeline.map((step, idx) => {
-            const isStepSelected = !showVideo && selectedShot === step.shot;
+        {/* 4-row pipeline */}
+        <div
+          className="mt-8 flex flex-col py-1"
+          data-fade
+          onMouseLeave={() => {
+            setShowVideo(true);
+            setSelectedShot(null);
+            setIsZoomed(false);
+          }}
+          aria-label="Pipeline steps"
+        >
+          {pipelineRows.map((step, idx) => {
+            const isStepActive = !showVideo && selectedShot === step.shot && (step.zoom ? isZoomed : !isZoomed);
             return (
-              <li
+              <div
                 key={step.label}
                 tabIndex={0}
-                onMouseEnter={() => { setSelectedShot(step.shot); setShowVideo(false); }}
-                onFocus={() => { setSelectedShot(step.shot); setShowVideo(false); }}
-                className="inline-flex items-center gap-2 cursor-pointer transition-colors"
+                onMouseEnter={() => {
+                  setSelectedShot(step.shot);
+                  setIsZoomed(Boolean(step.zoom));
+                  setShowVideo(false);
+                }}
+                onFocus={() => {
+                  setSelectedShot(step.shot);
+                  setIsZoomed(Boolean(step.zoom));
+                  setShowVideo(false);
+                }}
+                className="group flex items-center gap-3.5 cursor-pointer py-1.5 outline-none transition-colors"
               >
-                {idx > 0 && <span aria-hidden className="muted mr-1">→</span>}
+                <div className="flex flex-col items-center justify-center relative w-2.5 shrink-0">
+                  {idx > 0 && <span className="absolute -top-3 bottom-1/2 w-px bg-[#0B0B0B]/25" />}
+                  {idx < pipelineRows.length - 1 && <span className="absolute top-1/2 -bottom-3 w-px bg-[#0B0B0B]/25" />}
+                  <span
+                    className={`w-2 h-2 rounded-full transition-all relative z-10 ${
+                      isStepActive
+                        ? "bg-[#1F5A3A] ring-2 ring-[#1F5A3A]/40 scale-125"
+                        : "bg-[#0B0B0B] group-hover:bg-[#1F5A3A]"
+                    }`}
+                  />
+                </div>
                 <span
-                  className="rounded border px-2.5 py-1 transition-all"
-                  style={{
-                    borderColor: isStepSelected ? "var(--accent-green)" : "var(--line)",
-                    color: isStepSelected ? "var(--accent-green)" : "var(--ink)",
-                    background: isStepSelected ? "rgba(33, 76, 58, 0.08)" : "transparent",
-                  }}
+                  className={`font-mono text-[13px] tracking-wide transition-colors ${
+                    isStepActive ? "text-[#1F5A3A] font-semibold" : "text-[#0B0B0B] group-hover:text-[#1F5A3A]"
+                  }`}
                 >
                   {step.label}
                 </span>
-              </li>
+              </div>
             );
           })}
-        </ol>
+        </div>
+
         <CaseStudy open={cs} onClose={closeCs} />
       </div>
 
       {/* Right media frame */}
-      <div className="flex h-full w-full min-w-0 flex-col justify-center">
-        <div className="overflow-hidden rounded-lg bg-[var(--ink)] p-3 sm:p-4 text-[var(--cream)] shadow-md" data-sig>
-          <div className="relative aspect-[16/10] w-full overflow-hidden rounded bg-black/40">
-            {showVideo && !videoFailed ? (
-              <video
-                ref={videoRef}
-                src="/media/ddss-demo.mp4"
-                muted
-                loop
-                playsInline
-                preload="metadata"
-                poster={posterSrc}
-                onError={() => setVideoFailed(true)}
-                className="h-full w-full object-cover"
-                style={{ objectFit: "cover" }}
-              />
-            ) : (
-              <img
-                src={ddssImages[activeShotKey] ?? posterSrc}
-                alt={shots.find((s) => s.k === activeShotKey)?.t ?? "DDSS product capture"}
-                className="h-full w-full object-cover"
-                style={{ objectFit: "cover" }}
-              />
-            )}
-          </div>
+      <div className="w-full min-w-0 flex flex-col justify-center max-[899px]:order-1">
+        <div
+          className="relative aspect-[16/10] w-full overflow-hidden rounded-[12px] border border-[#0B0B0B]/20 bg-[#0B0B0B] shadow-[0_8px_30px_rgb(0,0,0,0.06)]"
+          data-sig
+        >
+          {showVideo && !videoFailed ? (
+            <video
+              ref={videoRef}
+              src="/media/ddss-demo.mp4"
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              poster={posterSrc}
+              onError={() => setVideoFailed(true)}
+              className="h-full w-full object-cover"
+              style={{ objectFit: "cover" }}
+            />
+          ) : (
+            <img
+              src={ddssImages[activeShotKey] ?? posterSrc}
+              alt={shots.find((s) => s.k === activeShotKey)?.t ?? "DDSS product capture"}
+              className="h-full w-full object-cover transition-transform duration-500 ease-out"
+              style={{
+                objectFit: "cover",
+                transform: isZoomed ? "scale(1.45) translate(-12%, -6%)" : "none",
+                transformOrigin: "top right",
+              }}
+            />
+          )}
+        </div>
 
-          <div className="mt-3 flex items-center justify-between gap-3 overflow-hidden">
-            <div className="flex-1 overflow-x-auto py-1" style={{ scrollbarWidth: "none" }}>
-              <div className="flex min-w-max gap-2">
-                {shots.map((s, idx) => {
-                  const isThumbSelected = !showVideo && (selectedShot === s.k || (!selectedShot && idx === 0));
-                  return (
-                    <button
-                      key={s.k}
-                      type="button"
-                      onClick={() => { setSelectedShot(s.k); setShowVideo(false); }}
-                      className={`relative h-10 w-16 shrink-0 overflow-hidden rounded border transition-all ${
-                        isThumbSelected
-                          ? "border-[var(--accent-green)] ring-1 ring-[var(--accent-green)] opacity-100"
-                          : "border-[var(--line-inv)] opacity-55 hover:opacity-100"
-                      }`}
-                      title={s.t}
-                      aria-label={s.t}
-                    >
-                      <img src={ddssImages[s.k]} alt="" className="h-full w-full object-cover" loading="lazy" />
-                    </button>
-                  );
-                })}
-              </div>
+        {/* Filmstrip: 8 small thumbnails 16:10 in one row, equal width, 8px gap */}
+        <div className="mt-3.5 flex items-center justify-between gap-3 overflow-hidden">
+          <div className="flex-1 overflow-x-auto py-1" style={{ scrollbarWidth: "none" }}>
+            <div className="flex items-center gap-[8px] min-w-max">
+              {filmstrip.map((s) => {
+                const isThumbSelected = !showVideo && selectedShot === s.k && !isZoomed;
+                return (
+                  <button
+                    key={s.k}
+                    type="button"
+                    onClick={() => {
+                      setSelectedShot(s.k);
+                      setIsZoomed(false);
+                      setShowVideo(false);
+                    }}
+                    className={`relative aspect-[16/10] w-[46px] sm:w-[54px] lg:w-[58px] shrink-0 overflow-hidden rounded-[3px] border border-[#0B0B0B]/15 transition-all cursor-pointer ${
+                      isThumbSelected
+                        ? "after:absolute after:inset-x-0 after:bottom-0 after:h-[2px] after:bg-[#1F5A3A] opacity-100"
+                        : "opacity-60 hover:opacity-100"
+                    }`}
+                    title={s.t}
+                    aria-label={s.t}
+                  >
+                    <img src={ddssImages[s.k]} alt="" className="h-full w-full object-cover" loading="lazy" />
+                  </button>
+                );
+              })}
             </div>
-            {!showVideo && (
-              <button
-                type="button"
-                onClick={() => { setShowVideo(true); setSelectedShot(null); }}
-                className="mono shrink-0 text-[11px] underline underline-offset-4 hover:opacity-80"
-                style={{ color: "var(--accent-green)" }}
-              >
-                {works.playDemo}
-              </button>
-            )}
           </div>
+          {!showVideo && (
+            <button
+              type="button"
+              onClick={() => {
+                setShowVideo(true);
+                setSelectedShot(null);
+                setIsZoomed(false);
+              }}
+              className="font-mono shrink-0 text-[11px] font-medium text-[#1F5A3A] hover:underline cursor-pointer pl-1 whitespace-nowrap"
+            >
+              {works.playDemo}
+            </button>
+          )}
         </div>
       </div>
     </article>
