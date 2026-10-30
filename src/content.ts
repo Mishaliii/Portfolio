@@ -31,7 +31,7 @@ export const ui = {
   skip: "Skip intro",
   paletteTitle: "Command palette",
   palettePlaceholder: "Type a command...",
-  paletteHint: "",
+  paletteHint: "Ctrl K",
   backToOverview: "Back to overview",
   copyright: "(c) 2026 MISHAL",
   istLabel: "IST",
@@ -96,6 +96,7 @@ export const about = {
   bio: "I build machine learning and computer vision systems and serve them through tested Python APIs.",
   portraitAlt: "Portrait of Muhammed Mishal",
   seeWorks: "See works",
+  poseCue: "LOOKS UP: LOOKS AT YOU",
   facts: [
     { label: "EDUCATION", bold: "MCA · CGPA 8.33", text: " · TKM College of Engineering, Kollam · 2024-26", secondary: "BCA · Musaliar College of Arts and Science · 2021-24" },
     { label: "EXPERIENCE", bold: "AI / ML Intern, DDSS", text: " · Bluecast Technologies · Jan-Apr 2026", secondary: "Built a dermatology decision-support system using DINOv2 case retrieval" },
@@ -403,42 +404,10 @@ export type RetrievalSample = { id: string; label: string; image: string; placeh
 export const journey = {
   heading: "ACADEMIC & INDUSTRY JOURNEY.",
   timeline: [
-    {
-      when: "Jan - Apr 2026",
-      role: "AI / ML Engineering Intern",
-      place: "Bluecast Technologies",
-      detail: "Built the dermatology decision support system (DDSS) with DINOv2 visual similarity retrieval and FastAPI.",
-      featured: true,
-      what: "AI / ML Intern, DDSS",
-      where: "Bluecast Technologies",
-    },
-    {
-      when: "2024 - 2026",
-      role: "Master of Computer Applications",
-      place: "TKM College of Engineering, Kollam",
-      detail: "CGPA 8.33. Advanced coursework in machine learning, algorithms and software engineering.",
-      featured: false,
-      what: "MCA, CGPA 8.33",
-      where: "TKM College of Engineering, Kollam",
-    },
-    {
-      when: "2021 - 2024",
-      role: "Bachelor of Computer Applications",
-      place: "Musaliar College of Arts and Science",
-      detail: "Graduated with strong foundations in programming, database architectures and software engineering.",
-      featured: false,
-      what: "BCA",
-      where: "Musaliar College of Arts and Science",
-    },
-    {
-      when: "2026",
-      role: "AI / ML Engineer",
-      place: "Open to Work",
-      detail: "Seeking full-time roles in machine learning engineering, computer vision and Python backend systems.",
-      featured: false,
-      what: "AI / ML Engineer",
-      where: "Open to work",
-    },
+    { when: "2021-24", what: "BCA", where: "Musaliar College of Arts and Science, Pathanamthitta" },
+    { when: "2024-26", what: "MCA · CGPA 8.33", where: "TKM College of Engineering, Kollam" },
+    { when: "Jan-Apr 2026", what: "AI / ML Intern, DDSS", where: "Bluecast Technologies" },
+    { when: "2026", what: "AI / ML Engineer", where: "Open to work" },
   ],
   stream: ["embed -> 768-d", "search -> top-k", "rank -> 3 cases"],
   diagramTitle: "DDSS PIPELINE",
@@ -452,23 +421,10 @@ export const journey = {
 
 export const connect = {
   heading: ["LET'S BUILD", "SOMETHING."],
-  sub: "Available for machine learning, computer vision and backend engineering roles.",
-  pillText: "let's collaborate",
-  toast: "Email copied",
+  sub: "Backend, ML or retrieval work. I reply within two days.",
   mailto: "Write an email",
+  greetings: ["Hello", "Namaskaram", "Marhaba", "Namaste"],
   namePrefix: "· ",
-  greetings: [
-    { word: "Hello", lang: "en", fontClass: "font-sans" },
-    { word: "നമസ്കാരം", lang: "ml", fontClass: "font-ml" },
-    { word: "नमस्ते", lang: "hi", fontClass: "font-hi" },
-    { word: "مرحباً", lang: "ar", dir: "rtl" as const, fontClass: "font-ar" },
-  ],
-  links: [
-    { label: "Copy email", action: "copy" as const },
-    { label: "Download CV", href: "/cv.pdf", download: true },
-    { label: "GitHub", href: "https://github.com/Mishaliii", ext: true },
-    { label: "LinkedIn", href: "https://www.linkedin.com/", ext: true },
-  ],
 };
 
 export const palette = [

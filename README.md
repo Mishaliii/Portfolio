@@ -1,45 +1,21 @@
-# Muhammed Mishal: AI / ML Engineer Portfolio
-
-Interactive portfolio showcasing computer vision, RAG, and production backend systems.
-
-## Tech Stack
-
-- TanStack Start and TanStack Router
-- React 19 and TypeScript
-- GSAP Observer and motion ticker
-- Tailwind CSS
-
-## Architecture
-
-- Paged state machine on desktop via GSAP Observer.
-- Natural smooth scroll on mobile via Lenis and ScrollTrigger.
-- Zero mixed-blend or filter paint penalties on full-screen layers.
-- Content-driven architecture centered in `src/content.ts`.
+- **Ship faster**: describe what you want to build and Lovable handles the code.
+- **Stay in sync**: connect the project to GitHub and every change made in Lovable is committed straight to your repository.
+- **Full ownership**: this code is yours. Push to your repository and your changes sync back into Lovable, ready for your next prompt.
 
 ## Development
 
-Install dependencies:
+Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
 
 ```sh
-bun install
+git clone <this-repository-url>
+cd <repository-name>
+npm i
+npm run dev
 ```
 
-Start the development server:
+## Built with
 
-```sh
-bun run dev
-```
-
-## Production Build
-
-Build for production:
-
-```sh
-bun run build
-```
-
-Run the production server:
-
-```sh
-node .output/server/index.mjs
-```
+- TanStack Start
+- TypeScript
+- React
+- Tailwind CSS

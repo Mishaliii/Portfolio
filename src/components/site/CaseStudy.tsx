@@ -36,6 +36,9 @@ export function CaseStudy({ open, onClose }: { open: boolean; onClose: () => voi
 
     if (scrollArea.current) {
       scrollArea.current.scrollTop = 0;
+      scrollArea.current.addEventListener("scroll", () => {
+        console.log("SCROLLED TO:", scrollArea.current?.scrollTop, new Error().stack);
+      });
     }
 
     gsap.fromTo(el, { opacity: 0 }, { opacity: 1, duration: 0.35, ease: EASE.tr });

@@ -358,9 +358,3 @@ html:not(.paged) .expertise-detail { min-height: 150px; }
 .expertise-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-green); flex-shrink: 0; }
 html:not(.paged) .expertise-map { min-height: 480px; }
 @media (max-width: 767px) { html:not(.paged) .expertise-map { min-height: 400px; } .expertise-legend { height: auto; min-height: 32px; gap: 12px; } }
-
-/* Multi-script fonts for multilingual greeting */
-.font-ml { font-family: 'Noto Sans Malayalam', sans-serif; }
-.font-hi { font-family: 'Noto Sans Devanagari', sans-serif; }
-.font-ar { font-family: 'Noto Sans Arabic', sans-serif; }
-
