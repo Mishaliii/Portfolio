@@ -20,7 +20,7 @@ import { PageWorks } from "./PageWorks";
 import { PageJourney } from "./PageJourney";
 import { PageConnect } from "./PageConnect";
 
-const INV = new Set(["works", "connect"]);
+const INV = new Set(["connect"]);
 const StableHero = memo(PageHero);
 const StableAbout = memo(PageAbout);
 const StableExpertise = memo(PageExpertise);

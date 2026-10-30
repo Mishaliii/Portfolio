@@ -1,29 +1,24 @@
-// All site copy, links and project data. Components never hard-code copy.
-import ddssRetrieval from "@/assets/ddss-8-screen.webp";
+import ddssRetrieval from "@/assets/ddss-screen.webp";
 import sampleA from "@/assets/skin-sample-a.jpg";
 import sampleB from "@/assets/skin-sample-b.jpg";
 import sampleC from "@/assets/skin-sample-c.jpg";
-import type { ReferenceCase, RetrievalSample } from "@/lib/retrieval";
 
 export const site = {
   name: "Muhammed Mishal",
+  role: "AI / ML Engineer",
+  location: "KOLLAM, INDIA [IND] - 8.8932 N, 76.6141 E",
+  roleYear: "AI / ML ENGINEER // 2026",
   wordmark: "MISHAL",
   tag: "AI / ML",
   email: "muhammedmishalkpm13@gmail.com",
-  github: "https://github.com/", // VERIFY
-  linkedin: "https://www.linkedin.com/", // VERIFY
+  github: "https://github.com/Mishaliii",
+  linkedin: "https://www.linkedin.com/",
   cv: "/cv.pdf",
-  location: "KOLLAM, INDIA [IND] - 8.8932 N, 76.6141 E",
-  roleYear: "AI / ML ENGINEER // 2026",
-  availability: "Open to roles in Kerala, UAE or remote", // VERIFY
+  availability: "Open to roles in Kerala, UAE or remote",
   timezone: "Asia/Kolkata",
 };
 
 export const ui = {
-  performance: {
-    title: "Performance", fps: "FPS", frame: "Frame", longest: "Longest", tasks: "Long tasks", heap: "JS heap", unavailable: "Unavailable",
-    layers: { shader: "Scene shader", video: "Video upload / playback", headline: "Headline dissolve", grain: "Grain overlay", blur: "Nav backdrop blur", gradients: "Gradient overlays", lenis: "Lenis", wipe: "Section wipe" },
-  },
   downloadCv: "Download CV",
   sayHello: "Say hello",
   viewProjects: "View projects",
@@ -41,6 +36,25 @@ export const ui = {
   copyright: "(c) 2026 MISHAL",
   istLabel: "IST",
   scrollHint: "Scroll / ↓ / 1-6",
+  performance: {
+    title: "Performance",
+    fps: "FPS",
+    frame: "Frame",
+    longest: "Longest",
+    tasks: "Long tasks",
+    heap: "JS heap",
+    unavailable: "n/a",
+    layers: {
+      shader: "Scene shader",
+      video: "Video upload / playback",
+      headline: "Headline dissolve",
+      grain: "Grain overlay",
+      blur: "Nav backdrop blur",
+      gradients: "Gradient overlays",
+      lenis: "Lenis",
+      wipe: "Section wipe",
+    },
+  },
 };
 
 export const pages = [
@@ -50,7 +64,7 @@ export const pages = [
   { id: "works", num: "03", label: "Works" },
   { id: "journey", num: "04", label: "Journey" },
   { id: "connect", num: "05", label: "Connect" },
-] as const;
+];
 
 export const intro = {
   status: "Loading portfolio",
@@ -62,9 +76,15 @@ export const intro = {
 export const hero = {
   line1: "AI / ML",
   line2: "ENGINEER",
-  // Full-bleed WebGL scene (public/hero/): looping video + depth-map parallax behind cream type.
   scene: { alt: "Illustrated portrait of Mishal working at his laptop at night" },
   chip: "OPEN TO WORK, 2026",
+  h1: ["AI / ML", "ENGINEER."],
+  sub: "I build vision, retrieval and backend systems that run in production.",
+  cta1: "Download CV",
+  cta2: "View projects",
+  status: "Open to work, 2026",
+  openToWork: "Open to work, 2026",
+  loading: "Loading portfolio",
 };
 
 export const about = {
@@ -88,10 +108,11 @@ export const about = {
 export type Skill = { id: string; name: string; cluster: number; x: number; y: number; note: string };
 export const PROJECTS: Record<string, { status: string; target: string; skills: string[] }> = {
   "Dermatology Decision Support": { status: "done", target: "ddss", skills: ["Python","FastAPI","PyTorch","DINOv2","FAISS","OpenCV","PostgreSQL","Image retrieval","React / TS"] },
-  "Productivity & Role Prediction": { status: "done", target: "role", skills: ["Python","Pandas","scikit-learn","SQLite","Streamlit"] },
+  "Productivity & Role Prediction": { status: "done", target: "role", skills: ["Python","Pandas","scikit-learn","SQLite"] },
   "CareerLens AI": { status: "backend built", target: "careerlens", skills: ["Python","FastAPI","REST design","SQLite","FAISS","Gemini API","RAG pipelines","Sentence Transformers","Testing"] },
   "This portfolio": { status: "live", target: "overview", skills: ["React / TS","Git"] },
 };
+
 export const expertise = {
   heading: "MY EXPERTISE.",
   intro: "Hover a skill to see where I used it.",
@@ -131,21 +152,33 @@ export const expertise = {
 
 export type ImportanceItem = { label: string; value: number };
 export type PipelineStep = { label: string; shot: string };
-export type StatusLogItem = { text: string; status: "done" | "wip" | "pending" };
-export type PipelineBox = { label: string; built: boolean };
+export type PipelineBox = { label: string; caption: string; built: boolean };
+
+export type TableRow = {
+  id: string;
+  vals: string[];
+};
+
+export type TableOutput = {
+  label: string;
+  vals: string[];
+};
 
 export type Project = {
   id: string;
   title: string;
   sentence: string;
-  line: string;
+  line?: string;
   mutedLine?: string;
   buttonLabel?: string;
   badge?: string;
-  pipelineSteps?: PipelineStep[];
+  pipelineSteps?: PipelineStep[] | string[];
   importance?: ImportanceItem[];
-  fallbackPipeline?: string[];
-  statusLog?: StatusLogItem[];
+  table?: {
+    columns: string[];
+    rows: TableRow[];
+    outputs: TableOutput[];
+  };
   pipelineBoxes?: PipelineBox[];
   links: { live?: string; github?: string; video?: string };
   metrics: { label: string; value: string }[];
@@ -156,11 +189,32 @@ export type Project = {
   stack?: string[];
 };
 
+export type CaseStudySection = {
+  id: string;
+  num: string;
+  title: string;
+  text?: string;
+  shot?: string;
+  shotCaption?: string;
+  methods?: { name: string; desc: string }[];
+  points?: string[];
+};
+
 export const works = {
   heading: "SELECTED WORKS.",
-  labels: { problem: "Problem", approach: "Approach", result: "Result", limitations: "Limitations", live: "Live", github: "GitHub", video: "Demo video", demo: "Product preview", status: "Status", deepDive: "Deep Dive" },
+  labels: {
+    problem: "Problem",
+    approach: "Approach",
+    result: "Result",
+    limitations: "Limitations",
+    live: "Live",
+    github: "GitHub",
+    video: "Demo video",
+    demo: "Product preview",
+    status: "Status",
+    deepDive: "Deep Dive",
+  },
   playDemo: "Play demo",
-  featureImportancePending: "Feature importance chart to be added.",
   projects: [
     {
       id: "ddss",
@@ -186,44 +240,60 @@ export const works = {
       id: "role",
       title: "Productivity and Role Prediction",
       sentence: "Predicts how productive a worker is and groups workers by behaviour.",
-      line: "Random Forest regression for the productivity score, K-Means for the worker groups, served in a Streamlit app.",
-      // Paste real feature importance numbers here when available, e.g. [{ label: "Overtime", value: 0.28 }, ...]
-      importance: [] as ImportanceItem[],
-      fallbackPipeline: [
-        "Worker data",
-        "Pandas preparation",
-        "Random Forest and K-Means",
-        "Streamlit app",
+      line: "Random Forest regression for the productivity score, K-Means for the worker groups.",
+      pipelineSteps: [
+        "Behaviour features",
+        "Random Forest regression",
+        "K-Means clustering",
+        "Score + role",
       ],
+      table: {
+        columns: [
+          "Subject",
+          "Typing_Intensity",
+          "Idle_Duration",
+          "Task_Switching_Frequency",
+          "Time_Coding",
+          "Time_Email",
+          "Time_SocialMedia",
+          "Time_Browsing",
+          "Time_Docs",
+        ],
+        rows: [
+          { id: "S001", vals: ["75", "23", "11", "4.9", "7.65", "9.8", "13.78", "13.16"] },
+          { id: "S003", vals: ["61", "9", "7", "10.86", "12.22", "7.87", "7.6", "7.33"] },
+          { id: "S007", vals: ["87", "13", "4", "18.26", "19.24", "12.07", "0.33", "0.33"] },
+        ],
+        outputs: [
+          { label: "Productivity score", vals: ["S001 53.48", "S003 54.36", "S007 77.14"] },
+          { label: "Label", vals: ["Medium", "Medium", "High"] },
+          { label: "Role", vals: ["Manager"] },
+        ],
+      },
+      importance: [] as ImportanceItem[],
       links: {},
       metrics: [],
       problem: "Predicts how productive a worker is and groups workers by behaviour.",
-      approach: "Random Forest regression for the productivity score, K-Means for the worker groups, served in a Streamlit app.",
-      stack: ["scikit-learn", "Python", "pandas", "Streamlit"],
+      approach: "Random Forest regression for the productivity score, K-Means for the worker groups.",
+      stack: ["scikit-learn", "Python", "pandas"],
     },
     {
       id: "careerlens",
       title: "CareerLens AI",
-      sentence: "Reads a resume, answers questions from it with evidence, and scores it against a job description.",
-      line: "Backend built, 281 tests passing.",
+      sentence: "Matches a resume to roles and explains the gaps. Backend is built and tested; the front end is being rebuilt.",
       badge: "Backend built and tested",
-      statusLog: [
-        { text: "Backend: built, 281 tests passing", status: "done" as const },
-        { text: "Front end: being rebuilt", status: "wip" as const },
-        { text: "Deployment: pending", status: "pending" as const },
-      ],
       pipelineBoxes: [
-        { label: "Resume PDF", built: true },
-        { label: "Profile extraction", built: true },
-        { label: "Chunks and embeddings with FAISS", built: true },
-        { label: "Gemini answer with citations", built: true },
-        { label: "Job match and skill gaps", built: true },
-        { label: "Front end", built: false },
-        { label: "Deployment", built: false },
+        { label: "Resume PDF", caption: "Resume parsing", built: true },
+        { label: "Profile extraction", caption: "Profile extraction", built: true },
+        { label: "Chunks and embeddings with FAISS", caption: "MiniLM embeddings", built: true },
+        { label: "Gemini answer with citations", caption: "Gemini citations", built: true },
+        { label: "Job match and skill gaps", caption: "SQLAlchemy store", built: true },
+        { label: "Front end", caption: "Under rebuild", built: false },
+        { label: "Deployment", caption: "Pending deployment", built: false },
       ],
       links: {},
       metrics: [],
-      problem: "Reads a resume, answers questions from it with evidence, and scores it against a job description.",
+      problem: "Matches a resume to roles and explains the gaps. Backend is built and tested; the front end is being rebuilt.",
       approach: "Sentence Transformers embeddings of resumes and roles, FAISS similarity search, Gemini gap explanation.",
       stack: ["FastAPI", "Python", "SQLite", "Sentence Transformers", "FAISS", "Gemini API"],
     },
@@ -253,9 +323,7 @@ export const works = {
     ] as RetrievalSample[],
   },
   caseStudy: {
-    eyebrow: "CASE STUDY // BLUECAST TECHNOLOGIES · JAN-APR 2026",
     title: ["DERMATOLOGY", "DECISION SUPPORT."],
-    lede: "A clinical assistant that turns a skin photo into a ranked differential: likely conditions with confidence bands, a severity score and an editable treatment plan. The doctor always makes the final call.",
     close: "Close",
     closeKey: "Esc",
     galleryLabel: "PRODUCT SCREENS / 10 CAPTURES",
@@ -264,94 +332,57 @@ export const works = {
     galleryError: "This screenshot could not be loaded.",
     galleryRetry: "Retry",
     galleryCount: "of",
-    navigation: [
-      { id: "demo", label: "Try retrieval" },
-      { id: "product", label: "Product screens" },
-      { id: "decisions", label: "Engineering decisions" },
-      { id: "architecture", label: "Architecture" },
-      { id: "limits", label: "Limits & validation" },
+    nav: [
+      { id: "what-it-does", label: "What it does" },
+      { id: "how-it-works", label: "How it works" },
+      { id: "what-i-built", label: "What I built" },
+      { id: "retrieval-methods", label: "Retrieval methods" },
+      { id: "limitations", label: "Limitations" },
     ],
-    needTitle: "The clinical need",
-    need: "Skin conditions can share colour, texture and shape. The goal was not to replace a dermatologist with one predicted label, but to bring candidate conditions into a reviewable workflow: patient record, image analysis, differential review, grading and treatment planning.",
-    retrievalTitle: "What retrieval actually does",
-    retrieval: [
-      { t: "Build the reference index", d: "Preprocess the training images, extract a DINOv2 embedding for each image, and retain its disease label alongside the vector. Hold test images outside that index to avoid evaluating on the same photographs used as references." },
-      { t: "Embed a new query", d: "Apply the same preprocessing and backbone to the uploaded image. The resulting 768-dimensional CLS representation is compared with reference embeddings, rather than training a new classifier for every query." },
-      { t: "Retrieve and review", d: "Rank reference matches by cosine similarity and present candidate conditions for clinician review. The screenshots show the product’s ranked differential; they are not an interactive search against the reference index." },
-    ],
-    scoreNote: "Similarity is not a calibrated probability of disease. The percentage bars shown in the app should not be read as diagnostic accuracy. Confidence-band thresholds and clinical calibration have not been supplied for this portfolio.",
-    validationTitle: "Evidence and unresolved questions",
-    validation: [
-      { t: "Product evidence", d: "The ten supplied captures show the implemented patient-to-prescription workflow, including differential review and a GAGS score of 20 shown as Moderate." },
-      { t: "Evaluation evidence", d: "The documentation describes a held-out SD-198 test split, but no measured top-k recall, diagnostic accuracy or search latency was supplied. Dataset coverage is not a performance result." },
-      { t: "Index implementation", d: "FAISS and pgvector both appear in the documentation. Their exact roles in the final deployed system still need confirmation; this brief does not claim a measured comparison." },
-      { t: "Portfolio retrieval demo", d: "The client-side demo is prepared for approved query images and their actual precomputed reference matches. Current images are identified as sample illustrations; no scores or medical metadata are invented. It does not run model inference or access the private dataset." },
-    ],
-    role: [
-      { k: "Role", v: "AI / ML Intern" },
-      { k: "Duration", v: "Jan-Apr 2026" },
-      { k: "Dataset", v: "SD-198 · 198 conditions" },
-      { k: "Backbone", v: "DINOv2 ViT-B · 768-d" },
-    ],
-    stats: [
-      { v: "198", l: "skin conditions covered" },
-      { v: "768", l: "numbers per image embedding" },
-      { v: "196", l: "16×16 patches read per image" },
-      { v: "6", l: "clinical severity calculators" },
-    ],
-    compareTitle: "Why not a classifier",
-    before: { t: "Single-label classifier", points: ["One hard label with high confidence", "Unsafe when two conditions look alike", "No way to add a new disease without retraining", "Clinician cannot see the evidence"] },
-    after: { t: "Differential support", points: ["Several likely conditions, ranked", "Similarity scores mapped to High / Moderate / Low", "New confirmed cases and diseases can be added", "Doctor-in-the-loop: AI suggests, doctor decides"] },
-    datasetTitle: "Choosing the data",
-    datasets: [
-      { n: "HAM10000", d: "Large, but only 7 labels", pick: false },
-      { n: "Derma (Harvard)", d: "23 diseases with a train-test split", pick: false },
-      { n: "Mega Balanced (Kaggle)", d: "36 diseases, no test set", pick: false },
-      { n: "SD-198", d: "198 diseases, published research benchmark", pick: true },
-    ],
-    datasetNote: "SD-198 was split into train and test folders. The train set is embedded and indexed; the test set is held out for evaluation.",
-    vitTitle: "How the model reads a photo",
-    vit: [
-      "The image is resized to 224×224 and cut into a 14×14 grid of 16×16 patches.",
-      "Each patch becomes a vector, with position added so the model knows where it sits.",
-      "Self-attention lets every patch look at every other: the lesion links to its neighbours and the background fades.",
-      "A summary [CLS] token collects it all into one 768-d embedding, the vector that gets stored and searched.",
-    ],
-    vitHint: "Hover the grid",
-    iterTitle: "Three approaches, in order",
-    iters: [
-      { n: "01", t: "Mean vector per disease", tag: "Dropped", why: "Fast and simple, but skin diseases are not one tight cluster. Stages, body sites and lighting form sub-clusters, so the average blurred them into a point that matched no real case, and small classes were unstable." },
-      { n: "02", t: "kNN retrieval with FAISS", tag: "Improved", why: "Comparing against real training images kept the variation inside each disease and made results explainable. Conditions with near-identical texture still overlapped." },
-      { n: "03", t: "CLS token representation", tag: "Current", why: "Use the ViT's [CLS] summary as the single image representation for retrieval. This is a representation choice within the retrieval pipeline, not a replacement for nearest-neighbour search. Improvements across lighting or angle still require held-out measurement." },
-    ],
-    archTitle: "End-to-end pipeline",
-    arch: [
-      { n: "01", t: "Capture", d: "Camera or upload, with file and quality checks; lesion region kept in focus." },
-      { n: "02", t: "Embed", d: "OpenCV / Pillow preprocessing, then DINOv2 ViT-B produces a 768-d vector." },
-      { n: "03", t: "Search", d: "Cosine similarity over stored embeddings with FAISS and pgvector." },
-      { n: "04", t: "Rank", d: "Scores normalised into High / Moderate / Low bands; low confidence falls back safely." },
-      { n: "05", t: "Assess", d: "A rule-based severity calculator matched to the predicted disease." },
-      { n: "06", t: "Prescribe", d: "Editable treatment plan; every case is saved for review and audit." },
-    ],
-    sevTitle: "Severity, not just a label",
-    sevIntro: "The same disease can need different treatment. After prediction, the doctor scores symptoms and a rule-based calculator maps the total to Mild, Moderate or Severe.",
-    sev: [
-      { k: "GAGS", t: "Acne", d: "Vulgaris, cystic, comedonal" },
-      { k: "EASI", t: "Eczema", d: "Atopic, contact, seborrheic" },
-      { k: "PASI", t: "Psoriasis", d: "Plaque, guttate, scalp" },
-      { k: "SALT", t: "Fungal", d: "Tinea, tinea pedis" },
-      { k: "ABCDE", t: "Pigmentation", d: "Melasma, vitiligo" },
-      { k: "GEN", t: "General", d: "Rare cases and low-confidence fallback" },
-    ],
-    loopTitle: "Doctor in the loop",
-    loop: [
-      "Doctor reviews the differential and confirms the disease.",
-      "A case record stores predicted vs confirmed disease, severity and AI confidence.",
-      "Suggested medicines are pre-filled; dosage, frequency and duration stay editable.",
-      "The final prescription is saved and can be retrieved for follow-up and audit.",
-    ],
-    shotsTitle: "The product, screen by screen",
-    shotsIntro: "Actual captures from DermAI CDSS: patient intake, image analysis, ranked differential, severity grading and treatment planning. Supporting login and dashboard screens are included too.",
+    sections: [
+      {
+        id: "what-it-does",
+        num: "a",
+        title: "What it does",
+        text: "A doctor uploads a lesion photo and gets a ranked list of similar past cases with the evidence. Support, not diagnosis.",
+      },
+      {
+        id: "how-it-works",
+        num: "b",
+        title: "How it works",
+        text: "Image preprocessing, DINOv2 768-d embedding, cosine similarity, FAISS index, ranked cases with similarity bars.",
+        shot: "ddss-8",
+        shotCaption: "Ranked differential diagnosis suggestions with similarity scores.",
+      },
+      {
+        id: "what-i-built",
+        num: "c",
+        title: "What I built",
+        text: "Django + PostgreSQL backend, patient and case history, GASI severity calculator, treatment plan and prescription saving, dashboard with disease and severity charts, login. Built at Bluecast Technologies.",
+        shot: "ddss-10",
+        shotCaption: "Treatment plan and prescription saving.",
+      },
+      {
+        id: "retrieval-methods",
+        num: "d",
+        title: "Retrieval methods compared",
+        methods: [
+          { name: "MV-Mean", desc: "Averages feature vectors across multiple views of the same lesion into one centroid." },
+          { name: "MV-CLS", desc: "CLS token pooling across multiple views to preserve visual transformer attention." },
+          { name: "KNN", desc: "Nearest-neighbour lookup over indexed reference cases using cosine similarity." },
+        ],
+      },
+      {
+        id: "limitations",
+        num: "e",
+        title: "Limitations",
+        points: [
+          "Retrieval not classification: candidate cases are retrieved for clinician review rather than predicting an autonomous diagnostic decision.",
+          "Reference set dependency: retrieval quality depends on the range and coverage of the indexed reference images.",
+          "Clinical review required: a doctor always makes the final call and confirms the treatment plan.",
+        ],
+      },
+    ] as CaseStudySection[],
     shots: [
       { k: "ddss", t: "Sign in", d: "Doctors sign in to a private workspace." },
       { k: "ddss-2", t: "Dashboard", d: "Daily patients, visits and disease counts at a glance." },
@@ -364,26 +395,17 @@ export const works = {
       { k: "ddss-9", t: "Severity: GAGS", d: "Region sliders compute the acne severity score." },
       { k: "ddss-10", t: "Treatment plan", d: "Pre-filled medicines the doctor edits and saves." },
     ],
-    stackTitle: "Stack",
-    stack: ["Python 3.10", "PyTorch", "DINOv2", "OpenCV", "Pillow", "FAISS", "pgvector"],
-    guardTitle: "Limits I kept visible",
-    guards: [
-      "DINOv2 is not medically fine-tuned: it sees texture and colour, not pathology.",
-      "Visually similar conditions still overlap.",
-      "Severity depends on accurate clinician input.",
-      "Decision support only, never a diagnosis.",
-    ],
-    learnTitle: "What I learned",
-    learn: "The first idea is rarely the right representation. Measuring why the centroid failed is what led to retrieval, then to the CLS token, and keeping the doctor in control shaped every screen after the model.",
   },
-  flowLabel: "How it works",
 };
+
+export type ReferenceCase = { id: string; image: string; label?: string; note?: string };
+export type RetrievalSample = { id: string; label: string; image: string; placeholder?: boolean; matches: { referenceId: string; similarity?: number }[] };
 
 export const journey = {
   heading: "ACADEMIC & INDUSTRY JOURNEY.",
   timeline: [
-    { when: "2021-24", what: "BCA", where: "Musaliar College of Arts and Science, Pathanamthitta" }, // VERIFY years
-    { when: "2024-26", what: "MCA · CGPA 8.33", where: "TKM College of Engineering, Kollam" }, // VERIFY years
+    { when: "2021-24", what: "BCA", where: "Musaliar College of Arts and Science, Pathanamthitta" },
+    { when: "2024-26", what: "MCA · CGPA 8.33", where: "TKM College of Engineering, Kollam" },
     { when: "Jan-Apr 2026", what: "AI / ML Intern, DDSS", where: "Bluecast Technologies" },
     { when: "2026", what: "AI / ML Engineer", where: "Open to work" },
   ],

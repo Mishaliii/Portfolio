@@ -6,7 +6,11 @@ import { perfLayers, performanceLayers, setPerformanceLayer } from "@/lib/perfor
 export function PerformancePanel() {
   const [enabled, setEnabled] = useState(false);
   const readout = useRef<HTMLDivElement>(null);
-  useEffect(() => { setEnabled(new URLSearchParams(location.search).get("perf") === "1"); }, []);
+
+  useEffect(() => {
+    setEnabled(typeof window !== "undefined" && new URLSearchParams(window.location.search).get("perf") === "1");
+  }, []);
+
   useEffect(() => {
     if (!enabled) return;
     let frame = 0, previous = performance.now(), started = previous, count = 0, sum = 0, longest = 0, tasks = 0;
@@ -27,12 +31,22 @@ export function PerformancePanel() {
     frame = requestAnimationFrame(tick);
     return () => { cancelAnimationFrame(frame); observer?.disconnect(); };
   }, [enabled]);
+
   if (!enabled) return null;
-  return <aside className="performance-panel" aria-label={ui.performance.title} data-perf-panel>
-    <strong>{ui.performance.title}</strong><div ref={readout} className="performance-readout" />
-    {perfLayers.map((layer) => <label key={layer} className="performance-option">
-      <Checkbox defaultChecked={performanceLayers[layer]} aria-label={ui.performance.layers[layer]} onCheckedChange={(checked) => setPerformanceLayer(layer, checked === true)} />
-      {ui.performance.layers[layer]}
-    </label>)}
-  </aside>;
+  return (
+    <aside className="performance-panel" aria-label={ui.performance.title} data-perf-panel>
+      <strong>{ui.performance.title}</strong>
+      <div ref={readout} className="performance-readout" />
+      {perfLayers.map((layer) => (
+        <label key={layer} className="performance-option">
+          <Checkbox
+            defaultChecked={performanceLayers[layer]}
+            aria-label={ui.performance.layers[layer]}
+            onCheckedChange={(checked) => setPerformanceLayer(layer, checked === true)}
+          />
+          {ui.performance.layers[layer]}
+        </label>
+      ))}
+    </aside>
+  );
 }

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
-import { works, type Project } from "@/content";
+import { works, type Project, type PipelineStep, type PipelineBox } from "@/content";
 import { SplitReveal } from "./Split";
 import { EASE } from "@/lib/motion";
 import { CaseStudy } from "./CaseStudy";
@@ -40,15 +40,38 @@ function DDSSCard({ p, active }: { p: Project; active: boolean }) {
     return () => document.removeEventListener("visibilitychange", onVisChange);
   }, [active, showVideo, videoFailed]);
 
+  const pipeline = (p.pipelineSteps ?? []) as PipelineStep[];
+
   return (
-    <article className="flex h-full flex-col-reverse justify-center gap-8 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] lg:gap-[4vw]" aria-label={p.title}>
-      <div className="flex flex-col justify-center">
-        <h3 className="display" style={{ fontSize: "clamp(34px, min(4.4vw, 7.5dvh), 96px)", lineHeight: 0.95 }}>
-          <SplitReveal text={p.title.toUpperCase()} />
+    <article
+      className="flex h-full flex-col-reverse justify-center gap-8 lg:grid lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:gap-[4vw] items-center"
+      aria-label={p.title}
+    >
+      {/* Left text column */}
+      <div className="flex min-w-0 flex-col justify-center">
+        <h3
+          className="display tracking-tight text-[var(--ink)]"
+          style={{ fontSize: "clamp(28px, min(3.6vw, 5.5dvh), 60px)", lineHeight: 0.95 }}
+        >
+          <span className="block"><SplitReveal text="DERMATOLOGY" /></span>
+          <span className="block"><SplitReveal text="DECISION SUPPORT." /></span>
         </h3>
-        <p className="mt-[2.5dvh] max-w-[46ch] text-[17px] leading-snug" data-fade>{p.sentence}</p>
-        <p className="mt-3 text-[15px] leading-snug" data-fade>{p.line}</p>
-        <p className="muted mt-2 text-[14px]" data-fade>{p.mutedLine}</p>
+
+        <p className="mt-[2.2dvh] max-w-[46ch] text-[16px] sm:text-[17px] leading-snug text-[var(--ink)]" data-fade>
+          {p.sentence}
+        </p>
+
+        {p.line && (
+          <p className="mt-3 text-[14px] sm:text-[15px] leading-snug text-[var(--ink)]" data-fade>
+            {p.line}
+          </p>
+        )}
+
+        {p.mutedLine && (
+          <p className="muted mt-2 text-[13px] sm:text-[14px]" data-fade>
+            {p.mutedLine}
+          </p>
+        )}
 
         <div className="mt-6" data-fade>
           <button className="btn" onClick={() => setCs(true)} aria-haspopup="dialog">
@@ -56,8 +79,9 @@ function DDSSCard({ p, active }: { p: Project; active: boolean }) {
           </button>
         </div>
 
-        <ol className="mt-8 flex flex-wrap items-center gap-2 text-[13px] mono" data-fade>
-          {p.pipelineSteps?.map((step, idx) => {
+        {/* 4-step pipeline */}
+        <ol className="mt-8 flex flex-wrap items-center gap-2 text-[12px] mono" data-fade aria-label="Pipeline steps">
+          {pipeline.map((step, idx) => {
             const isStepSelected = !showVideo && selectedShot === step.shot;
             return (
               <li
@@ -65,7 +89,7 @@ function DDSSCard({ p, active }: { p: Project; active: boolean }) {
                 tabIndex={0}
                 onMouseEnter={() => { setSelectedShot(step.shot); setShowVideo(false); }}
                 onFocus={() => { setSelectedShot(step.shot); setShowVideo(false); }}
-                className="group inline-flex items-center gap-2 cursor-pointer transition-colors"
+                className="inline-flex items-center gap-2 cursor-pointer transition-colors"
               >
                 {idx > 0 && <span aria-hidden className="muted mr-1">→</span>}
                 <span
@@ -85,7 +109,8 @@ function DDSSCard({ p, active }: { p: Project; active: boolean }) {
         <CaseStudy open={cs} onClose={closeCs} />
       </div>
 
-      <div className="flex h-full flex-col justify-center">
+      {/* Right media frame */}
+      <div className="flex h-full w-full min-w-0 flex-col justify-center">
         <div className="overflow-hidden rounded-lg bg-[var(--ink)] p-3 sm:p-4 text-[var(--cream)] shadow-md" data-sig>
           <div className="relative aspect-[16/10] w-full overflow-hidden rounded bg-black/40">
             {showVideo && !videoFailed ? (
@@ -99,12 +124,14 @@ function DDSSCard({ p, active }: { p: Project; active: boolean }) {
                 poster={posterSrc}
                 onError={() => setVideoFailed(true)}
                 className="h-full w-full object-cover"
+                style={{ objectFit: "cover" }}
               />
             ) : (
               <img
                 src={ddssImages[activeShotKey] ?? posterSrc}
                 alt={shots.find((s) => s.k === activeShotKey)?.t ?? "DDSS product capture"}
-                className="h-full w-full object-contain"
+                className="h-full w-full object-cover"
+                style={{ objectFit: "cover" }}
               />
             )}
           </div>
@@ -150,128 +177,98 @@ function DDSSCard({ p, active }: { p: Project; active: boolean }) {
   );
 }
 
-function RoleCard({ p, active }: { p: Project; active: boolean }) {
-  const [hasRoleApp, setHasRoleApp] = useState(false);
-  const hasImportance = p.importance && p.importance.length > 0;
-
-  useEffect(() => {
-    const img = new Image();
-    img.onload = () => setHasRoleApp(true);
-    img.src = "/media/role-app.png";
-  }, []);
+function RoleCard({ p }: { p: Project }) {
+  const table = p.table;
+  const pipeline = (p.pipelineSteps ?? []) as string[];
 
   return (
-    <article className="grid h-full grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:gap-[4vw]" aria-label={p.title}>
-      <div className="flex h-full flex-col justify-center" data-sig>
-        {hasImportance ? (
-          <div className="w-full max-w-md space-y-3 rounded-lg border border-[var(--line)] bg-[rgba(23,22,21,0.02)] p-6">
-            {p.importance?.map((item) => (
-              <div key={item.label} className="space-y-1">
-                <div className="flex justify-between text-[13px] mono">
-                  <span>{item.label}</span>
-                  <span className="muted">{(item.value * 100).toFixed(1)}%</span>
-                </div>
-                <div className="h-2 w-full rounded-full bg-[var(--line)] overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-[var(--accent-green)] origin-left transition-transform duration-1000 ease-out"
-                    style={{ transform: active ? `scaleX(${item.value})` : "scaleX(0)" }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="w-full max-w-lg">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {p.fallbackPipeline?.map((box, i) => (
-                <div
-                  key={box}
-                  className="rounded border border-[var(--line)] bg-[rgba(23,22,21,0.02)] p-4"
-                >
-                  <span className="mono text-[11px] block" style={{ color: "var(--gold)" }}>
-                    0{i + 1}
-                  </span>
-                  <span className="mt-1 block font-medium text-[15px]">{box}</span>
-                </div>
-              ))}
+    <article
+      className="grid h-full grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:gap-[4vw] items-center"
+      aria-label={p.title}
+    >
+      {/* Left visual: Designed table card + output chips */}
+      <div className="flex h-full w-full min-w-0 flex-col justify-center" data-sig>
+        {table && (
+          <div className="w-full rounded-lg border border-[var(--line)] bg-[var(--cream)] p-4 sm:p-5 shadow-sm">
+            <div className="overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+              <table className="w-full text-left text-[11px] mono border-collapse min-w-[500px]">
+                <thead>
+                  <tr className="border-b hair text-[var(--muted)]">
+                    {table.columns.map((col) => (
+                      <th key={col} className="pb-2 pr-3 font-medium whitespace-nowrap">
+                        {col}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y hair text-[var(--ink)]">
+                  {table.rows.map((r) => (
+                    <tr key={r.id} className="hover:bg-[rgba(33,76,58,0.04)] transition-colors">
+                      <td className="py-2 pr-3 font-semibold text-[var(--accent-green)]">{r.id}</td>
+                      {r.vals.map((v, vi) => (
+                        <td key={vi} className="py-2 pr-3 whitespace-nowrap opacity-90">
+                          {v}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            <p className="mono muted mt-4 text-[12px]">{works.featureImportancePending}</p>
+
+            {/* Connecting arrow row */}
+            <div className="my-3 flex items-center justify-center gap-2 text-[var(--muted)]" aria-hidden="true">
+              <span className="h-px flex-1 bg-[var(--line)]" />
+              <span className="mono text-[11px]">↓ Model Inference</span>
+              <span className="h-px flex-1 bg-[var(--line)]" />
+            </div>
+
+            {/* Output chips */}
+            <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px] mono">
+              <div className="rounded border border-[var(--line)] bg-[rgba(33,76,58,0.06)] px-2.5 py-1">
+                <span className="font-semibold text-[var(--accent-green)]">Score: </span>
+                <span className="text-[var(--ink)]">S001 53.48 · S003 54.36 · S007 77.14</span>
+              </div>
+              <div className="rounded border border-[var(--line)] bg-[rgba(33,76,58,0.06)] px-2.5 py-1">
+                <span className="font-semibold text-[var(--accent-green)]">Label: </span>
+                <span className="text-[var(--ink)]">Medium · Medium · High</span>
+              </div>
+              <div className="rounded border border-[var(--line)] bg-[rgba(33,76,58,0.06)] px-2.5 py-1">
+                <span className="font-semibold text-[var(--accent-green)]">Role: </span>
+                <span className="text-[var(--ink)]">Manager</span>
+              </div>
+            </div>
           </div>
         )}
-        {hasRoleApp && (
-          <img
-            src="/media/role-app.png"
-            alt="Role app preview"
-            className="mt-4 max-w-sm rounded border border-[var(--line)] shadow-sm"
-          />
-        )}
       </div>
 
-      <div className="flex flex-col justify-center">
-        <h3 className="display" style={{ fontSize: "clamp(34px, min(4.4vw, 7.5dvh), 96px)", lineHeight: 0.95 }}>
-          <SplitReveal text={p.title.toUpperCase()} />
+      {/* Right text column */}
+      <div className="flex min-w-0 flex-col justify-center">
+        <h3
+          className="display tracking-tight text-[var(--ink)]"
+          style={{ fontSize: "clamp(26px, min(3.4vw, 5.2dvh), 54px)", lineHeight: 0.95 }}
+        >
+          <span className="block"><SplitReveal text="PRODUCTIVITY AND" /></span>
+          <span className="block"><SplitReveal text="ROLE PREDICTION." /></span>
         </h3>
-        <p className="mt-[2.5dvh] max-w-[46ch] text-[17px] leading-snug" data-fade>{p.sentence}</p>
-        <p className="mt-3 text-[15px] leading-snug" data-fade>{p.line}</p>
-      </div>
-    </article>
-  );
-}
 
-function CareerLensCard({ p }: { p: Project }) {
-  return (
-    <article className="mx-auto flex h-full w-full max-w-5xl flex-col justify-center gap-8 lg:grid lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:gap-[5vw]" aria-label={p.title}>
-      <div className="flex flex-col justify-center">
-        <h3 className="display" style={{ fontSize: "clamp(34px, min(4.4vw, 7.5dvh), 96px)", lineHeight: 0.95 }}>
-          <SplitReveal text={p.title.toUpperCase()} />
-        </h3>
-        <p className="mt-[2.5dvh] max-w-[44ch] text-[17px] leading-snug" data-fade>{p.sentence}</p>
+        <p className="mt-[2.2dvh] max-w-[46ch] text-[16px] sm:text-[17px] leading-snug text-[var(--ink)]" data-fade>
+          {p.sentence}
+        </p>
 
-        {p.badge && (
-          <div className="mt-3" data-fade>
-            <span className="inline-block rounded-full bg-[rgba(33,76,58,0.1)] px-3 py-1 text-[12px] font-medium mono text-[var(--accent-green)]">
-              {p.badge}
-            </span>
-          </div>
+        {p.line && (
+          <p className="mt-3 text-[14px] sm:text-[15px] leading-snug text-[var(--ink)]" data-fade>
+            {p.line}
+          </p>
         )}
 
-        <ul className="mt-6 space-y-2.5 text-[14px]" data-fade>
-          {p.statusLog?.map((item) => (
-            <li key={item.text} className="flex items-center gap-2.5">
-              <span
-                className="inline-block h-2 w-2 shrink-0 rounded-full"
-                style={{
-                  backgroundColor:
-                    item.status === "done"
-                      ? "var(--accent-green)"
-                      : item.status === "wip"
-                      ? "var(--gold)"
-                      : "var(--muted)",
-                }}
-              />
-              <span>{item.text}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <div className="flex h-full flex-col justify-center" data-sig>
-        <ol className="flex flex-col gap-2.5 max-w-sm">
-          {p.pipelineBoxes?.map((box, idx) => (
-            <li
-              key={box.label}
-              className={`flex items-center justify-between rounded px-3.5 py-2.5 text-[13px] transition-colors ${
-                box.built
-                  ? "border border-solid border-[var(--line)] bg-[rgba(23,22,21,0.02)] font-medium text-[var(--ink)]"
-                  : "border border-dashed border-[var(--line)] text-muted"
-              }`}
-            >
-              <span className="flex items-center gap-2">
-                <span className="mono text-[10px] muted">0{idx + 1}</span>
-                <span>{box.label}</span>
-              </span>
-              <span className="mono text-[10px]" style={{ color: box.built ? "var(--accent-green)" : "var(--muted)" }}>
-                {box.built ? "BUILT" : "PLANNED"}
+        {/* 4-step pipeline */}
+        <ol className="mt-8 flex flex-wrap items-center gap-2 text-[12px] mono" data-fade aria-label="Pipeline steps">
+          {pipeline.map((step, idx) => (
+            <li key={step} className="inline-flex items-center gap-2">
+              {idx > 0 && <span aria-hidden className="muted mr-1">→</span>}
+              <span className="rounded border border-[var(--line)] px-2.5 py-1 text-[var(--ink)]">
+                {step}
               </span>
             </li>
           ))}
@@ -281,10 +278,120 @@ function CareerLensCard({ p }: { p: Project }) {
   );
 }
 
+function CareerLensCard({ p }: { p: Project }) {
+  const boxes = (p.pipelineBoxes ?? []) as PipelineBox[];
+
+  return (
+    <article
+      className="mx-auto flex h-full w-full max-w-6xl flex-col justify-center gap-8 lg:grid lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:gap-[4vw] items-center"
+      aria-label={p.title}
+    >
+      {/* Left column */}
+      <div className="flex min-w-0 flex-col justify-center">
+        <h3
+          className="display tracking-tight text-[var(--ink)]"
+          style={{ fontSize: "clamp(30px, min(3.8vw, 6dvh), 64px)", lineHeight: 0.95 }}
+        >
+          <SplitReveal text={p.title.toUpperCase()} />
+        </h3>
+
+        <p className="mt-[2.2dvh] max-w-[44ch] text-[16px] sm:text-[17px] leading-snug text-[var(--ink)]" data-fade>
+          {p.sentence}
+        </p>
+
+        {p.badge && (
+          <div className="mt-4" data-fade>
+            <span className="inline-block rounded-full border border-[var(--accent-green)]/30 bg-[rgba(33,76,58,0.08)] px-3 py-1 text-[11px] font-medium mono text-[var(--accent-green)]">
+              {p.badge}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Right column: Designed horizontal flow with connectors */}
+      <div className="flex h-full w-full min-w-0 flex-col justify-center" data-sig>
+        <div className="flex flex-col gap-3" aria-label="Pipeline flow">
+          {/* Row 1: 4 boxes */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            {boxes.slice(0, 4).map((box, idx) => (
+              <div key={box.label} className="flex items-center gap-1.5 flex-1 min-w-0">
+                <div
+                  className={`p-2.5 sm:p-3 rounded flex-1 min-w-0 transition-colors ${
+                    box.built
+                      ? "border border-solid border-[var(--line)] bg-[rgba(23,22,21,0.02)]"
+                      : "border border-dashed border-[var(--line)] opacity-70"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="mono text-[10px] muted">0{idx + 1}</span>
+                    <span
+                      className="mono text-[9px] uppercase px-1.5 py-0.5 rounded shrink-0"
+                      style={{
+                        color: box.built ? "var(--accent-green)" : "var(--muted)",
+                        background: box.built ? "rgba(33, 76, 58, 0.08)" : "transparent",
+                      }}
+                    >
+                      {box.built ? "Built" : "Planned"}
+                    </span>
+                  </div>
+                  <div className="font-medium text-[11px] sm:text-[12px] mt-1 text-[var(--ink)] leading-tight">{box.label}</div>
+                  <div className="mono text-[9px] sm:text-[10px] muted mt-0.5 leading-tight">{box.caption}</div>
+                </div>
+                {idx < 3 && (
+                  <span className="hidden sm:inline-block mono text-[var(--gold)] text-[12px] shrink-0" aria-hidden="true">
+                    →
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Row 2: 3 boxes */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:w-[75%]">
+            {boxes.slice(4).map((box, idx) => (
+              <div key={box.label} className="flex items-center gap-1.5 flex-1 min-w-0">
+                <div
+                  className={`p-2.5 sm:p-3 rounded flex-1 min-w-0 transition-colors ${
+                    box.built
+                      ? "border border-solid border-[var(--line)] bg-[rgba(23,22,21,0.02)]"
+                      : "border border-dashed border-[var(--line)] opacity-70"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="mono text-[10px] muted">0{idx + 5}</span>
+                    <span
+                      className="mono text-[9px] uppercase px-1.5 py-0.5 rounded shrink-0"
+                      style={{
+                        color: box.built ? "var(--accent-green)" : "var(--muted)",
+                        background: box.built ? "rgba(33, 76, 58, 0.08)" : "transparent",
+                      }}
+                    >
+                      {box.built ? "Built" : "Planned"}
+                    </span>
+                  </div>
+                  <div className="font-medium text-[11px] sm:text-[12px] mt-1 text-[var(--ink)] leading-tight">{box.label}</div>
+                  <div className="mono text-[9px] sm:text-[10px] muted mt-0.5 leading-tight">{box.caption}</div>
+                </div>
+                {idx < 2 && (
+                  <span className="hidden sm:inline-block mono text-[var(--gold)] text-[12px] shrink-0" aria-hidden="true">
+                    →
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+}
+
 export function PageWorks({ sub, paged }: { sub: number; paged: boolean }) {
   const stack = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { preloadScreenshots(); }, []);
+  useEffect(() => {
+    preloadScreenshots();
+  }, []);
 
   useEffect(() => {
     if (!paged || !stack.current) return;
@@ -304,14 +411,14 @@ export function PageWorks({ sub, paged }: { sub: number; paged: boolean }) {
   return (
     <div className="page-inner max-w-full overflow-x-hidden" style={{ background: "var(--cream)", color: "var(--ink)" }}>
       {/* Progress indicator row */}
-      <div className="flex items-center justify-end gap-2 pb-3" data-fade>
+      <div className="flex items-center justify-end gap-2 pb-2" data-fade>
         {works.projects.map((_, idx) => (
           <span
             key={idx}
             aria-hidden="true"
-            className="inline-block h-[2px] transition-all duration-500 ease-out"
+            className="inline-block h-[3px] rounded-full transition-all duration-500 ease-out"
             style={{
-              width: (!paged || sub === idx) ? 28 : 12,
+              width: (!paged || sub === idx) ? 32 : 12,
               backgroundColor: (!paged || sub === idx) ? "var(--accent-green)" : "var(--line)",
             }}
           />
@@ -322,14 +429,14 @@ export function PageWorks({ sub, paged }: { sub: number; paged: boolean }) {
 
       <div
         ref={stack}
-        className={paged ? "relative mt-[2dvh] min-h-0 flex-1" : "mt-6 space-y-16"}
+        className={paged ? "relative mt-[2dvh] min-h-0 flex-1 flex flex-col justify-center" : "mt-6 space-y-16"}
         data-sig
       >
         {works.projects.map((p, i) => (
           <div
             key={p.id}
             data-card
-            className={paged ? "absolute inset-0 origin-top overflow-hidden" : "border-b hair pb-12"}
+            className={paged ? "absolute inset-0 origin-top overflow-hidden flex flex-col justify-center" : "border-b hair pb-12"}
             style={{
               background: "var(--cream)",
               color: "var(--ink)",
@@ -341,7 +448,7 @@ export function PageWorks({ sub, paged }: { sub: number; paged: boolean }) {
             {p.id === "ddss" ? (
               <DDSSCard p={p} active={!paged || i === sub} />
             ) : p.id === "role" ? (
-              <RoleCard p={p} active={!paged || i === sub} />
+              <RoleCard p={p} />
             ) : (
               <CareerLensCard p={p} />
             )}

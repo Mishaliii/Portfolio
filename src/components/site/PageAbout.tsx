@@ -1,11 +1,11 @@
 import { useEffect, useRef } from "react";
+import { gsap } from "gsap";
 import { about, site, ui } from "@/content";
 import { Button } from "@/components/ui/button";
 import { ArrowDownToLine, ArrowUpRight } from "lucide-react";
 import { SplitReveal } from "./Split";
 import { HeadlineDissolve } from "./HeadlineDissolve";
-import { subscribe, onPage } from "@/lib/motion";
-import { easePortrait, idlePortrait, portraitMix, portraitOffset, PORTRAIT_DISSOLVE_MS } from "@/lib/about-portrait";
+import { onPage } from "@/lib/motion";
 import sideImg from "@/assets/portrait-side-composited.webp";
 import frontImg from "@/assets/portrait-front-composited.webp";
 
@@ -14,49 +14,63 @@ export function PageAbout({ go }: { go: (id: string) => void }) {
   const up = useRef<HTMLImageElement>(null);
   const front = useRef<HTMLImageElement>(null);
   const portrait = useRef<HTMLDivElement>(null);
-  const cue = useRef<HTMLSpanElement>(null);
+
   useEffect(() => {
-    const root = section.current, a = up.current, b = front.current, image = portrait.current;
-    if (!root || !a || !b || !image) return;
+    const root = section.current, a = up.current, b = front.current;
+    if (!root || !a || !b) return;
+
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const fine = window.matchMedia("(any-pointer: fine)");
-    let target = 0, x = 0, prev = performance.now(), activeTime = 0, hasPointer = false, visible = false;
-    let bounds = root.getBoundingClientRect();
-    let dissolve: Animation | undefined;
-    let cueShown = true;
-    const resize = new ResizeObserver(() => { bounds = root.getBoundingClientRect(); });
-    resize.observe(root);
-    const io = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; }); io.observe(root);
-    const move = (e: PointerEvent) => {
-      if (e.pointerType === "touch" || !onPage(root)) return;
-      bounds = root.getBoundingClientRect();
-      if (e.clientY < bounds.top || e.clientY > bounds.bottom) return;
-      hasPointer = true;
-      target = Math.max(0, Math.min(1, (e.clientX - bounds.left) / bounds.width));
-    };
-    window.addEventListener("pointermove", move, { passive: true });
-    const unsub = subscribe((time) => {
-      const elapsed = Math.min(50, time - prev); prev = time;
-      if (!visible || !onPage(root)) return;
-      activeTime += elapsed;
-      if (reduce.matches) { a.style.opacity = "1"; b.style.opacity = "0"; image.style.transform = "none"; dissolve?.cancel(); return; }
-      const next = easePortrait(x, fine.matches && hasPointer ? target : idlePortrait(activeTime), elapsed);
-      if ((x < 0.5 && next >= 0.5) || (x > 0.5 && next <= 0.5)) {
-        if (cueShown) { cueShown = false; cue.current?.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 500, fill: "forwards" }); }
-        dissolve?.cancel();
-        dissolve = image.animate([{ opacity: 1 }, { opacity: 0.08, offset: 0.5 }, { opacity: 1 }], { duration: PORTRAIT_DISSOLVE_MS, easing: "steps(5, end)" });
+    if (reduce.matches) {
+      a.style.opacity = "1";
+      b.style.opacity = "0";
+      return;
+    }
+
+    // Initial state: A is visible, B is hidden
+    gsap.set(a, { opacity: 1 });
+    gsap.set(b, { opacity: 0 });
+
+    // Image A holds 4s, fades to B over 1.2s, holds 4s, fades to A over 1.2s, loops
+    const tl = gsap.timeline({ repeat: -1 });
+    tl.to(b, { opacity: 1, duration: 1.2, ease: "power2.inOut" }, "+=4")
+      .to(a, { opacity: 0, duration: 1.2, ease: "power2.inOut" }, "<")
+      .to(a, { opacity: 1, duration: 1.2, ease: "power2.inOut" }, "+=4")
+      .to(b, { opacity: 0, duration: 1.2, ease: "power2.inOut" }, "<");
+
+    const syncPlayback = () => {
+      const active = onPage(root) && !document.hidden;
+      if (active) {
+        if (tl.paused()) tl.play();
+      } else {
+        if (!tl.paused()) tl.pause();
       }
-      x = next;
-      const mix = portraitMix(x);
-      a.style.opacity = String(1 - mix); b.style.opacity = String(mix);
-      image.style.transform = `translate3d(${portraitOffset(x).toFixed(3)}%,0,0)`;
+    };
+
+    const io = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting && onPage(root) && !document.hidden) {
+        tl.play();
+      } else {
+        tl.pause();
+      }
     });
-    return () => { unsub(); resize.disconnect(); io.disconnect(); dissolve?.cancel(); window.removeEventListener("pointermove", move); };
+    io.observe(root);
+
+    const onVisChange = () => syncPlayback();
+    document.addEventListener("visibilitychange", onVisChange);
+
+    // Initial check
+    syncPlayback();
+
+    return () => {
+      tl.kill();
+      io.disconnect();
+      document.removeEventListener("visibilitychange", onVisChange);
+    };
   }, []);
+
   return (
     <div ref={section} className="about-section">
       <span className="about-label mono" data-fade>{about.label}</span>
-      <span ref={cue} className="about-pose-cue mono">{about.poseCue}</span>
       <div className="about-portrait" aria-label={about.portraitAlt} role="img">
         <div ref={portrait} className="about-portrait-images">
           <img ref={up} src={sideImg} alt="" decoding="async" aria-hidden="true" />
