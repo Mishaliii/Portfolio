@@ -20,7 +20,7 @@ import { PageWorks } from "./PageWorks";
 import { PageJourney } from "./PageJourney";
 import { PageConnect } from "./PageConnect";
 
-const INV = new Set(["connect"]);
+const INV = new Set<string>();
 const StableHero = memo(PageHero);
 const StableAbout = memo(PageAbout);
 const StableExpertise = memo(PageExpertise);
@@ -315,14 +315,15 @@ export function Site() {
     }
   }, []);
   const journeyOn = !paged || cur === 4;
+  const connectOn = !paged || cur === 5;
   const P = useMemo(() => [
     <StableHero go={goId} />,
     <StableAbout go={goId} />,
     <StableExpertise goProject={goProject} />,
     <StableWorks sub={sub} paged={!!paged} />,
     <StableJourney active={journeyOn} />,
-    <StableConnect copyEmail={copyEmail} go={goId} />,
-  ], [goId, goProject, sub, paged, journeyOn, copyEmail]);
+    <StableConnect active={connectOn} copyEmail={copyEmail} go={goId} />,
+  ], [goId, goProject, sub, paged, journeyOn, connectOn, copyEmail]);
 
   return (
     <div className={`site-shell ${!booted ? "is-loading" : ""} ${revealing ? "is-revealing" : ""}`}>
