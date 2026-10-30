@@ -41,6 +41,20 @@ export function CaseStudy({ open, onClose }: { open: boolean; onClose: () => voi
       scrollArea.current.scrollTop = 0;
     }
 
+    const origHtmlOverflow = document.documentElement.style.overflow;
+    const origBodyOverflow = document.body.style.overflow;
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    document.documentElement.setAttribute("data-modal-open", "true");
+
+    const stopScroll = (e: Event) => {
+      e.stopPropagation();
+    };
+    el.addEventListener("wheel", stopScroll, { passive: false });
+    el.addEventListener("touchmove", stopScroll, { passive: false });
+    bd.addEventListener("wheel", stopScroll, { passive: false });
+    bd.addEventListener("touchmove", stopScroll, { passive: false });
+
     gsap.fromTo(bd, { opacity: 0 }, { opacity: 1, duration: 0.3, ease: "linear" });
     gsap.fromTo(el, { xPercent: 100 }, { xPercent: 0, duration: 0.42, ease: "power3.out" });
 
@@ -83,6 +97,13 @@ export function CaseStudy({ open, onClose }: { open: boolean; onClose: () => voi
     window.addEventListener("keydown", key, true);
     return () => {
       sectionObserver.disconnect();
+      document.documentElement.style.overflow = origHtmlOverflow;
+      document.body.style.overflow = origBodyOverflow;
+      document.documentElement.removeAttribute("data-modal-open");
+      el.removeEventListener("wheel", stopScroll);
+      el.removeEventListener("touchmove", stopScroll);
+      bd.removeEventListener("wheel", stopScroll);
+      bd.removeEventListener("touchmove", stopScroll);
       window.removeEventListener("keydown", key, true);
       prev?.focus({ preventScroll: true });
     };

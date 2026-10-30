@@ -237,6 +237,7 @@ export function Site() {
     // (a new flick during a decaying tail); each armed gesture can fire exactly once.
     let lastEvt = 0, lastFire = 0, prevA = 0, armed = true;
     const onWheel = (e: WheelEvent) => {
+      if (document.querySelector('[role="dialog"]') || document.documentElement.hasAttribute("data-modal-open")) return;
       const t = performance.now(), a = Math.abs(e.deltaY);
       if (t - lastEvt > 250) armed = true;
       else if (a > prevA * 1.8 && a > 25 && t - lastFire > 450) armed = true;
@@ -252,7 +253,7 @@ export function Site() {
       onUp: () => fire(1), onDown: () => fire(-1),
     });
     function fire(d: 1 | -1) {
-      if (pal || busy.current || !armed) return;
+      if (pal || busy.current || !armed || document.querySelector('[role="dialog"]') || document.documentElement.hasAttribute("data-modal-open")) return;
       armed = false; lastFire = performance.now(); step(d);
     }
     return () => { obs.kill(); window.removeEventListener("wheel", onWheel, { capture: true }); };
@@ -279,6 +280,7 @@ export function Site() {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); setPal((p) => !p); return; }
       if (pal || !booted) return;
       if ((e.target as HTMLElement)?.tagName === "INPUT") return;
+      if (document.querySelector('[role="dialog"]') || document.documentElement.hasAttribute("data-modal-open")) return;
       if (/^[1-6]$/.test(e.key)) go(+e.key - 1);
       else if (paged && (e.key === "ArrowDown" || e.key === "PageDown" || e.key === "j" || (e.key === " " && (e.target as HTMLElement)?.tagName !== "BUTTON"))) { e.preventDefault(); step(1); }
       else if (paged && (e.key === "ArrowUp" || e.key === "PageUp" || e.key === "k")) { e.preventDefault(); step(-1); }
