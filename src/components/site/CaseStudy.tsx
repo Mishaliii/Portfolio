@@ -201,11 +201,23 @@ export function CaseStudy({
                 {/* Case with single shot */}
                 {sec.shot && ddssImages[sec.shot] ? (
                   <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.15fr] gap-6 items-start">
-                    {sec.text && (
-                      <p className="text-[16px] sm:text-[17px] leading-relaxed text-[#0B0B0B]">
-                        {sec.text}
-                      </p>
-                    )}
+                    <div>
+                      {sec.text && (
+                        <p className="text-[16px] sm:text-[17px] leading-relaxed text-[#0B0B0B] mb-4">
+                          {sec.text}
+                        </p>
+                      )}
+                      {sec.points && sec.points.length > 0 && (
+                        <ul className="space-y-2.5">
+                          {sec.points.map((pt) => (
+                            <li key={pt} className="flex gap-3 text-[15px] text-[#0B0B0B]">
+                              <span className="mono text-[#1F5A3A] shrink-0">•</span>
+                              <span>{pt}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
                     <figure className="rounded-[10px] border border-[#0B0B0B]/15 overflow-hidden bg-[#0B0B0B] p-2 shadow-sm">
                       <img
                         src={ddssImages[sec.shot]}
@@ -228,6 +240,41 @@ export function CaseStudy({
                       </p>
                     )}
                   </>
+                )}
+
+                {/* Clinical workflow screens grid */}
+                {sec.screens && sec.screens.length > 0 && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-5">
+                    {sec.screens.map((item, idx) => (
+                      <figure
+                        key={item.shot}
+                        className="rounded-[10px] border border-[#0B0B0B]/15 overflow-hidden bg-[#0B0B0B] p-2.5 shadow-sm flex flex-col justify-between"
+                      >
+                        <div className="overflow-hidden rounded bg-[#161616] flex items-center justify-center">
+                          {ddssImages[item.shot] ? (
+                            <img
+                              src={ddssImages[item.shot]}
+                              alt={`${item.label}: ${item.desc}`}
+                              className="w-full h-auto object-contain max-h-[200px]"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="h-[140px] flex items-center justify-center text-xs text-white/50 mono">
+                              {item.label}
+                            </div>
+                          )}
+                        </div>
+                        <figcaption className="mt-2.5 px-1 pb-1">
+                          <span className="mono text-[11px] font-semibold text-[#E8DED0] uppercase tracking-wider block">
+                            {String(idx + 1).padStart(2, "0")} · {item.label}
+                          </span>
+                          <p className="text-[13px] text-[#E8DED0]/75 mt-1 leading-snug">
+                            {item.desc}
+                          </p>
+                        </figcaption>
+                      </figure>
+                    ))}
+                  </div>
                 )}
 
                 {/* Multiple shots grid if present */}
@@ -265,8 +312,8 @@ export function CaseStudy({
                   </div>
                 )}
 
-                {/* Bullet points */}
-                {sec.points && sec.points.length > 0 && (
+                {/* Bullet points (when not already rendered beside a single shot) */}
+                {(!sec.shot || !ddssImages[sec.shot]) && sec.points && sec.points.length > 0 && (
                   <ul className="space-y-2.5 max-w-[58ch] mt-4">
                     {sec.points.map((pt) => (
                       <li key={pt} className="flex gap-3 text-[15px] text-[#0B0B0B]">

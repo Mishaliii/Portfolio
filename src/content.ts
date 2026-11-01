@@ -208,6 +208,8 @@ export type CaseStudyData = {
   shots?: { k: string; t: string; d: string }[];
 };
 
+export type CaseStudyScreen = { shot: string; label: string; desc: string };
+
 export type CaseStudySection = {
   id: string;
   num: string;
@@ -218,6 +220,7 @@ export type CaseStudySection = {
   shotCaption?: string;
   methods?: { name: string; desc: string }[];
   points?: string[];
+  screens?: CaseStudyScreen[];
 };
 
 export const works = {
@@ -385,52 +388,94 @@ export const works = {
     galleryCount: "of",
     nav: [
       { id: "what-it-does", label: "What it does" },
-      { id: "how-it-works", label: "How it works" },
-      { id: "what-i-built", label: "What I built" },
-      { id: "retrieval-methods", label: "Retrieval methods compared" },
-      { id: "limits", label: "Limits" },
+      { id: "workflow-screens", label: "Workflow screens" },
+      { id: "data-preprocessing", label: "Data & preprocessing" },
+      { id: "embedding-search", label: "Embedding & search" },
+      { id: "backend-api", label: "Backend & API" },
+      { id: "retrieval-methods", label: "Retrieval methods" },
+      { id: "limits-next-steps", label: "Limits & next steps" },
     ],
     sections: [
       {
         id: "what-it-does",
         num: "1",
         title: "What it does",
-        text: "A doctor uploads a lesion photo and gets ranked similar past cases with the evidence. It supports a decision, it does not make one.",
-      },
-      {
-        id: "how-it-works",
-        num: "2",
-        title: "How it works",
-        text: "Preprocessing, DINOv2 768-d embedding, cosine similarity, FAISS index, ranked cases shown as similarity bars.",
-        shot: "ddss-8",
-        shotCaption: "Ranked cases shown as similarity bars.",
-      },
-      {
-        id: "what-i-built",
-        num: "3",
-        title: "What I built",
-        text: "The backend (Django, PostgreSQL), patient and case history, GASI severity calculator, treatment plan and prescription saving, dashboard with disease and severity charts, login. Built at Bluecast Technologies.",
-        shots: ["ddss-10", "ddss-2"],
-        shotCaption: "Treatment plan and clinician dashboard.",
-      },
-      {
-        id: "retrieval-methods",
-        num: "4",
-        title: "Retrieval methods compared",
-        methods: [
-          { name: "MV-Mean", desc: "Averages feature vectors across multiple views of the same lesion into one centroid." },
-          { name: "MV-CLS", desc: "Pools CLS token embeddings across multiple views to preserve visual transformer attention." },
-          { name: "KNN", desc: "Nearest-neighbour lookup over indexed reference cases using cosine similarity." },
+        text: "A doctor uploads a lesion photo and gets ranked similar past cases with the evidence. It supports a clinical decision, it does not make one.",
+        points: [
+          "Candidate conditions are ranked with visual similarity evidence.",
+          "Clinician stays in control from intake to treatment plan confirmation.",
         ],
       },
       {
-        id: "limits",
-        num: "5",
-        title: "Limits",
+        id: "workflow-screens",
+        num: "2",
+        title: "The clinical workflow screens",
+        text: "Six key product screens from patient intake to treatment planning:",
+        screens: [
+          { shot: "ddss-2", label: "Dashboard", desc: "Daily patient intake, visit logs, and disease distribution at a glance." },
+          { shot: "ddss-5", label: "Patient history", desc: "Chronological visit records with past diagnoses and case notes." },
+          { shot: "ddss-6", label: "Photo upload", desc: "High-resolution lesion image upload with automated quality checks." },
+          { shot: "ddss-8", label: "Differentials", desc: "Similar conditions ranked with confidence bars for clinician confirmation." },
+          { shot: "ddss-9", label: "GASI severity", desc: "Region-based severity calculator mapping scores to Mild, Moderate, or Severe." },
+          { shot: "ddss-10", label: "Treatment plan", desc: "Pre-filled medications and dosages that the doctor edits, approves, and saves." },
+        ],
+      },
+      {
+        id: "data-preprocessing",
+        num: "3",
+        title: "Data and preprocessing",
+        text: "The reference database is built on the published SD-198 benchmark dataset covering 198 skin conditions.",
         points: [
-          "It retrieves, it does not classify.",
-          "It depends on the reference image set.",
-          "It needs clinical review.",
+          "Reference set: SD-198 is partitioned into reference training cases and a held-out evaluation test split.",
+          "Image preparation: Photos are preprocessed using OpenCV and Pillow, resized to 224×224 pixels, and normalised.",
+          "Patch division: The 224×224 image is divided into a 14×14 grid of 16×16 patches for Vision Transformer attention.",
+        ],
+      },
+      {
+        id: "embedding-search",
+        num: "4",
+        title: "Embedding and search",
+        text: "Query images are matched in visual vector space rather than passing through a hard single-label classifier.",
+        points: [
+          "DINOv2 ViT-B model: Vision Transformer Base backbone extracts patch tokens without supervised label bias.",
+          "768-d embedding: The [CLS] token condenses lesion color and texture into a single 768-dimensional dense vector.",
+          "Similarity metric: Cosine similarity compares the query vector against indexed reference embeddings.",
+          "FAISS index: Nearest-neighbour vector search retrieves closest reference matches with low latency.",
+          "Ranked results: Returns top-3 candidate cases with similarity bars mapped to High, Moderate, and Low confidence tiers.",
+        ],
+        shot: "ddss-8",
+        shotCaption: "Ranked differential candidates with similarity confidence bars.",
+      },
+      {
+        id: "backend-api",
+        num: "5",
+        title: "Backend and API",
+        text: "The architecture separates clinical record management from low-latency visual inference services.",
+        points: [
+          "Framework: Django powers the clinical portal, patient history, and severity grading; FastAPI serves vector retrieval.",
+          "Database: PostgreSQL stores patient records, case history, diagnoses, and saved prescriptions.",
+          "Authentication: Role-based doctor login provides secure access to the private clinical workspace.",
+        ],
+      },
+      {
+        id: "retrieval-methods",
+        num: "6",
+        title: "Retrieval methods compared",
+        methods: [
+          { name: "MV-Mean", desc: "Averages feature vectors across multiple views of the same lesion into one centroid. Dropped because diverse stages blurred into unrepresentative averages." },
+          { name: "MV-CLS", desc: "Pools CLS token embeddings across multiple views to preserve visual transformer attention." },
+          { name: "kNN (FAISS)", desc: "Nearest-neighbour lookup over indexed individual training cases using cosine similarity, preserving intra-condition variety." },
+        ],
+      },
+      {
+        id: "limits-next-steps",
+        num: "7",
+        title: "Limits and next steps",
+        points: [
+          "Decision support only: The system retrieves visual evidence; it does not replace a clinician's diagnosis.",
+          "Reference set dependency: Retrieval fidelity is bounded by the coverage and distribution of indexed conditions.",
+          "Evaluation plan: Measure top-k recall (Top-1, Top-3, Top-5) and diagnostic agreement on the held-out SD-198 test split across skin condition categories.",
+          "Clinical review: All treatment plans and confirmed diagnoses require sign-off by a qualified dermatologist.",
         ],
       },
     ] as CaseStudySection[],
