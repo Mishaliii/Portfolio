@@ -5,7 +5,7 @@ import { Liquid } from "./Liquid";
 import { subscribe, onPage } from "@/lib/motion";
 import { linkedSkills, projectsForSkill, skillState } from "@/lib/expertise";
 
-export function PageExpertise({ goProject }: { goProject: (id: string) => void }) {
+export function PageExpertise({ goProject, active = true }: { goProject: (id: string) => void; active?: boolean }) {
   const box = useRef<HTMLDivElement>(null), cv = useRef<HTMLCanvasElement>(null);
   const category = useRef(-1), focus = useRef(-1), pinned = useRef(-1);
   const [selected, setSelected] = useState(-1), [activeCluster, setActiveCluster] = useState(-1);
@@ -25,7 +25,7 @@ export function PageExpertise({ goProject }: { goProject: (id: string) => void }
 
     const size = () => {
       const r = b.getBoundingClientRect(); W = r.width; H = r.height;
-      const d = Math.min(window.innerWidth < 768 ? 1.5 : 2, window.devicePixelRatio || 1);
+      const d = Math.min(1.5, window.devicePixelRatio || 1);
       c.width = Math.round(W*d); c.height = Math.round(H*d); ctx.setTransform(d,0,0,d,0,0);
       const css = getComputedStyle(b), token = (s: string) => css.getPropertyValue(s).trim();
       ink=token("--ink"); muted=token("--muted"); green=token("--accent-green"); gold=token("--gold"); paper=token("--cream"); grid=token("--map-grid"); circle=token("--map-circle"); circleLine=token("--map-circle-line"); scanColor=token("--map-scan");
@@ -46,8 +46,8 @@ export function PageExpertise({ goProject }: { goProject: (id: string) => void }
     let lastCluster=-1;
     const unsub=subscribe((t)=>{
       const dt=Math.min(32,t-prev)/1000;prev=t;
-      const active=onPage(b)&&b.getBoundingClientRect().bottom>0&&b.getBoundingClientRect().top<window.innerHeight;
-      if(!active){wasActive=false;return;}
+      if (!active || !onPage(b)) { wasActive = false; return; }
+
       if(!wasActive){entry=0;wasActive=true;} entry+=dt;elapsed+=dt;
       const idle=t-lastInput>4000;
       const tour=!reduce.matches&&idle&&focus.current<0&&category.current<0?Math.floor((t-lastInput-4000)/4600)%4:-1;
@@ -94,7 +94,7 @@ export function PageExpertise({ goProject }: { goProject: (id: string) => void }
       for(let i=0;i<4;i++){const center=centers[i],r=Math.min(W,H)*.17;const name=expertise.clusters[i];const x=Math.max(8,center[0]*W-r),y=center[1]*H-r-10;ctx.fillStyle=paper;ctx.fillRect(x-4,y-12,ctx.measureText(name).width+8,18);ctx.fillStyle=gold;ctx.fillText(name,x,y);}
     });
     return()=>{unsub();ro.disconnect();b.removeEventListener("pointermove",move);b.removeEventListener("pointerleave",leave);b.removeEventListener("pointerup",click);window.removeEventListener("keydown",key);window.removeEventListener("wheel",input);window.removeEventListener("pointerdown",input);window.removeEventListener("pointermove",input);};
-  },[]);
+  },[active]);
 
   const skill = selected >= 0 ? expertise.skills[selected] : null;
   const projects = skill ? projectsForSkill(skill.name) : [];

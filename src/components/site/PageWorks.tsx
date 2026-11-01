@@ -911,7 +911,7 @@ function CareerLensCard({ p, active }: { p: Project; active: boolean }) {
   );
 }
 
-export function PageWorks({ sub, paged }: { sub: number; paged: boolean }) {
+export function PageWorks({ sub, paged, active = true }: { sub: number; paged: boolean; active?: boolean }) {
   const stack = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -971,11 +971,11 @@ export function PageWorks({ sub, paged }: { sub: number; paged: boolean }) {
             inert={paged && i !== sub ? true : undefined}
           >
             {p.id === "ddss" ? (
-              <DDSSCard p={p} active={!paged || i === sub} />
+              <DDSSCard p={p} active={active && (!paged || i === sub)} />
             ) : p.id === "role" ? (
-              <RoleCard p={p} active={!paged || i === sub} />
+              <RoleCard p={p} active={active && (!paged || i === sub)} />
             ) : (
-              <CareerLensCard p={p} active={!paged || i === sub} />
+              <CareerLensCard p={p} active={active && (!paged || i === sub)} />
             )}
           </div>
         ))}

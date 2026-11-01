@@ -320,13 +320,10 @@ html.paged .about-section {
   aspect-ratio: 2 / 3;
   z-index: 2;
   pointer-events: none;
-  mask-image: var(--about-portrait-fade);
-  -webkit-mask-image: var(--about-portrait-fade);
 }
 .about-portrait-images {
   position: absolute;
   inset: 0;
-  will-change: transform;
 }
 .about-portrait img {
   position: absolute;
@@ -335,10 +332,18 @@ html.paged .about-section {
   height: 100%;
   object-fit: contain;
   object-position: bottom left;
-  will-change: opacity;
 }
 .about-portrait img + img {
   opacity: 0;
+}
+.about-portrait-fade {
+  position: absolute;
+  inset-x: 0;
+  bottom: 0;
+  height: 24%;
+  background: linear-gradient(to top, var(--cream) 0%, transparent 100%);
+  pointer-events: none;
+  z-index: 3;
 }
 
 /* Left content container: spans from var(--pad) to 52%, sharing single left edge */

@@ -298,6 +298,24 @@ export function Site() {
     return () => { window.removeEventListener("keydown", k); window.removeEventListener("popstate", pop); };
   }, [go, step, pal, paged, booted]);
 
+  // Dev-only frame monitor: warns when a frame takes over 100ms
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    let lastTime = performance.now();
+    let frameId: number;
+    const checkFrame = (now: number) => {
+      const dt = now - lastTime;
+      if (dt > 100 && lastTime > 0) {
+        const activePage = pages[curRef.current]?.id ?? "unknown";
+        console.warn(`[PERF DEV] Frame took ${Math.round(dt)}ms on active page: "${activePage}"`);
+      }
+      lastTime = now;
+      frameId = requestAnimationFrame(checkFrame);
+    };
+    frameId = requestAnimationFrame(checkFrame);
+    return () => cancelAnimationFrame(frameId);
+  }, []);
+
   const run = (it: (typeof palette)[number]) => {
     if (it.kind === "page") go(idx(it.target));
     else if (it.kind === "cv") { const a = document.createElement("a"); a.href = site.cv; a.download = ""; a.click(); }
@@ -323,15 +341,18 @@ export function Site() {
       if (target) lenis.current ? lenis.current.scrollTo(target) : target.scrollIntoView({ behavior: "smooth" });
     }
   }, []);
+  const aboutOn = !paged || cur === 1;
+  const expertiseOn = !paged || cur === 2;
+  const worksOn = !paged || cur === 3;
   const journeyOn = !paged || cur === 4;
   const P = useMemo(() => [
     <StableHero go={goId} />,
-    <StableAbout go={goId} />,
-    <StableExpertise goProject={goProject} />,
-    <StableWorks sub={sub} paged={!!paged} />,
+    <StableAbout go={goId} active={aboutOn} />,
+    <StableExpertise goProject={goProject} active={expertiseOn} />,
+    <StableWorks sub={sub} paged={!!paged} active={worksOn} />,
     <StableJourney active={journeyOn} />,
     <StableConnect copyEmail={copyEmail} go={goId} />,
-  ], [goId, goProject, sub, paged, journeyOn, copyEmail]);
+  ], [goId, goProject, sub, paged, aboutOn, expertiseOn, worksOn, journeyOn, copyEmail]);
 
   return (
     <div className={`site-shell ${!booted ? "is-loading" : ""} ${revealing ? "is-revealing" : ""}`}>

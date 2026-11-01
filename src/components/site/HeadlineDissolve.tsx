@@ -257,14 +257,22 @@ export function HeadlineDissolve({
         }
       }
 
-      // In erase mode: we must continuously render the canvas text whenever assembled
+      // In erase mode: render text on canvas; when idle (no dots, specks, sweep, pointer), sleep ticker
       const activeErase = erase && assembled && textLayout && pointerEnabled;
+      const isIdle = !dots.length && !specks.length && sweep < 0 && !inside;
 
-      if (!activeErase && !dots.length && !specks.length && sweep < 0) {
+      if (!activeErase && isIdle) {
         if (drawn) {
           ctx.clearRect(0, 0, W, H);
           drawn = false;
         }
+        sleep();
+        schedule();
+        return;
+      }
+
+      if (activeErase && isIdle && drawn) {
+        // Text is already drawn and pristine on canvas; sleep until next interaction or sweep
         sleep();
         schedule();
         return;

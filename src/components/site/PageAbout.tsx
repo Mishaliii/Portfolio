@@ -8,11 +8,12 @@ import { onPage } from "@/lib/motion";
 import sideImg from "@/assets/portrait-side-composited.webp";
 import frontImg from "@/assets/portrait-front-composited.webp";
 
-export function PageAbout({ go }: { go: (id: string) => void }) {
+export function PageAbout({ go, active = true }: { go: (id: string) => void; active?: boolean }) {
   const section = useRef<HTMLDivElement>(null);
   const up = useRef<HTMLImageElement>(null);
   const front = useRef<HTMLImageElement>(null);
   const portrait = useRef<HTMLDivElement>(null);
+  const tlRef = useRef<gsap.core.Timeline | null>(null);
 
   useEffect(() => {
     const root = section.current, a = up.current, b = front.current;
@@ -31,14 +32,15 @@ export function PageAbout({ go }: { go: (id: string) => void }) {
 
     // Image A holds 4s, fades to B over 1.2s, holds 4s, fades to A over 1.2s, loops
     const tl = gsap.timeline({ repeat: -1 });
+    tlRef.current = tl;
     tl.to(b, { opacity: 1, duration: 1.2, ease: "power2.inOut" }, "+=4")
       .to(a, { opacity: 0, duration: 1.2, ease: "power2.inOut" }, "<")
       .to(a, { opacity: 1, duration: 1.2, ease: "power2.inOut" }, "+=4")
       .to(b, { opacity: 0, duration: 1.2, ease: "power2.inOut" }, "<");
 
     const syncPlayback = () => {
-      const active = onPage(root) && !document.hidden;
-      if (active) {
+      const isPlayable = active && onPage(root) && !document.hidden;
+      if (isPlayable) {
         if (tl.paused()) tl.play();
       } else {
         if (!tl.paused()) tl.pause();
@@ -46,7 +48,7 @@ export function PageAbout({ go }: { go: (id: string) => void }) {
     };
 
     const io = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting && onPage(root) && !document.hidden) {
+      if (entry.isIntersecting && active && onPage(root) && !document.hidden) {
         tl.play();
       } else {
         tl.pause();
@@ -55,17 +57,34 @@ export function PageAbout({ go }: { go: (id: string) => void }) {
     io.observe(root);
 
     const onVisChange = () => syncPlayback();
-    document.addEventListener("visibilitychange", onVisChange);
+    const onPause = () => tl.pause();
+    const onResume = () => syncPlayback();
 
-    // Initial check
+    document.addEventListener("visibilitychange", onVisChange);
+    window.addEventListener("page-motion-pause", onPause);
+    window.addEventListener("page-motion-resume", onResume);
+
     syncPlayback();
 
     return () => {
       tl.kill();
+      tlRef.current = null;
       io.disconnect();
       document.removeEventListener("visibilitychange", onVisChange);
+      window.removeEventListener("page-motion-pause", onPause);
+      window.removeEventListener("page-motion-resume", onResume);
     };
-  }, []);
+  }, [active]);
+
+  useEffect(() => {
+    const tl = tlRef.current;
+    if (!tl) return;
+    if (active && !document.hidden && onPage(section.current)) {
+      if (tl.paused()) tl.play();
+    } else {
+      if (!tl.paused()) tl.pause();
+    }
+  }, [active]);
 
   return (
     <div ref={section} className="about-section">
@@ -74,6 +93,7 @@ export function PageAbout({ go }: { go: (id: string) => void }) {
           <img ref={up} src={sideImg} alt="" decoding="async" aria-hidden="true" />
           <img ref={front} src={frontImg} alt="" decoding="async" aria-hidden="true" />
         </div>
+        <div className="about-portrait-fade" aria-hidden="true" />
       </div>
       <div className="about-content">
         <div className="about-header">
