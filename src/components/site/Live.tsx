@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import type { GreetingItem } from "@/content";
 import { coarse } from "@/lib/motion";
 import { useCycle } from "@/lib/hooks";
 
@@ -93,13 +94,23 @@ export function RollYear({ year, className, style }: { year: string; className?:
   );
 }
 
-/** Rotating greeting with a mask rise. */
-export function Greeting({ lines }: { lines: string[] }) {
+/** Rotating greeting with a mask rise. Fixed height container so nothing jumps. */
+export function Greeting({ lines }: { lines: GreetingItem[] }) {
   const i = useCycle(lines.length, 2600);
+  const cur = lines[i % lines.length];
   return (
-    <span className="mono inline-flex overflow-hidden" aria-label={lines.join(" / ")}>
-      <span key={i} className="greet-in inline-block" aria-hidden>
-        {lines[i]}
+    <span
+      className="greeting-container mono inline-flex items-center overflow-hidden"
+      aria-label={lines.map((l) => l.text).join(" / ")}
+    >
+      <span
+        key={i}
+        className="greeting-text greet-in inline-block"
+        lang={cur.lang}
+        dir={cur.dir || "ltr"}
+        aria-hidden
+      >
+        {cur.text}
       </span>
     </span>
   );

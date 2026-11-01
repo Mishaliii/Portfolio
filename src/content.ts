@@ -88,15 +88,13 @@ export const hero = {
 };
 
 export const about = {
-  label: "01 / ABOUT",
   name: "MISHAL",
   period: ".",
   fullName: "MUHAMMED MISHAL",
   role: " · AI / ML ENGINEER · KOLLAM, KERALA",
-  bio: "I build machine learning and computer vision systems and serve them through tested Python APIs.",
+  bio: "I'm an AI/ML engineer from Kollam. I build machine learning and computer vision systems and serve them through tested Python APIs. At Bluecast Technologies I built a dermatology decision-support system that finds similar cases with DINOv2 and FAISS.",
   portraitAlt: "Portrait of Muhammed Mishal",
   seeWorks: "See works",
-  poseCue: "LOOKS UP: LOOKS AT YOU",
   facts: [
     { label: "EDUCATION", bold: "MCA · CGPA 8.33", text: " · TKM College of Engineering, Kollam · 2024-26", secondary: "BCA · Musaliar College of Arts and Science · 2021-24" },
     { label: "EXPERIENCE", bold: "AI / ML Intern, DDSS", text: " · Bluecast Technologies · Jan-Apr 2026", secondary: "Built a dermatology decision-support system using DINOv2 case retrieval" },
@@ -440,11 +438,22 @@ export const journey = {
   ],
 };
 
+export type GreetingItem = {
+  text: string;
+  lang: string;
+  dir?: "ltr" | "rtl";
+};
+
 export const connect = {
   heading: ["LET'S BUILD", "SOMETHING."],
   sub: "Backend, ML or retrieval work. I reply within two days.",
   mailto: "Write an email",
-  greetings: ["Hello", "Namaskaram", "Marhaba", "Namaste"],
+  greetings: [
+    { text: "Hello", lang: "en" },
+    { text: "നമസ്കാരം", lang: "ml" },
+    { text: "नमस्ते", lang: "hi" },
+    { text: "مرحباً", lang: "ar", dir: "rtl" as const },
+  ],
   namePrefix: "· ",
 };
 

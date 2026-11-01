@@ -1,7 +1,6 @@
 import { useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { about, site, ui } from "@/content";
-import { Button } from "@/components/ui/button";
 import { ArrowDownToLine, ArrowUpRight } from "lucide-react";
 import { SplitReveal } from "./Split";
 import { HeadlineDissolve } from "./HeadlineDissolve";
@@ -70,30 +69,76 @@ export function PageAbout({ go }: { go: (id: string) => void }) {
 
   return (
     <div ref={section} className="about-section">
-      <span className="about-label mono" data-fade>{about.label}</span>
       <div className="about-portrait" aria-label={about.portraitAlt} role="img">
         <div ref={portrait} className="about-portrait-images">
           <img ref={up} src={sideImg} alt="" decoding="async" aria-hidden="true" />
           <img ref={front} src={frontImg} alt="" decoding="async" aria-hidden="true" />
         </div>
       </div>
-      <HeadlineDissolve className="about-name-dissolve">
-        <h2 className="about-name display"><SplitReveal text={about.name} /><span className="accent"><SplitReveal text={about.period} /></span></h2>
-      </HeadlineDissolve>
-      <div className="about-copy">
-        <p className="about-role mono"><strong>{about.fullName.split(" ").map((word, i) => <span key={word}><span data-about-word>{word}</span>{i === 0 ? " " : ""}</span>)}</strong>{about.role.split(" ").map((word, i) => <span key={i}><span data-about-word>{word}</span>{" "}</span>)}</p>
-        <p className="about-bio">{about.bio.split(" ").map((word, i) => <span key={i}><span data-about-word>{word}</span>{" "}</span>)}</p>
-        <div className="about-actions" data-fade>
-          <Button asChild variant="ghost" className="about-action"><a href={site.cv} download>{ui.downloadCv}<ArrowDownToLine size={15} /></a></Button>
-          <Button asChild variant="ghost" className="about-action"><a href="#works" onClick={(e) => { e.preventDefault(); go("works"); }}>{about.seeWorks}<ArrowUpRight size={15} /></a></Button>
+      <div className="about-content">
+        <div className="about-header">
+          <HeadlineDissolve className="about-name-dissolve">
+            <h2 className="about-name display">
+              <SplitReveal text={about.name} />
+              <span className="accent"><SplitReveal text={about.period} /></span>
+            </h2>
+          </HeadlineDissolve>
+          <div className="about-copy">
+            <p className="about-role mono">
+              <strong>
+                {about.fullName.split(" ").map((word, i) => (
+                  <span key={word}>
+                    <span data-about-word>{word}</span>
+                    {i === 0 ? " " : ""}
+                  </span>
+                ))}
+              </strong>
+              {about.role.split(" ").map((word, i) => (
+                <span key={i}>
+                  <span data-about-word>{word}</span>{" "}
+                </span>
+              ))}
+            </p>
+            <p className="about-bio">
+              {about.bio.split(" ").map((word, i) => (
+                <span key={i}>
+                  <span data-about-word>{word}</span>{" "}
+                </span>
+              ))}
+            </p>
+            <div className="about-actions" data-fade>
+              <a href={site.cv} download className="btn btn-solid about-btn">
+                <span>{ui.downloadCv}</span>
+                <ArrowDownToLine size={15} />
+              </a>
+              <a
+                href="#works"
+                onClick={(e) => {
+                  e.preventDefault();
+                  go("works");
+                }}
+                className="btn about-btn"
+              >
+                <span>{about.seeWorks}</span>
+                <ArrowUpRight size={15} />
+              </a>
+            </div>
+          </div>
         </div>
+        <dl className="about-facts">
+          {about.facts.map((fact) => (
+            <div className="about-fact" key={fact.label} data-about-fact>
+              <dt className="mono">{fact.label}</dt>
+              <dd>
+                {"live" in fact && fact.live && <span className="live-dot" aria-hidden="true" />}
+                {"bold" in fact && <strong>{fact.bold}</strong>}
+                {fact.text}
+                {"secondary" in fact && <span className="about-fact-secondary muted">{fact.secondary}</span>}
+              </dd>
+            </div>
+          ))}
+        </dl>
       </div>
-      <dl className="about-facts">
-        {about.facts.map((fact) => <div className="about-fact" key={fact.label} data-about-fact>
-          <dt className="mono">{fact.label}</dt>
-          <dd>{"live" in fact && fact.live && <span className="live-dot" aria-hidden="true" />}{"bold" in fact && <strong>{fact.bold}</strong>}{fact.text}{"secondary" in fact && <span className="about-fact-secondary muted">{fact.secondary}</span>}</dd>
-        </div>)}
-      </dl>
     </div>
   );
 }

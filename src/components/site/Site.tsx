@@ -82,6 +82,7 @@ function Palette({ open, onClose, run }: { open: boolean; onClose: () => void; r
 export function Site() {
   const paged = useMode();
   const [cur, setCur] = useState(0);
+  const [perfMode, setPerfMode] = useState(false);
   const [sub, setSub] = useState(0);
   const [booted, setBooted] = useState(false);
   const [showIntro, setShowIntro] = useState(true);
@@ -110,6 +111,7 @@ export function Site() {
     void boot();
     if (m === "none") { Object.assign(stage, { zoom: 1, light: 1, radius: 0.22, controls: true }); setBooted(true); setShowIntro(false); }
     const h = location.hash.slice(1); if (h) { setCur(idx(h)); curRef.current = idx(h); }
+    if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("perf") === "1") setPerfMode(true);
   }, []);
 
   useLayoutEffect(() => {
@@ -329,7 +331,7 @@ export function Site() {
   return (
     <div className={`site-shell ${!booted ? "is-loading" : ""} ${revealing ? "is-revealing" : ""}`}>
       <Cursor />
-      <PerformancePanel />
+      {perfMode && <PerformancePanel />}
       <SceneStage />
       {showIntro && !booted && mode !== "none" && <Intro mode={mode} onReveal={revealIntro} onDone={finishIntro} />}
 
