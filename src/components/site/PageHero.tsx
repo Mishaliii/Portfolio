@@ -26,7 +26,7 @@ export function PageHero({ go }: { go: (id: string) => void }) {
       <div className="hero-shade" aria-hidden />
       <span role="img" aria-label={hero.scene.alt} className="sr-only" />
       <div className="hero-top">
-        <HeadlineDissolve auto wait bg="var(--ink)" ink="var(--cream)" className="w-fit max-w-full">
+        <HeadlineDissolve erase auto wait className="w-fit max-w-full">
         <h1 className="hero-title display" aria-label={`${hero.line1} ${hero.line2}.`}>
           <span className="hero-line" aria-hidden><span data-hline>{hero.line1}</span></span>
           <span className="hero-line" aria-hidden><span data-hline>{hero.line2}<span data-hero-period className="hero-dot" /></span></span>
