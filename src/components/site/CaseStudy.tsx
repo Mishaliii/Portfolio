@@ -1,12 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { gsap } from "gsap";
-import { works } from "@/content";
+import { works, type CaseStudyData } from "@/content";
 import { ddssImages } from "./ScreenshotGallery";
 
-const c = works.caseStudy;
-
-export function CaseStudy({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function CaseStudy({
+  open,
+  onClose,
+  data,
+}: {
+  open: boolean;
+  onClose: () => void;
+  data?: CaseStudyData;
+}) {
+  const c = data ?? works.caseStudy;
   const box = useRef<HTMLElement>(null);
   const backdrop = useRef<HTMLDivElement>(null);
   const scrollArea = useRef<HTMLDivElement>(null);
@@ -32,6 +39,7 @@ export function CaseStudy({ open, onClose }: { open: boolean; onClose: () => voi
 
   useEffect(() => {
     if (!open) return;
+    setActiveSection(c.sections[0]?.id ?? "");
     const prev = document.activeElement as HTMLElement | null;
     const el = box.current;
     const bd = backdrop.current;
@@ -107,9 +115,11 @@ export function CaseStudy({ open, onClose }: { open: boolean; onClose: () => voi
       window.removeEventListener("keydown", key, true);
       prev?.focus({ preventScroll: true });
     };
-  }, [open, close]);
+  }, [open, close, c]);
 
   if (!open || typeof document === "undefined") return null;
+
+  const badgeText = ("badge" in c && c.badge) ? c.badge : "DEEP DIVE";
 
   return createPortal(
     <>
@@ -137,7 +147,9 @@ export function CaseStudy({ open, onClose }: { open: boolean; onClose: () => voi
             <span className="display text-[22px] tracking-tight text-[#0B0B0B]">
               {Array.isArray(c.title) ? c.title.join(" ") : c.title}
             </span>
-            <span className="mono text-[11px] text-[#6B645A]">DEEP DIVE</span>
+            <span className="mono text-[11px] text-[#6B645A]">
+              {badgeText}
+            </span>
           </div>
           <button
             ref={closeBtn}
@@ -186,64 +198,60 @@ export function CaseStudy({ open, onClose }: { open: boolean; onClose: () => voi
                   </h3>
                 </div>
 
-                {/* Section 1: What it does */}
-                {sec.id === "what-it-does" && sec.text && (
-                  <p className="text-[16px] sm:text-[17px] leading-relaxed text-[#0B0B0B] max-w-[58ch]">
-                    {sec.text}
-                  </p>
+                {/* Case with single shot */}
+                {sec.shot && ddssImages[sec.shot] ? (
+                  <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.15fr] gap-6 items-start">
+                    {sec.text && (
+                      <p className="text-[16px] sm:text-[17px] leading-relaxed text-[#0B0B0B]">
+                        {sec.text}
+                      </p>
+                    )}
+                    <figure className="rounded-[10px] border border-[#0B0B0B]/15 overflow-hidden bg-[#0B0B0B] p-2 shadow-sm">
+                      <img
+                        src={ddssImages[sec.shot]}
+                        alt={sec.shotCaption ?? sec.title}
+                        className="w-full h-auto object-contain rounded"
+                        loading="lazy"
+                      />
+                      {sec.shotCaption && (
+                        <figcaption className="mono text-[10px] text-[#E8DED0]/80 p-1.5">
+                          {sec.shotCaption}
+                        </figcaption>
+                      )}
+                    </figure>
+                  </div>
+                ) : (
+                  <>
+                    {sec.text && (
+                      <p className="text-[16px] sm:text-[17px] leading-relaxed text-[#0B0B0B] max-w-[60ch] mb-4">
+                        {sec.text}
+                      </p>
+                    )}
+                  </>
                 )}
 
-                {/* Section 2: How it works with screenshot ddss-8 beside text */}
-                {sec.id === "how-it-works" && (
-                  <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.15fr] gap-6 items-start">
-                    <p className="text-[16px] sm:text-[17px] leading-relaxed text-[#0B0B0B]">
-                      {sec.text}
-                    </p>
-                    {sec.shot && ddssImages[sec.shot] && (
-                      <figure className="rounded-[10px] border border-[#0B0B0B]/15 overflow-hidden bg-[#0B0B0B] p-2 shadow-sm">
+                {/* Multiple shots grid if present */}
+                {sec.shots && sec.shots.length > 0 && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                    {sec.shots.map((shotKey) => (
+                      <figure key={shotKey} className="rounded-[10px] border border-[#0B0B0B]/15 overflow-hidden bg-[#0B0B0B] p-2 shadow-sm">
                         <img
-                          src={ddssImages[sec.shot]}
-                          alt={sec.shotCaption ?? sec.title}
+                          src={ddssImages[shotKey]}
+                          alt={shotKey === "ddss-10" ? "Treatment plan screenshot" : "Dashboard screenshot"}
                           className="w-full h-auto object-contain rounded"
                           loading="lazy"
                         />
-                        {sec.shotCaption && (
-                          <figcaption className="mono text-[10px] text-[#E8DED0]/80 p-1.5">
-                            {sec.shotCaption}
-                          </figcaption>
-                        )}
+                        <figcaption className="mono text-[10px] text-[#E8DED0]/80 p-1.5">
+                          {shotKey === "ddss-10" ? "Treatment plan and prescription saving" : "Clinician dashboard"}
+                        </figcaption>
                       </figure>
-                    )}
+                    ))}
                   </div>
                 )}
 
-                {/* Section 3: What I built with ddss-10 and dashboard screenshot */}
-                {sec.id === "what-i-built" && (
-                  <div>
-                    <p className="text-[16px] sm:text-[17px] leading-relaxed text-[#0B0B0B] max-w-[60ch] mb-5">
-                      {sec.text}
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {sec.shots?.map((shotKey) => (
-                        <figure key={shotKey} className="rounded-[10px] border border-[#0B0B0B]/15 overflow-hidden bg-[#0B0B0B] p-2 shadow-sm">
-                          <img
-                            src={ddssImages[shotKey]}
-                            alt={shotKey === "ddss-10" ? "Treatment plan screenshot" : "Dashboard screenshot"}
-                            className="w-full h-auto object-contain rounded"
-                            loading="lazy"
-                          />
-                          <figcaption className="mono text-[10px] text-[#E8DED0]/80 p-1.5">
-                            {shotKey === "ddss-10" ? "Treatment plan and prescription saving" : "Clinician dashboard"}
-                          </figcaption>
-                        </figure>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Section 4: Retrieval methods compared */}
-                {sec.id === "retrieval-methods" && sec.methods && (
-                  <div className="space-y-3 max-w-[58ch]">
+                {/* Methods compared/listed */}
+                {sec.methods && sec.methods.length > 0 && (
+                  <div className="space-y-3 max-w-[58ch] mt-4">
                     {sec.methods.map((m) => (
                       <div key={m.name} className="p-3.5 rounded border border-[#0B0B0B]/15 bg-[rgba(11,11,11,0.02)]">
                         <span className="mono text-[12px] font-semibold text-[#1F5A3A] block">
@@ -257,9 +265,9 @@ export function CaseStudy({ open, onClose }: { open: boolean; onClose: () => voi
                   </div>
                 )}
 
-                {/* Section 5: Limits */}
-                {sec.id === "limits" && sec.points && (
-                  <ul className="space-y-2.5 max-w-[58ch]">
+                {/* Bullet points */}
+                {sec.points && sec.points.length > 0 && (
+                  <ul className="space-y-2.5 max-w-[58ch] mt-4">
                     {sec.points.map((pt) => (
                       <li key={pt} className="flex gap-3 text-[15px] text-[#0B0B0B]">
                         <span className="mono text-[#1F5A3A] shrink-0">•</span>

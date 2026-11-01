@@ -152,7 +152,7 @@ export type ImportanceItem = { label: string; value: number };
 export type PipelineStep = { label: string; shot: string; zoom?: boolean };
 export type PipelineRow = { label: string; shot: string; zoom?: boolean };
 export type FilmstripItem = { k: string; t: string };
-export type PipelineBox = { label: string; caption: string; built: boolean };
+export type PipelineBox = { label: string; caption: string; built: boolean; desc?: string };
 
 export type TableRow = {
   id: string;
@@ -170,6 +170,7 @@ export type Project = {
   sentence: string;
   line?: string;
   mutedLine?: string;
+  statusLine?: string;
   buttonLabel?: string;
   badge?: string;
   pipelineSteps?: PipelineStep[] | string[];
@@ -189,6 +190,22 @@ export type Project = {
   result?: string;
   limitations?: string;
   stack?: string[];
+};
+
+export type CaseStudyData = {
+  title: string | string[];
+  badge?: string;
+  close: string;
+  closeKey?: string;
+  galleryLabel?: string;
+  galleryPrevious?: string;
+  galleryNext?: string;
+  galleryError?: string;
+  galleryRetry?: string;
+  galleryCount?: string;
+  nav: { id: string; label: string }[];
+  sections: CaseStudySection[];
+  shots?: { k: string; t: string; d: string }[];
 };
 
 export type CaseStudySection = {
@@ -226,6 +243,7 @@ export const works = {
       line: "DINOv2 embeddings and FAISS similarity search. Built at Bluecast Technologies.",
       mutedLine: "Support, not diagnosis.",
       buttonLabel: "Deep Dive",
+      statusLine: "Support, not diagnosis.",
       pipelineRows: [
         { label: "Photo", shot: "ddss-6", zoom: false },
         { label: "Embedding", shot: "ddss-7", zoom: false },
@@ -260,11 +278,14 @@ export const works = {
       title: "Productivity and Role Prediction",
       sentence: "Predicts how productive a worker is and groups workers by behaviour.",
       line: "Random Forest regression for the productivity score, K-Means for the worker groups.",
+      mutedLine: "Objective numeric score and behavioural cluster pattern.",
+      statusLine: "Random Forest regression and K-Means clustering.",
+      buttonLabel: "Details",
       pipelineSteps: [
         "Behaviour features",
         "Random Forest regression",
         "K-Means clustering",
-        "Score + role",
+        "Score and role",
       ],
       table: {
         columns: [
@@ -300,15 +321,26 @@ export const works = {
       id: "careerlens",
       title: "CareerLens AI",
       sentence: "Matches a resume to roles and explains the gaps. Backend is built and tested; the front end is being rebuilt.",
-      badge: "Backend built and tested",
+      line: "Sentence Transformers embeddings of resumes and roles, FAISS similarity search, Gemini gap explanation.",
+      mutedLine: "Automated semantic role matching with verified citations.",
+      statusLine: "Backend built and tested. Front end being rebuilt.",
+      buttonLabel: "Details",
+      pipelineSteps: [
+        "Resume extraction",
+        "MiniLM embeddings",
+        "FAISS search",
+        "Gemini citations",
+        "Skill gaps & store",
+      ],
       pipelineBoxes: [
-        { label: "Resume PDF", caption: "Resume parsing", built: true },
-        { label: "Profile extraction", caption: "Profile extraction", built: true },
-        { label: "Chunks and embeddings with FAISS", caption: "MiniLM embeddings", built: true },
-        { label: "Gemini answer with citations", caption: "Gemini citations", built: true },
-        { label: "Job match and skill gaps", caption: "SQLAlchemy store", built: true },
-        { label: "Front end", caption: "Under rebuild", built: false },
-        { label: "Deployment", caption: "Pending deployment", built: false },
+        { label: "Resume PDF", caption: "Resume parsing", built: true, desc: "Parses candidate profile data from raw PDF documents." },
+        { label: "Profile extraction", caption: "Profile extraction", built: true, desc: "Extracts technical skills, experience, and education into structured entities." },
+        { label: "Embeddings (MiniLM)", caption: "MiniLM embeddings", built: true, desc: "Generates 384-dimensional dense semantic vectors using Sentence Transformers." },
+        { label: "FAISS search", caption: "Cosine similarity", built: true, desc: "Indexes role definitions and runs fast nearest-neighbor similarity searches." },
+        { label: "Gemini explanation with citations", caption: "Gemini citations", built: true, desc: "Synthesises personalised skill gap analysis with direct source citations." },
+        { label: "Job match and skill gaps", caption: "SQLAlchemy store", built: true, desc: "Calculates match scores and persists role-fit evaluation in SQLite." },
+        { label: "Front end", caption: "Being rebuilt", built: false, desc: "Next-generation responsive UI currently in active development." },
+        { label: "Deployment", caption: "Pending", built: false, desc: "Cloud containerization and deployment pending frontend completion." },
       ],
       links: {},
       metrics: [],
@@ -464,3 +496,133 @@ export const palette = [
   { id: "gh", label: "Open GitHub", kind: "github" as const },
   { id: "li", label: "Open LinkedIn", kind: "linkedin" as const },
 ];
+
+export const roleCaseStudy: CaseStudyData = {
+  title: ["PRODUCTIVITY &", "ROLE PREDICTION."],
+  badge: "DETAILS",
+  close: "Close",
+  closeKey: "Esc",
+  nav: [
+    { id: "what-it-does", label: "What it does" },
+    { id: "pipeline-methods", label: "Pipeline & methods" },
+    { id: "behaviour-features", label: "Behaviour features" },
+    { id: "stack-outputs", label: "Stack & outputs" },
+  ],
+  sections: [
+    {
+      id: "what-it-does",
+      num: "1",
+      title: "What it does",
+      text: "Predicts how productive a worker is and groups workers by behaviour based on desktop session activity logs. It outputs an objective numeric productivity score and behavioural cluster role classification.",
+    },
+    {
+      id: "pipeline-methods",
+      num: "2",
+      title: "Pipeline & methods",
+      methods: [
+        {
+          name: "Random Forest Regression",
+          desc: "Trained on tabular behavioural features to predict a continuous productivity score from 0 to 100.",
+        },
+        {
+          name: "K-Means Clustering",
+          desc: "Unsupervised clustering grouping workers into behavioural role patterns (e.g. Manager) based on activity time distribution.",
+        },
+        {
+          name: "Feature Preprocessing",
+          desc: "Standardises and normalises 8 distinct activity features extracted from raw worker desktop sessions.",
+        },
+      ],
+    },
+    {
+      id: "behaviour-features",
+      num: "3",
+      title: "Behaviour features",
+      text: "Eight behavioural features are tracked across worker sessions: Typing Intensity, Idle Duration, Task Switching Frequency, Time Coding, Time Email, Time Social Media, Time Browsing, and Time Docs.",
+      points: [
+        "Typing Intensity: Active keystroke density during work intervals.",
+        "Idle Duration: Total inactivity duration across recorded sessions.",
+        "Task Switching: Context switches between distinct desktop applications.",
+        "Application Breakdown: Hours allocated to Coding, Email, Social Media, Browsing, and Docs.",
+      ],
+    },
+    {
+      id: "stack-outputs",
+      num: "4",
+      title: "Stack & outputs",
+      text: "Built in Python using scikit-learn for Random Forest regression and K-Means clustering, Pandas for data processing, and SQLite for session storage.",
+      points: [
+        "Infers productivity score (e.g. S001: 53.48, S003: 54.36, S007: 77.14).",
+        "Categorises score tiers into Medium and High performance.",
+        "Groups workers into role clusters (Manager).",
+      ],
+    },
+  ],
+};
+
+export const careerlensCaseStudy: CaseStudyData = {
+  title: ["CAREERLENS AI", "ARCHITECTURE."],
+  badge: "DETAILS",
+  close: "Close",
+  closeKey: "Esc",
+  nav: [
+    { id: "what-it-does", label: "What it does" },
+    { id: "pipeline-architecture", label: "Pipeline architecture" },
+    { id: "backend-stack", label: "Backend stack" },
+    { id: "current-status", label: "Current status & limits" },
+  ],
+  sections: [
+    {
+      id: "what-it-does",
+      num: "1",
+      title: "What it does",
+      text: "Matches a candidate resume to open roles and explains skill gaps with source citations, providing actionable alignment insights.",
+    },
+    {
+      id: "pipeline-architecture",
+      num: "2",
+      title: "Pipeline architecture",
+      methods: [
+        {
+          name: "Resume PDF Parsing",
+          desc: "Extracts candidate experience, technical skills, and education history from PDF documents into structured profile objects.",
+        },
+        {
+          name: "MiniLM Embeddings",
+          desc: "Generates dense 384-dimensional semantic vectors using Sentence Transformers to capture role requirements and experience nuances.",
+        },
+        {
+          name: "FAISS Similarity Search",
+          desc: "Indexes role definitions and performs fast cosine similarity searches to rank candidate fit.",
+        },
+        {
+          name: "Gemini Gap Explanation",
+          desc: "Synthesises personalised skill gap analysis with direct textual citations from the resume and target job description.",
+        },
+      ],
+    },
+    {
+      id: "backend-stack",
+      num: "3",
+      title: "Backend stack",
+      text: "Implemented as a tested Python service using FastAPI for REST endpoints, SQLite and SQLAlchemy for persistence, Sentence Transformers for embeddings, and the Gemini API for cited explanations.",
+      points: [
+        "FastAPI REST endpoints for resume ingestion and candidate evaluation.",
+        "Local Sentence Transformers (MiniLM) for private embedding generation.",
+        "FAISS vector store for sub-millisecond similarity queries.",
+        "SQLAlchemy store for candidate matches and persistent gap records.",
+      ],
+    },
+    {
+      id: "current-status",
+      num: "4",
+      title: "Current status & limits",
+      text: "Backend built and tested. Front end being rebuilt.",
+      points: [
+        "Backend services, vector search, and Gemini integration are fully implemented and tested.",
+        "User interface is undergoing a complete architectural rebuild.",
+        "Production cloud deployment is pending frontend completion.",
+      ],
+    },
+  ],
+};

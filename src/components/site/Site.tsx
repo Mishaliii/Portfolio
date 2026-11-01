@@ -112,6 +112,11 @@ export function Site() {
     if (m === "none") { Object.assign(stage, { zoom: 1, light: 1, radius: 0.22, controls: true }); setBooted(true); setShowIntro(false); }
     const h = location.hash.slice(1); if (h) { setCur(idx(h)); curRef.current = idx(h); }
     if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("perf") === "1") setPerfMode(true);
+    const onSetWorksSub = (e: any) => {
+      if (typeof e.detail === "number") setSub(e.detail);
+    };
+    window.addEventListener("set-works-sub", onSetWorksSub);
+    return () => window.removeEventListener("set-works-sub", onSetWorksSub);
   }, []);
 
   useLayoutEffect(() => {
