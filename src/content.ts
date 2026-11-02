@@ -497,8 +497,46 @@ export const works = {
 export type ReferenceCase = { id: string; image: string; label?: string; note?: string };
 export type RetrievalSample = { id: string; label: string; image: string; placeholder?: boolean; matches: { referenceId: string; similarity?: number }[] };
 
+export type JourneyStop = {
+  year: string;
+  role: string;
+  place: string;
+  line: string;
+  tag?: string;
+};
+
 export const journey = {
   heading: "ACADEMIC & INDUSTRY JOURNEY.",
+  stops: [
+    {
+      year: "2021",
+      role: "BCA",
+      place: "Musaliar College of Arts and Science",
+      line: "Bachelor of Computer Applications, algorithms, programming, and software foundations.",
+      tag: "Degree",
+    },
+    {
+      year: "2024",
+      role: "MCA · CGPA 8.33",
+      place: "TKM College of Engineering, Kollam",
+      line: "Master of Computer Applications with focus on machine learning and intelligent systems.",
+      tag: "Postgraduate",
+    },
+    {
+      year: "2026",
+      role: "AI / ML Intern, DDSS",
+      place: "Bluecast Technologies (Jan to Apr)",
+      line: "Built a dermatology decision-support system using DINOv2 case retrieval and FAISS.",
+      tag: "Internship",
+    },
+    {
+      year: "2026",
+      role: "AI / ML Engineer",
+      place: "Open to work",
+      line: "Building machine learning and computer vision systems, open to work in Kerala, UAE or remote.",
+      tag: "Available",
+    },
+  ] as JourneyStop[],
   timeline: [
     { when: "2021-24", what: "BCA", where: "Musaliar College of Arts and Science, Pathanamthitta" },
     { when: "2024-26", what: "MCA · CGPA 8.33", where: "TKM College of Engineering, Kollam" },

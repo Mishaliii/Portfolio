@@ -3,7 +3,7 @@ import { gsap } from "gsap";
 import { Observer } from "gsap/Observer";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Lenis from "lenis";
-import { pages, palette, site, ui, works } from "@/content";
+import { journey, pages, palette, site, ui, works } from "@/content";
 import { EASE, enterPage, exitPage, presplit, reduced, settlePage, wobble } from "@/lib/motion";
 import { WobbleText } from "./Split";
 import { Cursor } from "./Cursor";
@@ -84,6 +84,7 @@ export function Site() {
   const [cur, setCur] = useState(0);
   const [perfMode, setPerfMode] = useState(false);
   const [sub, setSub] = useState(0);
+  const [jStop, setJStop] = useState(0);
   const [booted, setBooted] = useState(false);
   const [showIntro, setShowIntro] = useState(true);
   const [mode, setMode] = useState<"full" | "short" | "none">("full");
@@ -101,6 +102,7 @@ export function Site() {
   const requestedProject = useRef<number | null>(null);
   const curRef = useRef(0); curRef.current = cur;
   const subRef = useRef(0); subRef.current = sub;
+  const jStopRef = useRef(0); jStopRef.current = jStop;
   const lenis = useRef<Lenis | null>(null);
 
   useEffect(() => {
@@ -165,6 +167,7 @@ export function Site() {
     newEl.classList.add("is-prepared");
     presplit(newEl);
     if (target === 3) { setSub(requestedProject.current ?? (down ? 0 : works.projects.length - 1)); requestedProject.current = null; }
+    if (target === 4) { setJStop(down ? 0 : journey.stops.length - 1); }
     const label = wipeLabel.current;
     if (!label) { done(); return; }
     label.textContent = `${pages[target].num} ${pages[target].label.toUpperCase()}`;
@@ -204,6 +207,12 @@ export function Site() {
       const ns = subRef.current + dir;
       if (ns >= 0 && ns < works.projects.length) {
         busy.current = true; setSub(ns); setTimeout(() => (busy.current = false), 650); return;
+      }
+    }
+    if (paged && curRef.current === 4) {
+      const ns = jStopRef.current + dir;
+      if (ns >= 0 && ns < journey.stops.length) {
+        busy.current = true; setJStop(ns); setTimeout(() => (busy.current = false), 920); return;
       }
     }
     go(curRef.current + dir);
@@ -341,6 +350,13 @@ export function Site() {
       if (target) lenis.current ? lenis.current.scrollTo(target) : target.scrollIntoView({ behavior: "smooth" });
     }
   }, []);
+  const selectJourneyStop = useCallback((targetStop: number) => {
+    if (busy.current || targetStop === jStopRef.current) return;
+    busy.current = true;
+    setJStop(targetStop);
+    setTimeout(() => (busy.current = false), 920);
+  }, []);
+
   const aboutOn = !paged || cur === 1;
   const expertiseOn = !paged || cur === 2;
   const worksOn = !paged || cur === 3;
@@ -350,9 +366,9 @@ export function Site() {
     <StableAbout go={goId} active={aboutOn} />,
     <StableExpertise goProject={goProject} active={expertiseOn} />,
     <StableWorks sub={sub} paged={!!paged} active={worksOn} />,
-    <StableJourney active={journeyOn} />,
+    <StableJourney active={journeyOn} stop={jStop} onSelectStop={selectJourneyStop} paged={!!paged} />,
     <StableConnect copyEmail={copyEmail} go={goId} />,
-  ], [goId, goProject, sub, paged, aboutOn, expertiseOn, worksOn, journeyOn, copyEmail]);
+  ], [goId, goProject, sub, jStop, paged, aboutOn, expertiseOn, worksOn, journeyOn, copyEmail, selectJourneyStop]);
 
   return (
     <div className={`site-shell ${!booted ? "is-loading" : ""} ${revealing ? "is-revealing" : ""}`}>
