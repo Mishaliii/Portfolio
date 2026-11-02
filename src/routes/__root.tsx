@@ -8,7 +8,7 @@ import {
   Scripts,
   type ErrorComponentProps,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportError } from "../lib/error-reporting";
@@ -115,6 +115,56 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+function RootBuddy() {
+  const [BuddyComponent, setBuddyComponent] = useState<React.ComponentType | null>(null);
+
+  useEffect(() => {
+    let timer: number | undefined;
+
+    const loadBuddy = () => {
+      if (timer) return;
+      timer = window.setTimeout(() => {
+        import("@/components/Buddy").then((mod) => {
+          setBuddyComponent(() => mod.Buddy);
+        });
+      }, 2000);
+    };
+
+    const isLoaderDone = () => {
+      if (typeof window !== "undefined" && (window as any).__siteBooted) return true;
+      const main = document.querySelector("main");
+      return main ? !main.hasAttribute("inert") : false;
+    };
+
+    if (isLoaderDone()) {
+      loadBuddy();
+    } else {
+      const interval = window.setInterval(() => {
+        if (isLoaderDone()) {
+          clearInterval(interval);
+          loadBuddy();
+        }
+      }, 150);
+      const onDone = () => {
+        clearInterval(interval);
+        window.removeEventListener("site-loader-done", onDone);
+        loadBuddy();
+      };
+      window.addEventListener("site-loader-done", onDone);
+      return () => {
+        clearInterval(interval);
+        window.removeEventListener("site-loader-done", onDone);
+        clearTimeout(timer);
+      };
+    }
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (!BuddyComponent) return null;
+  return <BuddyComponent />;
+}
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
@@ -122,6 +172,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
+      <RootBuddy />
     </QueryClientProvider>
   );
 }

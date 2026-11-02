@@ -3,7 +3,7 @@ import { gsap } from "gsap";
 import { Observer } from "gsap/Observer";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Lenis from "lenis";
-import { journey, pages, palette, site, ui, works } from "@/content";
+import { pages, palette, site, ui, works } from "@/content";
 import { EASE, enterPage, exitPage, presplit, reduced, settlePage, wobble } from "@/lib/motion";
 import { WobbleText } from "./Split";
 import { Cursor } from "./Cursor";
@@ -84,7 +84,6 @@ export function Site() {
   const [cur, setCur] = useState(0);
   const [perfMode, setPerfMode] = useState(false);
   const [sub, setSub] = useState(0);
-  const [jStop, setJStop] = useState(0);
   const [booted, setBooted] = useState(false);
   const [showIntro, setShowIntro] = useState(true);
   const [mode, setMode] = useState<"full" | "short" | "none">("full");
@@ -102,7 +101,6 @@ export function Site() {
   const requestedProject = useRef<number | null>(null);
   const curRef = useRef(0); curRef.current = cur;
   const subRef = useRef(0); subRef.current = sub;
-  const jStopRef = useRef(0); jStopRef.current = jStop;
   const lenis = useRef<Lenis | null>(null);
 
   useEffect(() => {
@@ -111,14 +109,15 @@ export function Site() {
     const m = introMode(seen, location.hash);
     setMode(m);
     void boot();
-    if (m === "none") { Object.assign(stage, { zoom: 1, light: 1, radius: 0.22, controls: true }); setBooted(true); setShowIntro(false); }
+    if (m === "none") {
+      Object.assign(stage, { zoom: 1, light: 1, radius: 0.22, controls: true });
+      (window as any).__siteBooted = true;
+      setBooted(true);
+      setShowIntro(false);
+      window.dispatchEvent(new CustomEvent("site-loader-done"));
+    }
     const h = location.hash.slice(1); if (h) { setCur(idx(h)); curRef.current = idx(h); }
     if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("perf") === "1") setPerfMode(true);
-    const onSetWorksSub = (e: any) => {
-      if (typeof e.detail === "number") { if (busy.current || e.detail === subRef.current) return; busy.current = true; setSub(e.detail); setTimeout(() => (busy.current = false), 920); }
-    };
-    window.addEventListener("set-works-sub", onSetWorksSub);
-    return () => window.removeEventListener("set-works-sub", onSetWorksSub);
   }, []);
 
   useLayoutEffect(() => {
@@ -167,7 +166,6 @@ export function Site() {
     newEl.classList.add("is-prepared");
     presplit(newEl);
     if (target === 3) { setSub(requestedProject.current ?? (down ? 0 : works.projects.length - 1)); requestedProject.current = null; }
-    if (target === 4) { setJStop(down ? 0 : journey.stops.length - 1); }
     const label = wipeLabel.current;
     if (!label) { done(); return; }
     label.textContent = `${pages[target].num} ${pages[target].label.toUpperCase()}`;
@@ -206,13 +204,7 @@ export function Site() {
     if (paged && curRef.current === 3) {
       const ns = subRef.current + dir;
       if (ns >= 0 && ns < works.projects.length) {
-        busy.current = true; setSub(ns); setTimeout(() => (busy.current = false), 920); return;
-      }
-    }
-    if (paged && curRef.current === 4) {
-      const ns = jStopRef.current + dir;
-      if (ns >= 0 && ns < journey.stops.length) {
-        busy.current = true; setJStop(ns); setTimeout(() => (busy.current = false), 920); return;
+        busy.current = true; setSub(ns); setTimeout(() => (busy.current = false), 650); return;
       }
     }
     go(curRef.current + dir);
@@ -225,7 +217,9 @@ export function Site() {
     if (first) first.classList.add("is-active");
   }, []);
   const finishIntro = useCallback(() => {
+    (window as any).__siteBooted = true;
     setBooted(true); setShowIntro(false);
+    window.dispatchEvent(new CustomEvent("site-loader-done"));
     const first = pageEls.current[curRef.current];
     first?.focus({ preventScroll: true });
   }, []);
@@ -307,24 +301,6 @@ export function Site() {
     return () => { window.removeEventListener("keydown", k); window.removeEventListener("popstate", pop); };
   }, [go, step, pal, paged, booted]);
 
-  // Dev-only frame monitor: warns when a frame takes over 100ms
-  useEffect(() => {
-    if (!import.meta.env.DEV) return;
-    let lastTime = performance.now();
-    let frameId: number;
-    const checkFrame = (now: number) => {
-      const dt = now - lastTime;
-      if (dt > 100 && lastTime > 0) {
-        const activePage = pages[curRef.current]?.id ?? "unknown";
-        console.warn(`[PERF DEV] Frame took ${Math.round(dt)}ms on active page: "${activePage}"`);
-      }
-      lastTime = now;
-      frameId = requestAnimationFrame(checkFrame);
-    };
-    frameId = requestAnimationFrame(checkFrame);
-    return () => cancelAnimationFrame(frameId);
-  }, []);
-
   const run = (it: (typeof palette)[number]) => {
     if (it.kind === "page") go(idx(it.target));
     else if (it.kind === "cv") { const a = document.createElement("a"); a.href = site.cv; a.download = ""; a.click(); }
@@ -337,44 +313,28 @@ export function Site() {
   const inv = heroTheme || (INV.has(pages[cur].id) && !!paged);
   // stable page elements: a page change mid-transition must not re-render every page
   const goId = useCallback((id: string) => goRef.current(idx(id)), []);
-  const selectWorksSub = useCallback((targetSub: number) => {
-    if (busy.current || targetSub === subRef.current) return;
-    busy.current = true;
-    setSub(targetSub);
-    setTimeout(() => (busy.current = false), 920);
-  }, []);
-
   const goProject = useCallback((id: string) => {
     if (id === "overview") { goRef.current(0); return; }
     const index = works.projects.findIndex((p) => p.id === id);
     if (index < 0) return;
     requestedProject.current = index;
-    if (curRef.current === 3) { selectWorksSub(index); requestedProject.current = null; }
+    if (curRef.current === 3) { setSub(index); requestedProject.current = null; }
     else goRef.current(3);
     if (!document.documentElement.classList.contains("paged")) {
       requestedProject.current = null;
       const target = document.querySelectorAll<HTMLElement>("#works article")[index];
       if (target) lenis.current ? lenis.current.scrollTo(target) : target.scrollIntoView({ behavior: "smooth" });
     }
-  }, [selectWorksSub]);
-  const selectJourneyStop = useCallback((targetStop: number) => {
-    if (busy.current || targetStop === jStopRef.current) return;
-    busy.current = true;
-    setJStop(targetStop);
-    setTimeout(() => (busy.current = false), 920);
   }, []);
-  const aboutOn = !paged || cur === 1;
-  const expertiseOn = !paged || cur === 2;
-  const worksOn = !paged || cur === 3;
   const journeyOn = !paged || cur === 4;
   const P = useMemo(() => [
     <StableHero go={goId} />,
-    <StableAbout go={goId} active={aboutOn} />,
-    <StableExpertise goProject={goProject} active={expertiseOn} />,
-    <StableWorks sub={sub} paged={!!paged} active={worksOn} onSelectSub={selectWorksSub} />,
-    <StableJourney active={journeyOn} stop={jStop} onSelectStop={selectJourneyStop} paged={!!paged} />,
+    <StableAbout go={goId} />,
+    <StableExpertise goProject={goProject} />,
+    <StableWorks sub={sub} paged={!!paged} />,
+    <StableJourney active={journeyOn} />,
     <StableConnect copyEmail={copyEmail} go={goId} />,
-  ], [goId, goProject, sub, jStop, paged, aboutOn, expertiseOn, worksOn, journeyOn, copyEmail, selectWorksSub, selectJourneyStop]);
+  ], [goId, goProject, sub, paged, journeyOn, copyEmail]);
 
   return (
     <div className={`site-shell ${!booted ? "is-loading" : ""} ${revealing ? "is-revealing" : ""}`}>
