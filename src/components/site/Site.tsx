@@ -113,7 +113,7 @@ export function Site() {
     const h = location.hash.slice(1); if (h) { setCur(idx(h)); curRef.current = idx(h); }
     if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("perf") === "1") setPerfMode(true);
     const onSetWorksSub = (e: any) => {
-      if (typeof e.detail === "number") setSub(e.detail);
+      if (typeof e.detail === "number") { if (busy.current || e.detail === subRef.current) return; busy.current = true; setSub(e.detail); setTimeout(() => (busy.current = false), 920); }
     };
     window.addEventListener("set-works-sub", onSetWorksSub);
     return () => window.removeEventListener("set-works-sub", onSetWorksSub);
@@ -203,7 +203,7 @@ export function Site() {
     if (paged && curRef.current === 3) {
       const ns = subRef.current + dir;
       if (ns >= 0 && ns < works.projects.length) {
-        busy.current = true; setSub(ns); setTimeout(() => (busy.current = false), 650); return;
+        busy.current = true; setSub(ns); setTimeout(() => (busy.current = false), 920); return;
       }
     }
     go(curRef.current + dir);
@@ -328,19 +328,26 @@ export function Site() {
   const inv = heroTheme || (INV.has(pages[cur].id) && !!paged);
   // stable page elements: a page change mid-transition must not re-render every page
   const goId = useCallback((id: string) => goRef.current(idx(id)), []);
+  const selectWorksSub = useCallback((targetSub: number) => {
+    if (busy.current || targetSub === subRef.current) return;
+    busy.current = true;
+    setSub(targetSub);
+    setTimeout(() => (busy.current = false), 920);
+  }, []);
+
   const goProject = useCallback((id: string) => {
     if (id === "overview") { goRef.current(0); return; }
     const index = works.projects.findIndex((p) => p.id === id);
     if (index < 0) return;
     requestedProject.current = index;
-    if (curRef.current === 3) { setSub(index); requestedProject.current = null; }
+    if (curRef.current === 3) { selectWorksSub(index); requestedProject.current = null; }
     else goRef.current(3);
     if (!document.documentElement.classList.contains("paged")) {
       requestedProject.current = null;
       const target = document.querySelectorAll<HTMLElement>("#works article")[index];
       if (target) lenis.current ? lenis.current.scrollTo(target) : target.scrollIntoView({ behavior: "smooth" });
     }
-  }, []);
+  }, [selectWorksSub]);
   const aboutOn = !paged || cur === 1;
   const expertiseOn = !paged || cur === 2;
   const worksOn = !paged || cur === 3;
@@ -349,10 +356,10 @@ export function Site() {
     <StableHero go={goId} />,
     <StableAbout go={goId} active={aboutOn} />,
     <StableExpertise goProject={goProject} active={expertiseOn} />,
-    <StableWorks sub={sub} paged={!!paged} active={worksOn} />,
+    <StableWorks sub={sub} paged={!!paged} active={worksOn} onSelectSub={selectWorksSub} />,
     <StableJourney active={journeyOn} />,
     <StableConnect copyEmail={copyEmail} go={goId} />,
-  ], [goId, goProject, sub, paged, aboutOn, expertiseOn, worksOn, journeyOn, copyEmail]);
+  ], [goId, goProject, sub, paged, aboutOn, expertiseOn, worksOn, journeyOn, copyEmail, selectWorksSub]);
 
   return (
     <div className={`site-shell ${!booted ? "is-loading" : ""} ${revealing ? "is-revealing" : ""}`}>

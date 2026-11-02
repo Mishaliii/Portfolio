@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
+import { SplitText } from "gsap/SplitText";
 import {
   works,
   roleCaseStudy,
@@ -7,9 +8,161 @@ import {
   type Project,
 } from "@/content";
 import { SplitReveal } from "./Split";
-import { EASE } from "@/lib/motion";
+import { HeadlineDissolve } from "./HeadlineDissolve";
+import { EASE, reduced } from "@/lib/motion";
 import { CaseStudy } from "./CaseStudy";
 import { ddssImages, preloadScreenshots } from "./ScreenshotGallery";
+
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(SplitText);
+}
+
+function MaskedParagraph({
+  text,
+  className = "",
+  active,
+  delay = 0,
+}: {
+  text: string;
+  className?: string;
+  active: boolean;
+  delay?: number;
+}) {
+  const elRef = useRef<HTMLParagraphElement>(null);
+  const splitRef = useRef<any>(null);
+
+  useEffect(() => {
+    const el = elRef.current;
+    if (!el) return;
+
+    if (reduced()) {
+      if (splitRef.current) {
+        splitRef.current.revert();
+        splitRef.current = null;
+      }
+      gsap.set(el, { opacity: 1, y: 0 });
+      return;
+    }
+
+    if (!active) {
+      if (splitRef.current) {
+        splitRef.current.revert();
+        splitRef.current = null;
+      }
+      gsap.set(el, { opacity: 0 });
+      return;
+    }
+
+    let isCancelled = false;
+    document.fonts.ready.then(() => {
+      if (isCancelled || !elRef.current) return;
+      if (splitRef.current) {
+        splitRef.current.revert();
+      }
+      try {
+        gsap.set(elRef.current, { opacity: 1 });
+        const sp = SplitText.create(elRef.current, { type: "lines", mask: "lines" });
+        splitRef.current = sp;
+        gsap.fromTo(
+          sp.lines,
+          { yPercent: 100 },
+          {
+            yPercent: 0,
+            duration: 0.7,
+            stagger: 0.08,
+            ease: "power3.out",
+            delay,
+          }
+        );
+      } catch {
+        gsap.fromTo(elRef.current, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.7, delay });
+      }
+    });
+
+    return () => {
+      isCancelled = true;
+      if (splitRef.current) {
+        splitRef.current.revert();
+        splitRef.current = null;
+      }
+    };
+  }, [active, text, delay]);
+
+  return (
+    <p ref={elRef} className={className}>
+      {text}
+    </p>
+  );
+}
+
+function TypewriterStatus({
+  text,
+  active,
+  delay = 0.35,
+}: {
+  text?: string;
+  active: boolean;
+  delay?: number;
+}) {
+  const [displayedText, setDisplayedText] = useState("");
+  const [showCaret, setShowCaret] = useState(false);
+
+  useEffect(() => {
+    if (!text) return;
+    if (!active) {
+      setDisplayedText("");
+      setShowCaret(false);
+      return;
+    }
+
+    if (reduced()) {
+      setDisplayedText(text);
+      setShowCaret(false);
+      return;
+    }
+
+    setDisplayedText("");
+    setShowCaret(false);
+
+    let charIndex = 0;
+    let timer: NodeJS.Timeout | number | null = null;
+    let caretTimer: NodeJS.Timeout | number | null = null;
+
+    const startTimer = setTimeout(() => {
+      setShowCaret(true);
+      timer = setInterval(() => {
+        charIndex++;
+        setDisplayedText(text.slice(0, charIndex));
+        if (charIndex >= text.length) {
+          if (timer) clearInterval(timer);
+          caretTimer = setTimeout(() => {
+            setShowCaret(false);
+          }, 600);
+        }
+      }, 30);
+    }, delay * 1000);
+
+    return () => {
+      clearTimeout(startTimer);
+      if (timer) clearInterval(timer);
+      if (caretTimer) clearTimeout(caretTimer);
+    };
+  }, [active, text, delay]);
+
+  if (!text) return null;
+
+  return (
+    <p className="mt-1 text-[15px] italic text-[#6B645A] flex items-center min-h-[1.5em]">
+      <span>{displayedText}</span>
+      {showCaret && (
+        <span
+          aria-hidden="true"
+          className="typewriter-caret inline-block w-[2px] h-[1em] ml-1 bg-[#1F5A3A] align-middle"
+        />
+      )}
+    </p>
+  );
+}
 
 export function WorkCardShell({
   ariaLabel,
@@ -21,6 +174,7 @@ export function WorkCardShell({
   onOpenDetails,
   pipeline,
   visual,
+  active,
 }: {
   ariaLabel: string;
   title: React.ReactNode;
@@ -31,7 +185,22 @@ export function WorkCardShell({
   onOpenDetails: () => void;
   pipeline: React.ReactNode;
   visual: React.ReactNode;
+  active: boolean;
 }) {
+  const titleWrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!active || reduced()) return;
+    const chars = titleWrapRef.current?.querySelectorAll<HTMLElement>("[data-char]");
+    if (chars && chars.length > 0) {
+      gsap.fromTo(
+        chars,
+        { yPercent: 120, scale: 1.04 },
+        { yPercent: 0, scale: 1, duration: 1.0, ease: EASE.in, stagger: 0.015, overwrite: "auto" }
+      );
+    }
+  }, [active]);
+
   return (
     <article
       className="flex flex-col max-[899px]:gap-6 min-[900px]:grid min-[900px]:grid-cols-[5fr_7fr] min-[900px]:gap-[56px] items-center px-4 sm:px-8 lg:px-[64px] w-full max-w-[1440px] mx-auto min-h-0"
@@ -39,27 +208,35 @@ export function WorkCardShell({
     >
       {/* Left text column */}
       <div className="min-w-0 flex flex-col justify-center max-[899px]:order-2">
-        <h3
-          className="display text-[#0B0B0B] tracking-tight"
-          style={{ fontSize: "clamp(40px, 5.2vw, 76px)", lineHeight: 0.95 }}
-        >
-          {title}
-        </h3>
+        <div ref={titleWrapRef}>
+          <HeadlineDissolve bg="var(--cream)" ink="var(--ink)" className="works-title-dissolve">
+            <h3
+              className="display text-[#0B0B0B] tracking-tight"
+              style={{ fontSize: "clamp(40px, 5.2vw, 76px)", lineHeight: 0.95 }}
+            >
+              {title}
+            </h3>
+          </HeadlineDissolve>
+        </div>
 
-        <p className="mt-4 text-[18px] sm:text-[20px] leading-snug text-[#0B0B0B] max-w-[46ch]" data-fade>
-          {sentence}
-        </p>
+        <MaskedParagraph
+          text={sentence}
+          active={active}
+          delay={0.15}
+          className="mt-4 text-[18px] sm:text-[20px] leading-snug text-[#0B0B0B] max-w-[46ch]"
+        />
 
         {line && (
-          <p className="mt-3 text-[15px] leading-snug text-[#6B645A]" data-fade>
-            {line}
-          </p>
+          <MaskedParagraph
+            text={line}
+            active={active}
+            delay={0.25}
+            className="mt-3 text-[15px] leading-snug text-[#6B645A]"
+          />
         )}
 
         {statusLine && (
-          <p className="mt-1 text-[15px] italic text-[#6B645A]" data-fade>
-            {statusLine}
-          </p>
+          <TypewriterStatus text={statusLine} active={active} delay={0.35} />
         )}
 
         <div className="mt-6" data-fade>
@@ -184,13 +361,19 @@ function DDSSCard({ p, active }: { p: Project; active: boolean }) {
                 }`}
               />
             </div>
-            <span
-              className={`font-mono text-[13px] tracking-wide transition-colors ${
-                isStepActive ? "text-[#1F5A3A] font-semibold" : "text-[#0B0B0B] group-hover:text-[#1F5A3A]"
-              }`}
-            >
-              {step.label}
-            </span>
+            <div className="relative inline-block transition-transform duration-200 ease-out group-hover:translate-x-[6px]">
+              <span
+                className={`font-mono text-[13px] tracking-wide transition-colors ${
+                  isStepActive ? "text-[#1F5A3A] font-semibold" : "text-[#0B0B0B] group-hover:text-[#1F5A3A]"
+                }`}
+              >
+                {step.label}
+              </span>
+              <span
+                aria-hidden="true"
+                className="absolute left-0 -bottom-0.5 h-px w-full bg-[#1F5A3A] origin-left scale-x-0 transition-transform duration-300 ease-out group-hover:scale-x-100"
+              />
+            </div>
           </div>
         );
       })}
@@ -283,11 +466,12 @@ function DDSSCard({ p, active }: { p: Project; active: boolean }) {
         title={titleNode}
         sentence={p.sentence}
         line={p.line}
-        statusLine={p.mutedLine}
+        statusLine={p.statusLine ?? p.mutedLine}
         buttonLabel={p.buttonLabel ?? "Deep Dive"}
         onOpenDetails={() => setCs(true)}
         pipeline={pipelineNode}
         visual={visualNode}
+        active={active}
       />
       <CaseStudy open={cs} onClose={closeCs} />
     </>
@@ -331,6 +515,64 @@ const SUBJECT_ROWS: Record<
   },
 };
 
+function OdometerDigit({
+  char,
+  delay = 0,
+  active,
+}: {
+  char: string;
+  delay?: number;
+  active: boolean;
+}) {
+  const isDigit = /^[0-9]$/.test(char);
+  const targetDigit = isDigit ? parseInt(char, 10) : 0;
+  const colRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = colRef.current;
+    if (!el || !isDigit) return;
+
+    if (reduced() || !active) {
+      gsap.set(el, { yPercent: -targetDigit * 10 });
+      return;
+    }
+
+    gsap.to(el, {
+      yPercent: -targetDigit * 10,
+      duration: 0.65,
+      delay,
+      ease: "power2.out",
+    });
+  }, [targetDigit, isDigit, delay, active]);
+
+  if (!isDigit) {
+    return <span className="inline-block px-[1px]">{char}</span>;
+  }
+
+  return (
+    <span className="inline-block overflow-hidden h-[1.15em] leading-none align-baseline">
+      <span ref={colRef} className="flex flex-col select-none will-change-transform">
+        {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
+          <span key={n} className="h-[1.15em] leading-none flex items-center justify-center">
+            {n}
+          </span>
+        ))}
+      </span>
+    </span>
+  );
+}
+
+function OdometerScore({ value, active }: { value: number; active: boolean }) {
+  const str = value.toFixed(2);
+  return (
+    <span className="font-mono text-[22px] sm:text-[28px] font-bold text-[#0B0B0B] leading-none inline-flex items-center">
+      {str.split("").map((c, i) => (
+        <OdometerDigit key={i} char={c} delay={i * 0.04} active={active} />
+      ))}
+    </span>
+  );
+}
+
 function ProductivityExplorer({
   active,
   pulseTarget,
@@ -340,8 +582,6 @@ function ProductivityExplorer({
 }) {
   const [selectedId, setSelectedId] = useState<SubjectId>("S001");
   const barRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const scoreNumRef = useRef<HTMLSpanElement>(null);
-  const prevScore = useRef<number>(SUBJECT_ROWS["S001"].score);
   const barsContainerRef = useRef<HTMLDivElement>(null);
   const scoreBoxRef = useRef<HTMLDivElement>(null);
   const roleChipRef = useRef<HTMLSpanElement>(null);
@@ -357,31 +597,21 @@ function ProductivityExplorer({
       if (!el) return;
       const feat = ROLE_FEATURES[idx];
       const pct = Math.min(100, Math.max(3, (v / feat.max) * 100));
-      gsap.to(el, {
-        width: `${pct}%`,
-        duration: 0.5,
-        ease: "power3.out",
-      });
+      if (reduced()) {
+        gsap.set(el, { width: `${pct}%` });
+      } else {
+        gsap.to(el, {
+          width: `${pct}%`,
+          duration: 0.5,
+          ease: "power3.out",
+        });
+      }
     });
-
-    // Score count-up tween
-    const obj = { val: prevScore.current };
-    gsap.to(obj, {
-      val: current.score,
-      duration: 0.5,
-      ease: "power3.out",
-      onUpdate: () => {
-        if (scoreNumRef.current) {
-          scoreNumRef.current.textContent = obj.val.toFixed(2);
-        }
-      },
-    });
-    prevScore.current = current.score;
   }, [selectedId, active]);
 
   // Pulse effect when hovering pipeline steps
   useEffect(() => {
-    if (!pulseTarget) return;
+    if (!pulseTarget || reduced()) return;
     if (pulseTarget === "features" && barsContainerRef.current) {
       gsap.fromTo(
         barsContainerRef.current,
@@ -494,12 +724,7 @@ function ProductivityExplorer({
           <span className="mono text-[10px] sm:text-[11px] uppercase tracking-wider text-[#6B645A]">
             Productivity Score:
           </span>
-          <span
-            ref={scoreNumRef}
-            className="font-mono text-[22px] sm:text-[28px] font-bold text-[#0B0B0B] leading-none"
-          >
-            {subjectData.score.toFixed(2)}
-          </span>
+          <OdometerScore value={subjectData.score} active={active} />
         </div>
 
         <div className="flex items-center gap-2">
@@ -569,13 +794,19 @@ function RoleCard({ p, active }: { p: Project; active: boolean }) {
                 }`}
               />
             </div>
-            <span
-              className={`font-mono text-[13px] tracking-wide transition-colors ${
-                isHovered ? "text-[#1F5A3A] font-semibold" : "text-[#0B0B0B] group-hover:text-[#1F5A3A]"
-              }`}
-            >
-              {step.label}
-            </span>
+            <div className="relative inline-block transition-transform duration-200 ease-out group-hover:translate-x-[6px]">
+              <span
+                className={`font-mono text-[13px] tracking-wide transition-colors ${
+                  isHovered ? "text-[#1F5A3A] font-semibold" : "text-[#0B0B0B] group-hover:text-[#1F5A3A]"
+                }`}
+              >
+                {step.label}
+              </span>
+              <span
+                aria-hidden="true"
+                className="absolute left-0 -bottom-0.5 h-px w-full bg-[#1F5A3A] origin-left scale-x-0 transition-transform duration-300 ease-out group-hover:scale-x-100"
+              />
+            </div>
           </div>
         );
       })}
@@ -594,6 +825,7 @@ function RoleCard({ p, active }: { p: Project; active: boolean }) {
         onOpenDetails={() => setCs(true)}
         pipeline={pipelineNode}
         visual={<ProductivityExplorer active={active} pulseTarget={pulseTarget} />}
+        active={active}
       />
       <CaseStudy open={cs} onClose={closeCs} data={roleCaseStudy} />
     </>
@@ -667,6 +899,7 @@ function CareerLensPipeline({ active }: { active: boolean }) {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
   const pathRef = useRef<SVGPathElement>(null);
   const dotRef = useRef<SVGCircleElement>(null);
+  const nodeRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   const activeNode = hoveredIdx !== null ? CAREERLENS_NODES[hoveredIdx] : CAREERLENS_NODES[0];
 
@@ -675,20 +908,58 @@ function CareerLensPipeline({ active }: { active: boolean }) {
     if (!path) return;
     const len = path.getTotalLength();
     path.style.strokeDasharray = `${len}`;
-    path.style.strokeDashoffset = `${len}`;
-    if (active) {
-      gsap.to(path, {
-        strokeDashoffset: 0,
-        duration: 1.6,
-        ease: "power2.out",
-      });
+
+    const validNodes = nodeRefs.current.filter(Boolean);
+
+    if (reduced()) {
+      path.style.strokeDashoffset = "0";
+      gsap.set(validNodes, { opacity: 1, y: 0 });
+      return;
     }
+
+    if (!active) {
+      path.style.strokeDashoffset = `${len}`;
+      gsap.set(validNodes, { opacity: 0, y: 12 });
+      return;
+    }
+
+    path.style.strokeDashoffset = `${len}`;
+    gsap.set(validNodes, { opacity: 0, y: 12 });
+
+    const tl = gsap.timeline();
+    // 1. Connector paths draw in on enter (1.4s, power2.out)
+    tl.to(
+      path,
+      {
+        strokeDashoffset: 0,
+        duration: 1.4,
+        ease: "power2.out",
+      },
+      0
+    );
+
+    // 2. Nodes fade up in order (stagger 0.07s)
+    tl.to(
+      validNodes,
+      {
+        opacity: 1,
+        y: 0,
+        duration: 0.45,
+        stagger: 0.07,
+        ease: "power2.out",
+      },
+      0.25
+    );
+
+    return () => {
+      tl.kill();
+    };
   }, [active]);
 
   useEffect(() => {
     const path = pathRef.current;
     const dot = dotRef.current;
-    if (!path || !dot || !active) return;
+    if (!path || !dot || !active || reduced()) return;
     const len = path.getTotalLength();
     const obj = { progress: 0 };
     const tween = gsap.to(obj, {
@@ -696,6 +967,7 @@ function CareerLensPipeline({ active }: { active: boolean }) {
       duration: 9,
       repeat: -1,
       ease: "none",
+      delay: 1.4,
       onUpdate: () => {
         const pt = path.getPointAtLength(obj.progress * len);
         dot.setAttribute("cx", `${pt.x}`);
@@ -762,6 +1034,9 @@ function CareerLensPipeline({ active }: { active: boolean }) {
             return (
               <div
                 key={node.num}
+                ref={(el) => {
+                  nodeRefs.current[idx] = el;
+                }}
                 tabIndex={0}
                 onMouseEnter={() => setHoveredIdx(idx)}
                 onMouseLeave={() => setHoveredIdx(null)}
@@ -798,6 +1073,9 @@ function CareerLensPipeline({ active }: { active: boolean }) {
             return (
               <div
                 key={node.num}
+                ref={(el) => {
+                  nodeRefs.current[idx] = el;
+                }}
                 tabIndex={0}
                 onMouseEnter={() => setHoveredIdx(idx)}
                 onMouseLeave={() => setHoveredIdx(null)}
@@ -878,16 +1156,23 @@ function CareerLensCard({ p, active }: { p: Project; active: boolean }) {
       {pipelineSteps.map((step, idx) => (
         <div
           key={step.label}
-          className="group flex items-center gap-3.5 py-1.5 outline-none transition-colors"
+          tabIndex={0}
+          className="group flex items-center gap-3.5 cursor-pointer py-1.5 outline-none transition-colors"
         >
           <div className="flex flex-col items-center justify-center relative w-2.5 shrink-0">
             {idx > 0 && <span className="absolute -top-3 bottom-1/2 w-px bg-[#0B0B0B]/25" />}
             {idx < pipelineSteps.length - 1 && <span className="absolute top-1/2 -bottom-3 w-px bg-[#0B0B0B]/25" />}
             <span className="w-2 h-2 rounded-full transition-all relative z-10 bg-[#0B0B0B] group-hover:bg-[#1F5A3A]" />
           </div>
-          <span className="font-mono text-[13px] tracking-wide transition-colors text-[#0B0B0B] group-hover:text-[#1F5A3A]">
-            {step.label}
-          </span>
+          <div className="relative inline-block transition-transform duration-200 ease-out group-hover:translate-x-[6px]">
+            <span className="font-mono text-[13px] tracking-wide transition-colors text-[#0B0B0B] group-hover:text-[#1F5A3A]">
+              {step.label}
+            </span>
+            <span
+              aria-hidden="true"
+              className="absolute left-0 -bottom-0.5 h-px w-full bg-[#1F5A3A] origin-left scale-x-0 transition-transform duration-300 ease-out group-hover:scale-x-100"
+            />
+          </div>
         </div>
       ))}
     </div>
@@ -900,51 +1185,185 @@ function CareerLensCard({ p, active }: { p: Project; active: boolean }) {
         title={titleNode}
         sentence={p.sentence}
         line={p.line}
-        statusLine={p.statusLine ?? "Backend built and tested. Front end being rebuilt."}
+        statusLine={p.statusLine ?? p.mutedLine}
         buttonLabel={p.buttonLabel ?? "Details"}
         onOpenDetails={() => setCs(true)}
         pipeline={pipelineNode}
         visual={<CareerLensPipeline active={active} />}
+        active={active}
       />
       <CaseStudy open={cs} onClose={closeCs} data={careerlensCaseStudy} />
     </>
   );
 }
 
-export function PageWorks({ sub, paged, active = true }: { sub: number; paged: boolean; active?: boolean }) {
+export function PageWorks({
+  sub,
+  paged,
+  active = true,
+  onSelectSub,
+}: {
+  sub: number;
+  paged: boolean;
+  active?: boolean;
+  onSelectSub?: (sub: number) => void;
+}) {
   const stack = useRef<HTMLDivElement>(null);
+  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const dimRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const prevSub = useRef(sub);
+  const initialRender = useRef(true);
 
   useEffect(() => {
     preloadScreenshots();
   }, []);
 
   useEffect(() => {
-    if (!paged || !stack.current) return;
-    const cards = stack.current.querySelectorAll<HTMLElement>("[data-card]");
-    cards.forEach((c, i) => {
-      const d = i - sub;
-      gsap.to(c, {
-        yPercent: d > 0 ? 110 : 0,
-        scale: d < 0 ? 1 + d * 0.04 : 1,
-        opacity: d < -2 ? 0 : 1,
-        duration: 0.9,
-        ease: EASE.tr,
+    if (!paged) return;
+
+    const cards = cardRefs.current;
+    const dims = dimRefs.current;
+
+    if (initialRender.current || reduced()) {
+      initialRender.current = false;
+      prevSub.current = sub;
+      cards.forEach((c, i) => {
+        if (!c) return;
+        const dim = dims[i];
+        if (i > sub) {
+          gsap.set(c, { yPercent: 100, scale: 1 });
+          if (dim) gsap.set(dim, { opacity: 0 });
+        } else if (i === sub) {
+          gsap.set(c, { yPercent: 0, scale: 1 });
+          if (dim) gsap.set(dim, { opacity: 0 });
+        } else {
+          const depth = sub - i;
+          gsap.set(c, { yPercent: -4 * depth, scale: Math.max(0.8, 1 - 0.06 * depth) });
+          if (dim) gsap.set(dim, { opacity: Math.min(0.8, 0.45 * depth) });
+        }
       });
-    });
+      return;
+    }
+
+    const from = prevSub.current;
+    const to = sub;
+    prevSub.current = sub;
+
+    if (from === to) return;
+
+    if (to > from) {
+      // Forward transition: next card slides up from bottom (yPercent 100 to 0, 0.9 s, expo.out) over current card,
+      // while current card scales to 0.94, moves up 4% and dims to 55% brightness.
+      cards.forEach((c, i) => {
+        if (!c) return;
+        const dim = dims[i];
+
+        if (i === to) {
+          gsap.fromTo(
+            c,
+            { yPercent: 100, scale: 1 },
+            { yPercent: 0, scale: 1, duration: 0.9, ease: "expo.out" }
+          );
+          if (dim) gsap.set(dim, { opacity: 0 });
+        } else if (i < to) {
+          const depth = to - i;
+          const targetScale = Math.max(0.8, 1 - 0.06 * depth);
+          const targetYPercent = -4 * depth;
+          const targetDim = Math.min(0.8, 0.45 * depth);
+
+          gsap.to(c, {
+            yPercent: targetYPercent,
+            scale: targetScale,
+            duration: 0.9,
+            ease: "expo.out",
+          });
+          if (dim) {
+            gsap.to(dim, {
+              opacity: targetDim,
+              duration: 0.9,
+              ease: "expo.out",
+            });
+          }
+        } else {
+          gsap.set(c, { yPercent: 100, scale: 1 });
+          if (dim) gsap.set(dim, { opacity: 0 });
+        }
+      });
+    } else {
+      // Reverse transition: top card slides down and the card beneath scales back to 1
+      cards.forEach((c, i) => {
+        if (!c) return;
+        const dim = dims[i];
+
+        if (i > to) {
+          gsap.to(c, {
+            yPercent: 100,
+            scale: 1,
+            duration: 0.9,
+            ease: "expo.out",
+          });
+          if (dim) {
+            gsap.to(dim, {
+              opacity: 0,
+              duration: 0.9,
+              ease: "expo.out",
+            });
+          }
+        } else if (i === to) {
+          gsap.to(c, {
+            yPercent: 0,
+            scale: 1,
+            duration: 0.9,
+            ease: "expo.out",
+          });
+          if (dim) {
+            gsap.to(dim, {
+              opacity: 0,
+              duration: 0.9,
+              ease: "expo.out",
+            });
+          }
+        } else {
+          const depth = to - i;
+          const targetScale = Math.max(0.8, 1 - 0.06 * depth);
+          const targetYPercent = -4 * depth;
+          const targetDim = Math.min(0.8, 0.45 * depth);
+
+          gsap.to(c, {
+            yPercent: targetYPercent,
+            scale: targetScale,
+            duration: 0.9,
+            ease: "expo.out",
+          });
+          if (dim) {
+            gsap.to(dim, {
+              opacity: targetDim,
+              duration: 0.9,
+              ease: "expo.out",
+            });
+          }
+        }
+      });
+    }
   }, [sub, paged]);
 
   return (
-    <div className="page-inner max-w-full overflow-x-hidden" style={{ background: "var(--cream)", color: "var(--ink)" }}>
+    <div
+      className="page-inner max-w-full overflow-x-hidden"
+      style={{ background: "var(--cream)", color: "var(--ink)" }}
+    >
       {/* Progress indicator row */}
       <div className="flex items-center justify-end gap-2 pb-2" data-fade>
-        {works.projects.map((_, idx) => (
-          <span
-            key={idx}
-            aria-hidden="true"
-            className="inline-block h-[3px] rounded-full transition-all duration-500 ease-out"
+        {works.projects.map((p, idx) => (
+          <button
+            key={p.id}
+            type="button"
+            onClick={() => onSelectSub?.(idx)}
+            aria-label={`Go to ${p.title}`}
+            className="inline-block h-[3px] rounded-full transition-all duration-500 ease-out cursor-pointer p-0 border-0 outline-none focus-visible:ring-1 focus-visible:ring-[#1F5A3A]"
             style={{
-              width: (!paged || sub === idx) ? 32 : 12,
-              backgroundColor: (!paged || sub === idx) ? "var(--accent-green)" : "var(--line)",
+              width: !paged || sub === idx ? 32 : 12,
+              backgroundColor: !paged || sub === idx ? "var(--accent-green)" : "var(--line)",
             }}
           />
         ))}
@@ -954,22 +1373,47 @@ export function PageWorks({ sub, paged, active = true }: { sub: number; paged: b
 
       <div
         ref={stack}
-        className={paged ? "relative mt-[2dvh] min-h-0 flex-1 flex flex-col justify-center" : "mt-6 space-y-16"}
+        className={
+          paged
+            ? "relative mt-[2dvh] min-h-0 flex-1 flex flex-col justify-center"
+            : "mt-6 space-y-16"
+        }
         data-sig
       >
         {works.projects.map((p, i) => (
           <div
             key={p.id}
+            ref={(el) => {
+              cardRefs.current[i] = el;
+            }}
             data-card
-            className={paged ? "absolute inset-0 origin-top overflow-hidden flex flex-col justify-center" : "border-b hair pb-12"}
+            className={
+              paged
+                ? "absolute inset-0 origin-top overflow-hidden flex flex-col justify-center rounded-t-[24px]"
+                : "border-b hair pb-12"
+            }
             style={{
               background: "var(--cream)",
               color: "var(--ink)",
-              zIndex: paged ? i : undefined,
+              zIndex: paged ? (i + 1) * 10 : undefined,
+              boxShadow: paged ? "0 -8px 32px rgba(11, 11, 11, 0.12)" : undefined,
+              borderTop: paged ? "1px solid rgba(11, 11, 11, 0.08)" : undefined,
             }}
             aria-hidden={paged && i !== sub}
             inert={paged && i !== sub ? true : undefined}
           >
+            {/* Dim overlay for non-active stacked cards (GPU transform & opacity only) */}
+            {paged && (
+              <div
+                ref={(el) => {
+                  dimRefs.current[i] = el;
+                }}
+                data-card-dim
+                className="absolute inset-0 bg-[#0B0B0B] pointer-events-none rounded-t-[24px] z-30"
+                style={{ opacity: 0 }}
+              />
+            )}
+
             {p.id === "ddss" ? (
               <DDSSCard p={p} active={active && (!paged || i === sub)} />
             ) : p.id === "role" ? (

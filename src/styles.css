@@ -370,6 +370,27 @@ html.paged .about-section {
   max-width: 100%;
   margin-bottom: 24px;
 }
+
+.works-title-dissolve {
+  position: relative;
+  width: max-content;
+  max-width: 100%;
+}
+
+@keyframes typewriterCaretBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.typewriter-caret {
+  animation: typewriterCaretBlink 0.65s step-start infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .typewriter-caret {
+    display: none !important;
+  }
+}
 .about-name {
   font-size: min(15cqw, 18cqh);
   letter-spacing: 0;
