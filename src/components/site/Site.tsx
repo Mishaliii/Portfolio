@@ -119,7 +119,13 @@ export function Site() {
     const m = introMode(seen, location.hash);
     setMode(m);
     void boot();
-    if (m === "none") { Object.assign(stage, { zoom: 1, light: 1, radius: 0.22, controls: true }); setBooted(true); setShowIntro(false); }
+    if (m === "none") {
+      Object.assign(stage, { zoom: 1, light: 1, radius: 0.22, controls: true });
+      (window as any).__siteBooted = true;
+      setBooted(true);
+      setShowIntro(false);
+      window.dispatchEvent(new CustomEvent("site-loader-done"));
+    }
     const h = location.hash.slice(1);
     if (h) {
       const initialIdx = idx(h);
@@ -242,7 +248,9 @@ export function Site() {
     if (first) first.classList.add("is-active");
   }, []);
   const finishIntro = useCallback(() => {
+    (window as any).__siteBooted = true;
     setBooted(true); setShowIntro(false);
+    window.dispatchEvent(new CustomEvent("site-loader-done"));
     const first = pageEls.current[curRef.current];
     first?.focus({ preventScroll: true });
   }, []);
