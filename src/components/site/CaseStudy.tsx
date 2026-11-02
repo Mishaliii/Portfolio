@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import { gsap } from "gsap";
 import { works, type CaseStudyData } from "@/content";
+import { useScrollSpy } from "@/hooks/useScrollSpy";
 import { ddssImages } from "./ScreenshotGallery";
 
 export function CaseStudy({
@@ -19,7 +20,14 @@ export function CaseStudy({
   const scrollArea = useRef<HTMLDivElement>(null);
   const closeBtn = useRef<HTMLButtonElement>(null);
   const closing = useRef(false);
-  const [activeSection, setActiveSection] = useState(c.sections[0]?.id ?? "");
+
+  const sectionIds = useMemo(() => c.sections.map((s) => s.id), [c.sections]);
+  const { activeSection, scrollTo } = useScrollSpy({
+    containerRef: scrollArea,
+    sectionIds,
+    offset: 24,
+    enabled: open,
+  });
 
   const close = useCallback(() => {
     const el = box.current;
@@ -39,7 +47,6 @@ export function CaseStudy({
 
   useEffect(() => {
     if (!open) return;
-    setActiveSection(c.sections[0]?.id ?? "");
     const prev = document.activeElement as HTMLElement | null;
     const el = box.current;
     const bd = backdrop.current;
@@ -68,21 +75,6 @@ export function CaseStudy({
 
     closeBtn.current?.focus({ preventScroll: true });
 
-    // Track active section for left sticky nav
-    const sectionObserver = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((e) => {
-          if (e.isIntersecting) setActiveSection(e.target.id);
-        });
-      },
-      { root: scrollArea.current, rootMargin: "-10% 0px -60% 0px" }
-    );
-
-    c.sections.forEach((s) => {
-      const targetEl = document.getElementById(s.id);
-      if (targetEl) sectionObserver.observe(targetEl);
-    });
-
     const key = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
@@ -104,7 +96,6 @@ export function CaseStudy({
 
     window.addEventListener("keydown", key, true);
     return () => {
-      sectionObserver.disconnect();
       document.documentElement.style.overflow = origHtmlOverflow;
       document.body.style.overflow = origBodyOverflow;
       document.documentElement.removeAttribute("data-modal-open");
@@ -123,12 +114,12 @@ export function CaseStudy({
 
   return createPortal(
     <>
-      {/* Dimmed backdrop */}
+      {/* Dimmed backdrop - plain semi-opaque scrim without expensive backdrop-filter */}
       <div
         ref={backdrop}
         onClick={close}
         aria-hidden="true"
-        className="fixed inset-0 z-[89] bg-black/45 backdrop-blur-[2px] cursor-pointer"
+        className="fixed inset-0 z-[89] bg-black/50 cursor-pointer"
       />
 
       {/* Full-height drawer from the right, 72% width */}
@@ -139,7 +130,8 @@ export function CaseStudy({
         role="dialog"
         aria-modal="true"
         aria-label={Array.isArray(c.title) ? c.title.join(" ") : c.title}
-        className="fixed inset-y-0 right-0 z-[90] w-full md:w-[72%] max-w-[1200px] h-full flex flex-col bg-[#E8DED0] text-[#0B0B0B] shadow-2xl border-l border-[#0B0B0B]/15"
+        className="fixed inset-y-0 right-0 z-[90] w-full md:w-[72%] max-w-[1200px] h-full flex flex-col bg-[#E8DED0] text-[#0B0B0B] shadow-[-8px_0_24px_rgba(0,0,0,0.12)] border-l border-[#0B0B0B]/15"
+        style={{ willChange: "transform" }}
       >
         {/* Top bar with title and small Close button */}
         <div className="flex items-center justify-between border-b border-[#0B0B0B]/15 px-6 sm:px-10 py-5 shrink-0 bg-[#E8DED0]">
@@ -172,9 +164,7 @@ export function CaseStudy({
                   <button
                     key={item.id}
                     type="button"
-                    onClick={() => {
-                      document.getElementById(item.id)?.scrollIntoView({ behavior: "smooth", block: "start" });
-                    }}
+                    onClick={() => scrollTo(item.id)}
                     className={`block text-left transition-colors cursor-pointer ${
                       isActive
                         ? "text-[#1F5A3A] font-semibold underline underline-offset-8 decoration-[#1F5A3A] decoration-2"
