@@ -1,6 +1,3 @@
-@import "@fontsource/noto-sans-malayalam/400.css";
-@import "@fontsource/noto-sans-devanagari/400.css";
-@import "@fontsource/noto-sans-arabic/400.css";
 @import "tailwindcss" source(none);
 @source "../src";
 
@@ -272,9 +269,6 @@ html:not(.paged) .hero { height: 100svh; height: 100dvh; }
 .hbtn-ghost .hbtn-arrow, .hbtn-solid:hover .hbtn-arrow { background: var(--cream); color: var(--ink); }
 .hbtn-ghost:hover .hbtn-arrow { background: var(--ink); color: var(--cream); }
 .hbtn:hover .hbtn-arrow { transform: rotate(-35deg); }
-.shot-copy { position: fixed; inset: 0; z-index: 60; pointer-events: none; color: var(--cream); }
-.shot-mark { position: absolute; left: var(--pad); top: 18px; font-size: 24px; }
-.shot-count { position: absolute; left: var(--pad); bottom: clamp(16px, 4dvh, 40px); font-size: clamp(72px, 14dvh, 160px); line-height: .84; font-variant-numeric: tabular-nums; }
 
 /* hero v2: title top-left, CTAs under it, availability chip bottom-right */
 .hero-top { position: absolute; z-index: 2; left: var(--pad); top: clamp(92px, 15vh, 160px); }

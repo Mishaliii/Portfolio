@@ -3,6 +3,10 @@ import { ArrowLeft, ArrowRight, RotateCw } from "lucide-react";
 import { works } from "@/content";
 
 const c = works.caseStudy;
+export const ddssThumbs: Record<string, string> = Object.fromEntries(
+  Object.entries(import.meta.glob<string>("@/assets/ddss*-thumb.webp", { eager: true, import: "default" }))
+    .map(([path, asset]) => [(path.split("/").pop() ?? "").replace("-thumb.webp", ""), asset]),
+);
 export const ddssImages: Record<string, string> = Object.fromEntries(
   Object.entries(import.meta.glob<string>("@/assets/ddss*-screen.webp", { eager: true, import: "default" }))
     .map(([path, asset]) => [(path.split("/").pop() ?? "").replace("-screen.webp", ""), asset]),

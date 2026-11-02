@@ -96,6 +96,18 @@ export function RollYear({ year, className, style }: { year: string; className?:
 
 /** Rotating greeting with a mask rise. Fixed height container so nothing jumps. */
 export function Greeting({ lines }: { lines: GreetingItem[] }) {
+  useEffect(() => {
+    const loadFonts = () => {
+      import("@fontsource/noto-sans-malayalam/400.css");
+      import("@fontsource/noto-sans-devanagari/400.css");
+      import("@fontsource/noto-sans-arabic/400.css");
+    };
+    if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+      (window as any).requestIdleCallback(loadFonts);
+    } else {
+      setTimeout(loadFonts, 1000);
+    }
+  }, []);
   const i = useCycle(lines.length, 2600);
   const cur = lines[i % lines.length];
   return (

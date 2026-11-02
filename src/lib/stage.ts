@@ -3,10 +3,6 @@ import { Observer } from "gsap/Observer";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { SplitText } from "gsap/SplitText";
 import { INTRO_TIMEOUT_MS, loadingProgress, readyToReveal, type BootPart } from "./intro";
-import portraitFront from "@/assets/portrait-front-composited.webp";
-import portraitSide from "@/assets/portrait-side-composited.webp";
-import ddss1 from "@/assets/ddss-2-screen.webp";
-import ddss8 from "@/assets/ddss-8-screen.webp";
 import { useSmallVideo } from "./performance";
 
 /** Scene data in video coordinates (origin top-left, 0..1), from public/hero/scene.json. */
@@ -112,18 +108,10 @@ export function boot(): Promise<void> {
     requestAnimationFrame(() => {
       gsap.registerPlugin(Observer, ScrollTrigger, SplitText);
       gsap.to({ v: 0 }, { v: 1, duration: 0.01 });
-      markBoot("init");
-    });
+          });
 
-    // secondary 10%: decode About/Works images two at a time
-    const list = [portraitSide, portraitFront, ddss1, ddss8];
-    let i = 0, done = 0;
-    const next = () => {
-      if (i >= list.length) return;
-      const im = new Image(); im.src = list[i++];
-      im.decode().catch(() => {}).finally(() => { done++; markBoot("secondary", done / list.length); next(); });
-    };
-    next(); next();
+    // secondary images load on idle when page mounts
+    markBoot("secondary");
     void t0;
   });
   return booting;

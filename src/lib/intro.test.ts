@@ -1,30 +1,62 @@
 import { describe, expect, it } from "vitest";
-import { introMode, loadingProgress, readyToReveal } from "./intro";
+import {
+  HARD_LIMIT_MS,
+  MIN_HOLD_MS,
+  ASSET_TIMEOUT_MS,
+  REDUCED_FADE_MS,
+  readyToSwitchOn,
+  isHardTimeout,
+  shouldShowIntro,
+  introMode,
+} from "./intro";
 
-describe("opening shot rules", () => {
-  it("weights fonts at 10 percent", () => expect(loadingProgress({ fonts: 1 })).toBe(10));
-  it("weights the poster at 5 percent", () => expect(loadingProgress({ poster: 1 })).toBe(5));
-  it("weights the video download at 55 percent, counting partial bytes", () => {
-    expect(loadingProgress({ video: 1 })).toBe(55);
-    expect(loadingProgress({ video: 0.5 })).toBe(27.5);
+describe("lights on loading screen rules", () => {
+  it("holds for at least 900ms before switching on even when assets are ready", () => {
+    expect(readyToSwitchOn(true, 0)).toBe(false);
+    expect(readyToSwitchOn(true, 500)).toBe(false);
+    expect(readyToSwitchOn(true, 899)).toBe(false);
+    expect(readyToSwitchOn(true, MIN_HOLD_MS)).toBe(true);
+    expect(readyToSwitchOn(true, 1000)).toBe(true);
   });
-  it("weights depth + scene data at 5, init at 15 and secondary images at 10 percent", () => {
-    expect(loadingProgress({ depth: 1 })).toBe(5);
-    expect(loadingProgress({ init: 1 })).toBe(15);
-    expect(loadingProgress({ secondary: 1 })).toBe(10);
+
+  it("does not switch on at 900ms if assets are not ready", () => {
+    expect(readyToSwitchOn(false, 900)).toBe(false);
+    expect(readyToSwitchOn(false, 1200)).toBe(false);
+    expect(readyToSwitchOn(false, 1599)).toBe(false);
   });
-  it("waits for the decoded uploaded frame even when downloads finish", () => {
-    expect(readyToReveal(100, 5999, false)).toBe(false);
-    expect(readyToReveal(100, 5999, true)).toBe(true);
-    expect(readyToReveal(99, 5999, true)).toBe(false);
+
+  it("switches on at 1.6s even on slow networks when assets are not ready", () => {
+    expect(readyToSwitchOn(false, ASSET_TIMEOUT_MS)).toBe(true);
+    expect(readyToSwitchOn(false, 2000)).toBe(true);
   });
-  it("falls back after exactly 6 seconds", () => {
-    expect(readyToReveal(40, 5999, false)).toBe(false);
-    expect(readyToReveal(40, 6000, false)).toBe(true);
+
+  it("enforces hard total time limit of 2.4s", () => {
+    expect(isHardTimeout(2399)).toBe(false);
+    expect(isHardTimeout(HARD_LIMIT_MS)).toBe(true);
+    expect(isHardTimeout(3000)).toBe(true);
   });
-  it("plays the full shot on a first visit, short on a repeat, none on deep links", () => {
+
+  it("plays once per session and skips on subsequent visits", () => {
+    expect(shouldShowIntro(false, "")).toBe(true);
+    expect(shouldShowIntro(false, "#overview")).toBe(true);
+    expect(shouldShowIntro(true, "")).toBe(false);
+    expect(shouldShowIntro(true, "#overview")).toBe(false);
+  });
+
+  it("skips loading screen on deep links", () => {
+    expect(shouldShowIntro(false, "#works")).toBe(false);
+    expect(shouldShowIntro(false, "#about")).toBe(false);
+    expect(shouldShowIntro(false, "#connect")).toBe(false);
+  });
+
+  it("returns correct mode for Site.tsx", () => {
     expect(introMode(false, "")).toBe("full");
-    expect(introMode(true, "#overview")).toBe("short");
+    expect(introMode(false, "#overview")).toBe("full");
+    expect(introMode(true, "")).toBe("none");
     expect(introMode(false, "#works")).toBe("none");
+  });
+
+  it("defines reduced motion fade time as 200ms", () => {
+    expect(REDUCED_FADE_MS).toBe(200);
   });
 });

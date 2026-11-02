@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, lazy, Suspense } from "react";
 import { gsap } from "gsap";
 import {
   works,
@@ -8,8 +8,8 @@ import {
 } from "@/content";
 import { SplitReveal } from "./Split";
 import { EASE } from "@/lib/motion";
-import { CaseStudy } from "./CaseStudy";
-import { ddssImages, preloadScreenshots } from "./ScreenshotGallery";
+const CaseStudy = lazy(() => import("./CaseStudy").then((m) => ({ default: m.CaseStudy })));
+import { ddssImages, ddssThumbs, preloadScreenshots } from "./ScreenshotGallery";
 
 export function WorkCardShell({
   ariaLabel,
@@ -92,6 +92,7 @@ function DDSSCard({ p, active }: { p: Project; active: boolean }) {
   const [videoFailed, setVideoFailed] = useState(false);
   const [selectedShot, setSelectedShot] = useState<string | null>(null);
   const [isZoomed, setIsZoomed] = useState(false);
+  const [inView, setInView] = useState(false);
 
   const shots = works.caseStudy.shots;
   const activeShotKey = selectedShot ?? shots[0]?.k ?? "ddss";
@@ -100,24 +101,34 @@ function DDSSCard({ p, active }: { p: Project; active: boolean }) {
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
-    const shouldPlay = active && showVideo && !videoFailed && !document.hidden;
+    const obs = new IntersectionObserver(([entry]) => {
+      setInView(entry?.isIntersecting ?? false);
+    }, { threshold: 0.1 });
+    obs.observe(v);
+    return () => obs.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    const shouldPlay = active && inView && showVideo && !videoFailed && !document.hidden;
     if (shouldPlay) {
       v.play().catch(() => {});
     } else {
       v.pause();
     }
-  }, [active, showVideo, videoFailed]);
+  }, [active, inView, showVideo, videoFailed]);
 
   useEffect(() => {
     const onVisChange = () => {
       const v = videoRef.current;
       if (!v) return;
       if (document.hidden) v.pause();
-      else if (active && showVideo && !videoFailed) v.play().catch(() => {});
+      else if (active && inView && showVideo && !videoFailed) v.play().catch(() => {});
     };
     document.addEventListener("visibilitychange", onVisChange);
     return () => document.removeEventListener("visibilitychange", onVisChange);
-  }, [active, showVideo, videoFailed]);
+  }, [active, inView, showVideo, videoFailed]);
 
   const filmstrip = p.filmstrip ?? [
     { k: "ddss-2", t: "Dashboard" },
@@ -210,7 +221,7 @@ function DDSSCard({ p, active }: { p: Project; active: boolean }) {
             muted
             loop
             playsInline
-            preload="metadata"
+            preload="none"
             poster={posterSrc}
             onError={() => setVideoFailed(true)}
             className="h-full w-full object-cover"
@@ -253,7 +264,7 @@ function DDSSCard({ p, active }: { p: Project; active: boolean }) {
                   title={s.t}
                   aria-label={s.t}
                 >
-                  <img src={ddssImages[s.k]} alt="" className="h-full w-full object-cover" loading="lazy" />
+                  <img src={ddssThumbs[s.k] || ddssImages[s.k]} alt="" className="h-full w-full object-cover" loading="lazy" />
                 </button>
               );
             })}
@@ -289,7 +300,7 @@ function DDSSCard({ p, active }: { p: Project; active: boolean }) {
         pipeline={pipelineNode}
         visual={visualNode}
       />
-      <CaseStudy open={cs} onClose={closeCs} />
+      <Suspense fallback={null}><CaseStudy open={cs} onClose={closeCs} /></Suspense>
     </>
   );
 }
@@ -595,7 +606,7 @@ function RoleCard({ p, active }: { p: Project; active: boolean }) {
         pipeline={pipelineNode}
         visual={<ProductivityExplorer active={active} pulseTarget={pulseTarget} />}
       />
-      <CaseStudy open={cs} onClose={closeCs} data={roleCaseStudy} />
+      <Suspense fallback={null}><CaseStudy open={cs} onClose={closeCs} data={roleCaseStudy} /></Suspense>
     </>
   );
 }
@@ -906,7 +917,7 @@ function CareerLensCard({ p, active }: { p: Project; active: boolean }) {
         pipeline={pipelineNode}
         visual={<CareerLensPipeline active={active} />}
       />
-      <CaseStudy open={cs} onClose={closeCs} data={careerlensCaseStudy} />
+      <Suspense fallback={null}><CaseStudy open={cs} onClose={closeCs} data={careerlensCaseStudy} /></Suspense>
     </>
   );
 }
@@ -915,8 +926,8 @@ export function PageWorks({ sub, paged, active = true }: { sub: number; paged: b
   const stack = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    preloadScreenshots();
-  }, []);
+    if (active) preloadScreenshots();
+  }, [active]);
 
   useEffect(() => {
     if (!paged || !stack.current) return;
