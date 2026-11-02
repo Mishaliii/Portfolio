@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, lazy, Suspense } from "react";
 import { gsap } from "gsap";
 import { Observer } from "gsap/Observer";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -15,9 +15,17 @@ import { PerformancePanel } from "./PerformancePanel";
 import { SceneStage } from "./SceneStage";
 import { PageHero, heroEnter } from "./PageHero";
 import { PageAbout } from "./PageAbout";
-import { PageExpertise } from "./PageExpertise";
-import { PageWorks } from "./PageWorks";
-import { PageJourney } from "./PageJourney";
+const PageExpertise = lazy(() => import("./PageExpertise").then((m) => ({ default: m.PageExpertise })));
+const PageWorks = lazy(() => import("./PageWorks").then((m) => ({ default: m.PageWorks })));
+const PageJourney = lazy(() => import("./PageJourney").then((m) => ({ default: m.PageJourney })));
+
+function prefetchDeferred() {
+  import("./PageWorks");
+  import("./PageExpertise");
+  import("./PageJourney");
+  import("./CaseStudy");
+  import("./RetrievalDemo");
+}
 import { PageConnect } from "./PageConnect";
 
 const INV = new Set(["connect"]);
@@ -236,6 +244,8 @@ export function Site() {
     const ric = (window as any).requestIdleCallback as ((cb: () => void) => number) | undefined;
     const pre = () => document.fonts.ready.then(() => presplit(document.querySelector("main")!));
     if (ric) ric(pre); else setTimeout(pre, 400);
+    const idlePrefetch = () => { prefetchDeferred(); };
+    if (ric) ric(idlePrefetch); else setTimeout(idlePrefetch, 800);
     if (paged) {
       pageEls.current.forEach((el, i) => el?.classList.toggle("is-active", i === curRef.current));
       const current = pageEls.current[curRef.current];
@@ -370,9 +380,9 @@ export function Site() {
   const P = useMemo(() => [
     <StableHero go={goId} />,
     <StableAbout go={goId} active={aboutOn} />,
-    <StableExpertise goProject={goProject} active={expertiseOn} />,
-    <StableWorks sub={sub} paged={!!paged} active={worksOn} onSelectSub={selectWorksSub} />,
-    <StableJourney active={journeyOn} stop={jStop} onSelectStop={selectJourneyStop} paged={!!paged} />,
+    <Suspense fallback={null}><StableExpertise goProject={goProject} active={expertiseOn} /></Suspense>,
+    <Suspense fallback={null}><StableWorks sub={sub} paged={!!paged} active={worksOn} onSelectSub={selectWorksSub} /></Suspense>,
+    <Suspense fallback={null}><StableJourney active={journeyOn} stop={jStop} onSelectStop={selectJourneyStop} paged={!!paged} /></Suspense>,
     <StableConnect copyEmail={copyEmail} go={goId} />,
   ], [goId, goProject, sub, jStop, paged, aboutOn, expertiseOn, worksOn, journeyOn, copyEmail, selectWorksSub, selectJourneyStop]);
 

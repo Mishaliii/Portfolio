@@ -153,42 +153,100 @@ export function SceneStage() {
     const onFrame = () => { frameReady = true; if (native) markSceneReady(); if (!dead && !native && vfc) frameId = vfc(onFrame); };
     if (vfc) frameId = vfc(onFrame);
 
-    // pointer state: mouse -1..1, idle drift, touch inertia
-    const m = { x: 0, y: 0 }, mt = { x: 0, y: 0 };
-    let lastMove = performance.now(), idleAmp = 0;
-    let dragging = false, dragX = 0, vel = 0;
+    // pointer parallax state: max 14px movement, frame-rate independent lerp
+    let targetX = 0, targetY = 0;
+    let currentX = 0, currentY = 0;
+    let parallaxActive = false;
+    let lastParallaxTime = performance.now();
+
+    const isTouch = (e?: PointerEvent) =>
+      coarse() ||
+      (e && e.pointerType === "touch") ||
+      (typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches);
+
+    const isReduced = () =>
+      typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    const applyTransform = (x: number, y: number) => {
+      mv.style.transform = `translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, 0) scale(1.06)`;
+    };
+
+    const parallaxStep = () => {
+      const now = performance.now();
+      const dt = Math.min(0.1, (now - lastParallaxTime) / 1000);
+      lastParallaxTime = now;
+
+      const active = onScreen && stage.heroOn && !stage.covered && !document.hidden;
+      if (!active || isReduced() || isTouch()) {
+        if (parallaxActive) {
+          parallaxActive = false;
+          gsap.ticker.remove(parallaxStep);
+        }
+        return;
+      }
+
+      // frame-rate independent easing: lerp factor about 0.08 per 16 ms: 1 - Math.pow(0.001, dt)
+      const k = 1 - Math.pow(0.001, dt);
+      currentX += (targetX - currentX) * k;
+      currentY += (targetY - currentY) * k;
+
+      const dx = Math.abs(targetX - currentX);
+      const dy = Math.abs(targetY - currentY);
+
+      if (dx < 0.02 && dy < 0.02) {
+        currentX = targetX;
+        currentY = targetY;
+        applyTransform(currentX, currentY);
+        parallaxActive = false;
+        gsap.ticker.remove(parallaxStep);
+        return;
+      }
+
+      applyTransform(currentX, currentY);
+    };
+
+    const startParallax = () => {
+      if (parallaxActive || isTouch() || isReduced()) return;
+      parallaxActive = true;
+      lastParallaxTime = performance.now();
+      gsap.ticker.add(parallaxStep);
+    };
+
     const onMove = (e: PointerEvent) => {
-      if (e.pointerType === "touch") return;
-      mt.x = (e.clientX / W) * 2 - 1; mt.y = -((e.clientY / H) * 2 - 1);
-      lastMove = performance.now();
+      if (isTouch(e) || isReduced()) return;
+      if (!stage.controls) return;
+      const nx = (e.clientX / W) * 2 - 1;
+      const ny = (e.clientY / H) * 2 - 1;
+      // Max movement about 14 px
+      targetX = Math.max(-14, Math.min(14, -nx * 14));
+      targetY = Math.max(-14, Math.min(14, -ny * 14));
+      startParallax();
     };
-    const onLeave = () => { mt.x = 0; mt.y = 0; };
-    const onTs = (e: TouchEvent) => { dragging = true; dragX = e.touches[0]?.clientX ?? 0; vel = 0; lastMove = performance.now(); };
-    const onTm = (e: TouchEvent) => {
-      if (!dragging || !stage.controls) return;
-      const x = e.touches[0]?.clientX ?? dragX; const dx = (x - dragX) / W * 2; dragX = x;
-      mt.x = Math.max(-1, Math.min(1, mt.x + dx)); vel = dx; lastMove = performance.now();
+
+    const onLeave = () => {
+      targetX = 0;
+      targetY = 0;
+      if (Math.abs(currentX) > 0.02 || Math.abs(currentY) > 0.02) {
+        startParallax();
+      }
     };
-    const onTe = () => { dragging = false; };
+
     window.addEventListener("pointermove", onMove, { passive: true });
     document.documentElement.addEventListener("pointerleave", onLeave);
     window.addEventListener("blur", onLeave);
-    window.addEventListener("touchstart", onTs, { passive: true });
-    window.addEventListener("touchmove", onTm, { passive: true });
-    window.addEventListener("touchend", onTe, { passive: true });
 
     const io = new IntersectionObserver(([en]) => { onScreen = en.isIntersecting; });
     const hero = document.getElementById("overview"); if (hero) io.observe(hero);
 
     let prev = performance.now(), playing = false;
-    let lastX = NaN, lastY = NaN, lastDim = -1, lastZoom = NaN, lastLight = NaN, lastRadius = NaN;
-    const setX = gsap.quickSetter(mv, "x", "px"), setY = gsap.quickSetter(mv, "y", "px");
-    gsap.set(mv, { scale: 1.04 });
-    // Keep this one composited surface stable instead of repeatedly promoting/demoting it.
+    let lastDim = -1, lastZoom = NaN, lastLight = NaN, lastRadius = NaN;
+    applyTransform(0, 0);
+    // Keep this one composited surface stable with transform only
     mv.style.willChange = "transform";
-    const amp = small ? 10 : 16; // px of parallax travel at the screen edge
+
     const tick = () => {
-      const now = performance.now(), dt = Math.min(0.1, (now - prev) / 1000); prev = now;
+      const now = performance.now();
+      prev = now;
       const active = onScreen && stage.heroOn && !stage.covered && performanceLayers.video && !document.hidden;
       if (stage.dim !== lastDim) { dm.style.opacity = String(stage.dim); lastDim = stage.dim; }
       if (!active || !sourceReady) { if (playing) { v.pause(); playing = false; } return; }
@@ -203,24 +261,13 @@ export function SceneStage() {
         if (draw && glRender) { glRender(); if (v.readyState >= 2 && lastVideoTime >= 0 && !stage.frameUploaded) markSceneReady(); lastZoom = stage.zoom; lastLight = stage.light; lastRadius = stage.radius; }
         return;
       }
-
-      if (stage.controls) {
-        const idle = now - lastMove > 2500 && !dragging;
-        idleAmp += ((idle ? 1 : 0) - idleAmp) * (1 - Math.exp(-dt / 0.45));
-        if (touch && !dragging) { mt.x += vel; vel *= 0.92; mt.x *= Math.exp(-dt / 0.6); }
-        const sx = Math.sin((now / 12000) * Math.PI * 2) * 0.25 * idleAmp;
-        const tx = mt.x * (1 - idleAmp) + sx, ty = mt.y * (1 - idleAmp);
-        const k = 1 - Math.exp(-dt / 0.12);
-        m.x += (tx - m.x) * k; m.y += (ty - m.y) * k;
-      }
-      const x = Math.round(-m.x * amp * 100) / 100, y = Math.round(m.y * amp * 60) / 100;
-      const moving = x !== lastX || y !== lastY;
-      if (moving) { setX(x); setY(y); lastX = x; lastY = y; }
     };
     gsap.ticker.add(tick);
 
     cleanups.push(() => {
-      gsap.ticker.remove(tick); io.disconnect();
+      gsap.ticker.remove(tick);
+      if (parallaxActive) gsap.ticker.remove(parallaxStep);
+      io.disconnect();
       if (frameId) v.cancelVideoFrameCallback?.(frameId);
       gl?.getExtension("WEBGL_lose_context")?.loseContext();
       window.removeEventListener("resize", size);
@@ -228,7 +275,6 @@ export function SceneStage() {
       window.removeEventListener("pointermove", onMove);
       document.documentElement.removeEventListener("pointerleave", onLeave);
       window.removeEventListener("blur", onLeave);
-      window.removeEventListener("touchstart", onTs); window.removeEventListener("touchmove", onTm); window.removeEventListener("touchend", onTe);
     });
     return () => { dead = true; v.pause(); cleanups.forEach((f) => f()); };
   }, []);
