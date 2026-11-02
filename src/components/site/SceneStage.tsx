@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { performanceLayers, sceneResolution } from "@/lib/performance";
-import { coarse } from "@/lib/motion";
+import { coarse, reduced } from "@/lib/motion";
 import { boot, coverFit, markBoot, markSceneReady, stage, videoBlob, videoSrc, type SceneData } from "@/lib/stage";
 
 const VERT = `attribute vec2 aPos; varying vec2 vUv;
@@ -61,6 +61,9 @@ export function SceneStage() {
       // The opening shader is never needed again; release its texture and drawing buffer.
       glUpload = null; glRender = null;
       gl?.getExtension("WEBGL_lose_context")?.loseContext();
+      c.style.display = "none";
+      c.width = 0;
+      c.height = 0;
     };
     const fallback = () => {
       goNative(); el.classList.add("is-fallback");
@@ -261,6 +264,7 @@ export function SceneStage() {
         if (draw && glRender) { glRender(); if (v.readyState >= 2 && lastVideoTime >= 0 && !stage.frameUploaded) markSceneReady(); lastZoom = stage.zoom; lastLight = stage.light; lastRadius = stage.radius; }
         return;
       }
+
     };
     gsap.ticker.add(tick);
 

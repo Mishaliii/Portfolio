@@ -120,7 +120,16 @@ export function Site() {
     setMode(m);
     void boot();
     if (m === "none") { Object.assign(stage, { zoom: 1, light: 1, radius: 0.22, controls: true }); setBooted(true); setShowIntro(false); }
-    const h = location.hash.slice(1); if (h) { setCur(idx(h)); curRef.current = idx(h); }
+    const h = location.hash.slice(1);
+    if (h) {
+      const initialIdx = idx(h);
+      setCur(initialIdx);
+      curRef.current = initialIdx;
+      if (initialIdx !== 0) {
+        stage.heroOn = false;
+        stage.covered = true;
+      }
+    }
     if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("perf") === "1") setPerfMode(true);
     const onSetWorksSub = (e: any) => {
       if (typeof e.detail === "number") { if (busy.current || e.detail === subRef.current) return; busy.current = true; setSub(e.detail); setTimeout(() => (busy.current = false), 920); }
@@ -333,6 +342,32 @@ export function Site() {
     };
     frameId = requestAnimationFrame(checkFrame);
     return () => cancelAnimationFrame(frameId);
+  }, []);
+
+  // Dev-only long task monitor: logs any task over 200ms with active page and what ran
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    let observer: PerformanceObserver | undefined;
+    try {
+      observer = new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) {
+          if (entry.duration > 200) {
+            const activePage = pages[curRef.current]?.id ?? "unknown";
+            const attribution = (entry as any).attribution?.[0];
+            const name = attribution?.name || attribution?.containerName || entry.name;
+            const src = attribution?.containerSrc || "";
+            console.warn(
+              `[LONGTASK] ${Math.round(entry.duration)}ms on page "${activePage}" - task: ${name}${src ? ` (${src})` : ""}`,
+              entry
+            );
+          }
+        }
+      });
+      observer.observe({ entryTypes: ["longtask"] });
+    } catch {
+      /* PerformanceObserver longtask unsupported */
+    }
+    return () => observer?.disconnect();
   }, []);
 
   const run = (it: (typeof palette)[number]) => {

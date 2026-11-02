@@ -80,7 +80,7 @@ html:not(.paged) .page-inner { min-height: 100svh; min-height: 100dvh; padding-t
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ── live movement ─────────────────────────────── */
-.grain-shift { animation: grainshift 1.1s steps(4) infinite; }
+.grain-shift { animation: grainshift 1.1s steps(4) infinite; will-change: transform; }
 @keyframes grainshift {
   0% { transform: translate(0, 0); }
   25% { transform: translate(-3px, 2px); }
@@ -318,6 +318,7 @@ html.paged .about-section {
 .about-portrait-images {
   position: absolute;
   inset: 0;
+  will-change: transform;
 }
 .about-portrait img {
   position: absolute;
@@ -326,6 +327,8 @@ html.paged .about-section {
   height: 100%;
   object-fit: contain;
   object-position: bottom left;
+  will-change: opacity;
+  transform: translateZ(0);
 }
 .about-portrait img + img {
   opacity: 0;

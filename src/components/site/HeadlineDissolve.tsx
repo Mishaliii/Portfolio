@@ -73,7 +73,7 @@ export function HeadlineDissolve({
 
     const measureLayout = (): TextLayout | null => {
       if (!h1 || !erase) return null;
-      const wrapRect = w.getBoundingClientRect();
+      const wrapRect = h1.getBoundingClientRect();
       if (wrapRect.width === 0 || wrapRect.height === 0) return null;
 
       const cs = getComputedStyle(h1);
@@ -117,11 +117,20 @@ export function HeadlineDissolve({
     };
 
     const size = () => {
-      const b = w.getBoundingClientRect();
+      const targetEl = (erase && h1) ? h1 : w;
+      const b = targetEl.getBoundingClientRect();
+      const wb = w.getBoundingClientRect();
       W = b.width;
       H = b.height;
       c.width = Math.round(W * dpr);
       c.height = Math.round(H * dpr);
+      if (erase && h1) {
+        c.style.position = "absolute";
+        c.style.left = `${Math.round(b.left - wb.left)}px`;
+        c.style.top = `${Math.round(b.top - wb.top)}px`;
+        c.style.width = `${W}px`;
+        c.style.height = `${H}px`;
+      }
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
       if (erase && assembled) {
@@ -142,7 +151,7 @@ export function HeadlineDissolve({
     let timer = 0;
 
     const wake = () => {
-      if (!unsub && !document.hidden) {
+      if (!unsub && !document.hidden && onPage(w)) {
         prev = performance.now();
         unsub = subscribe(draw);
       }
@@ -153,6 +162,8 @@ export function HeadlineDissolve({
     };
     const schedule = () => {
       clearTimeout(timer);
+      if (erase) return;
+      if (!onPage(w)) return;
       if (auto && pointerEnabled && Number.isFinite(nextSweep)) {
         timer = window.setTimeout(wake, Math.max(1000, nextSweep - performance.now()));
       }
@@ -175,7 +186,8 @@ export function HeadlineDissolve({
 
     const move = (e: PointerEvent) => {
       if (!onPage(w) || !performanceLayers.headline) return;
-      bounds = w.getBoundingClientRect();
+      const targetEl = (erase && h1) ? h1 : w;
+      bounds = targetEl.getBoundingClientRect();
       mx = e.clientX - bounds.left;
       my = e.clientY - bounds.top;
       inside = mx >= 0 && my >= 0 && mx <= W && my <= H;
@@ -216,6 +228,10 @@ export function HeadlineDissolve({
       prev = t;
 
       if (!visible || W === 0 || !onPage(w) || !performanceLayers.headline) {
+        if (!onPage(w)) {
+          sleep();
+          return;
+        }
         ctx.clearRect(0, 0, W, H);
         sleep();
         schedule();
@@ -272,9 +288,8 @@ export function HeadlineDissolve({
       }
 
       if (activeErase && isIdle && drawn) {
-        // Text is already drawn and pristine on canvas; sleep until next interaction or sweep
+        // Text is already drawn and pristine on canvas; sleep until next interaction
         sleep();
-        schedule();
         return;
       }
 
@@ -372,7 +387,8 @@ export function HeadlineDissolve({
     };
 
     const refresh = () => {
-      bounds = w.getBoundingClientRect();
+      if (!onPage(w)) return;
+      bounds = (erase && h1) ? h1.getBoundingClientRect() : w.getBoundingClientRect();
       if (erase && assembled) {
         textLayout = measureLayout();
         if (h1 && textLayout && textLayout.lines.length > 0 && pointerEnabled) {
@@ -380,8 +396,9 @@ export function HeadlineDissolve({
         }
       }
       if (performanceLayers.headline) {
+        drawn = false;
         wake();
-        schedule();
+        if (!erase) schedule();
       } else {
         ctx.clearRect(0, 0, W, H);
         sleep();
