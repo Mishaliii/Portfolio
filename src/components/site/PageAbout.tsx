@@ -96,54 +96,50 @@ export function PageAbout({ go, active = true }: { go: (id: string) => void; act
         <div className="about-portrait-fade" aria-hidden="true" />
       </div>
       <div className="about-content">
-        <div className="about-header">
-          <HeadlineDissolve className="about-name-dissolve">
-            <h2 className="about-name display">
-              <SplitReveal text={about.name} />
-              <span className="accent"><SplitReveal text={about.period} /></span>
-            </h2>
-          </HeadlineDissolve>
-          <div className="about-copy">
-            <p className="about-role mono">
-              <strong>
-                {about.fullName.split(" ").map((word, i) => (
-                  <span key={word}>
-                    <span data-about-word>{word}</span>
-                    {i === 0 ? " " : ""}
-                  </span>
-                ))}
-              </strong>
-              {about.role.split(" ").map((word, i) => (
-                <span key={i}>
-                  <span data-about-word>{word}</span>{" "}
-                </span>
-              ))}
-            </p>
-            <p className="about-bio">
-              {about.bio.split(" ").map((word, i) => (
-                <span key={i}>
-                  <span data-about-word>{word}</span>{" "}
-                </span>
-              ))}
-            </p>
-            <div className="about-actions" data-fade>
-              <a href={site.cv} download className="btn btn-solid about-btn">
-                <span>{ui.downloadCv}</span>
-                <ArrowDownToLine size={15} />
-              </a>
-              <a
-                href="#works"
-                onClick={(e) => {
-                  e.preventDefault();
-                  go("works");
-                }}
-                className="btn about-btn"
-              >
-                <span>{about.seeWorks}</span>
-                <ArrowUpRight size={15} />
-              </a>
-            </div>
-          </div>
+        <HeadlineDissolve className="about-name-dissolve">
+          <h2 className="about-name display">
+            <SplitReveal text={about.name} />
+            <span className="accent"><SplitReveal text={about.period} /></span>
+          </h2>
+        </HeadlineDissolve>
+        <p className="about-role mono">
+          <strong>
+            {about.fullName.split(" ").map((word, i) => (
+              <span key={word}>
+                <span data-about-word>{word}</span>
+                {i === 0 ? " " : ""}
+              </span>
+            ))}
+          </strong>
+          {about.role.split(" ").map((word, i) => (
+            <span key={i}>
+              <span data-about-word>{word}</span>{" "}
+            </span>
+          ))}
+        </p>
+        <p className="about-bio">
+          {about.bio.split(" ").map((word, i) => (
+            <span key={i}>
+              <span data-about-word>{word}</span>{" "}
+            </span>
+          ))}
+        </p>
+        <div className="about-actions" data-fade>
+          <a href={site.cv} download className="btn btn-solid about-btn">
+            <span>{ui.downloadCv}</span>
+            <ArrowDownToLine size={15} />
+          </a>
+          <a
+            href="#works"
+            onClick={(e) => {
+              e.preventDefault();
+              go("works");
+            }}
+            className="btn about-btn"
+          >
+            <span>{about.seeWorks}</span>
+            <ArrowUpRight size={15} />
+          </a>
         </div>
         <dl className="about-facts">
           {about.facts.map((fact) => (
