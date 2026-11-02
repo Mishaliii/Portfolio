@@ -1,106 +1,276 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
-import { journey } from "@/content";
-import { SplitReveal } from "./Split";
-import { RollYear } from "./Live";
-import { Liquid } from "./Liquid";
-import { idleFor } from "@/lib/motion";
+import { journey, type JourneyStop } from "@/content";
+import { reduced } from "@/lib/motion";
 
-const NX = [70, 260, 450, 640];
+function YearDigitColumn({
+  targetDigit,
+  active,
+}: {
+  targetDigit: number;
+  active: boolean;
+}) {
+  const stripRef = useRef<HTMLDivElement>(null);
+  const prevDigit = useRef<number>(targetDigit);
+  const initialized = useRef(false);
 
-function Pipeline({ active, onNode, node }: { active: boolean; onNode: (i: number) => void; node: number }) {
-  const svg = useRef<SVGSVGElement>(null);
-  const [sel, setSel] = useState(0);
   useEffect(() => {
-    if (!active || !svg.current) return;
-    const pk = svg.current.querySelector("#packet");
-    const nodes = svg.current.querySelectorAll("[data-node]");
-    const tl = gsap.timeline({ repeat: -1, repeatDelay: 0.6 });
-    tl.set(pk, { x: NX[0], opacity: 0 });
-    tl.to(pk, { opacity: 1, duration: 0.2 });
-    NX.forEach((_, i) => {
-      tl.call(() => onNode(i));
-      tl.to(nodes[i], { attr: { fill: "var(--burgundy)", r: 45 }, duration: 0.22, yoyo: true, repeat: 1 }, "<");
-      if (i < 3) tl.to(pk, { x: NX[i + 1], duration: 0.8, ease: "expo.inOut" }, "<");
+    const el = stripRef.current;
+    if (!el) return;
+
+    if (!initialized.current || reduced() || !active) {
+      initialized.current = true;
+      gsap.set(el, { yPercent: -targetDigit * 10 });
+      prevDigit.current = targetDigit;
+      return;
+    }
+
+    if (prevDigit.current === targetDigit) {
+      return;
+    }
+
+    // When the active stop changes the digits roll to the new year (0.9 s, power3.inOut)
+    gsap.to(el, {
+      yPercent: -targetDigit * 10,
+      duration: 0.9,
+      ease: "power3.inOut",
     });
-    tl.to(pk, { opacity: 0, duration: 0.2 });
-    return () => { tl.kill(); };
-  }, [active, onNode]);
+    prevDigit.current = targetDigit;
+  }, [targetDigit, active]);
+
   return (
-    <div data-sig className="flex h-full flex-col">
-      <div className="mono goldt" style={{ fontSize: 13 }}>{journey.diagramTitle}</div>
-      <svg ref={svg} viewBox="-30 20 770 170" className="mt-4 w-full" role="group" aria-label={journey.diagramTitle}>
-        {NX.slice(0, 3).map((x, i) => <line key={i} x1={x + 40} y1="90" x2={NX[i + 1] - 40} y2="90" stroke="var(--ink)" strokeWidth="1" />)}
-        {/* packet sits under the nodes: it lights each one as it lands, never over its label */}
-        <g id="packet" opacity="0">
-          <circle cx="0" cy="90" r="11" fill="#FF4A1C" opacity="0.22" />
-          <circle cx="0" cy="90" r="4.5" fill="#FF4A1C" />
-        </g>
-        {journey.nodes.map((n, i) => (
-          <g key={n.id} tabIndex={0} role="button" aria-label={n.t} aria-pressed={sel === i} onClick={() => setSel(i)} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && setSel(i)} style={{ outline: "none" }}>
-            <circle data-node cx={NX[i]} cy="90" r="40" fill="var(--cream)" stroke={sel === i ? "var(--burgundy)" : "var(--ink)"} strokeWidth={sel === i ? 2 : 1} />
-            <text x={NX[i]} y="96" textAnchor="middle" style={{ font: "500 16px 'JetBrains Mono'" }} fill="var(--ink)">0{i + 1}</text>
-            <text x={NX[i]} y="160" textAnchor="middle" style={{ font: "600 15px Manrope" }} fill="var(--ink)">{n.t}</text>
-          </g>
+    <span className="relative inline-block overflow-hidden h-[1em] leading-none select-none">
+      <span ref={stripRef} className="flex flex-col will-change-transform">
+        {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
+          <span
+            key={n}
+            className="h-[1em] leading-none flex items-center justify-center"
+          >
+            {n}
+          </span>
         ))}
-      </svg>
-      <ul className="stream mono mt-3 flex flex-wrap gap-x-6 gap-y-1 border-t pt-2 hair" style={{ borderColor: "var(--line)" }}>
-        {journey.stream.map((s, i) => (
-          <li key={s} data-on={node >= i + 1 ? "" : undefined} style={node >= i + 1 ? { color: "var(--signal)" } : undefined}>{s}</li>
-        ))}
-      </ul>
-      <div className="mt-3 border-t pt-3" style={{ borderColor: "var(--gold)" }} aria-live="polite">
-        <div className="text-[clamp(17px,1.4vw,22px)] font-semibold">{journey.nodes[sel].t}</div>
-        <p className="muted text-[clamp(15px,1.1vw,18px)]">{journey.nodes[sel].d}</p>
-      </div>
+      </span>
+    </span>
+  );
+}
+
+function YearOdometer({ year, active }: { year: string; active: boolean }) {
+  const digits = year.split("").map((c) => parseInt(c, 10));
+
+  return (
+    <div
+      className="display font-bold text-[#0B0B0B] tracking-tight inline-flex items-center justify-center select-none"
+      style={{
+        fontSize: "clamp(88px, 22vw, 320px)",
+        lineHeight: 1,
+      }}
+      aria-label={year}
+    >
+      {digits.map((d, i) => (
+        <YearDigitColumn key={i} targetDigit={d} active={active} />
+      ))}
     </div>
   );
 }
 
-export function PageJourney({ active }: { active: boolean }) {
-  const [node, setNode] = useState(0);
-  // selected entry: set by hovering/focusing an entry; auto-advances only when the pointer has rested away from the list
-  const [ai, setAi] = useState(0);
-  const inList = useRef(false);
-  useEffect(() => {
-    if (!active) return;
-    const id = window.setInterval(() => {
-      if (!document.hidden && !inList.current && idleFor(4000)) setAi((v) => (v + 1) % journey.timeline.length);
-    }, 4600);
-    return () => clearInterval(id);
-  }, [active]);
-  const onNode = useCallback((i: number) => setNode(i), []);
-  const year = journey.timeline[ai].when.replace(/[^\d]/g, "").slice(0, 4);
+function StopEntry({ stop }: { stop: JourneyStop }) {
   return (
-    <div className="page-inner">
-      <Liquid><h2 className="display" style={{ fontSize: "clamp(40px, min(6.4vw, 10.5dvh), 150px)", lineHeight: 0.95 }}>
-        <span className="block"><SplitReveal text="ACADEMIC &" /></span>
-        <span className="block"><SplitReveal text="INDUSTRY" hl /> <SplitReveal text="JOURNEY." /></span>
-      </h2></Liquid>
-      <div className="mt-[2.5dvh] h-px w-full" style={{ background: "var(--line)" }} data-fade />
-      <div className="mt-[3dvh] grid min-h-0 flex-1 grid-cols-1 items-center gap-[4vw] lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)]">
-        <ol className="relative border-l hair pl-6" onPointerEnter={() => (inList.current = true)} onPointerLeave={() => (inList.current = false)}>
-          <span aria-hidden className="absolute -left-px top-0 w-[2px] transition-[height] duration-700 ease-out"
-            style={{ height: `${((ai + 0.6) / journey.timeline.length) * 100}%`, background: "var(--burgundy)" }} />
-          {journey.timeline.map((t, i) => (
-            <li key={t.what} className="relative pb-[3.2dvh]" data-fade
-              onPointerEnter={() => setAi(i)} onFocus={() => setAi(i)} tabIndex={0}>
-              <span className="absolute -left-[29px] top-1.5 rounded-full transition-all duration-500"
-                style={{ width: i === ai ? 11 : 8, height: i === ai ? 11 : 8, marginTop: i === ai ? -1.5 : 0, background: i === ai ? "var(--burgundy)" : "var(--gold)" }} />
-              <div className="mono goldt" style={{ fontSize: 14 }}>{t.when}</div>
-              <div className="font-semibold leading-tight" style={{ fontSize: "clamp(20px,1.9vw,30px)", opacity: i === ai ? 1 : 0.72 }}>{t.what}</div>
-              <div className="muted" style={{ fontSize: "clamp(16px,1.2vw,19px)" }}>{t.where}</div>
-            </li>
-          ))}
-        </ol>
-        <div className="flex h-full min-h-0 flex-col">
-          <div className="flex items-end justify-between gap-4">
-            <span className="mono muted">{journey.timeline[ai].what}</span>
-            <RollYear year={year} className="display" style={{ fontSize: "clamp(40px, 4.6vw, 92px)", color: "transparent", WebkitTextStroke: "1px rgba(11,11,11,.3)" }} />
+    <div className="flex flex-col justify-center w-full max-w-[520px]">
+      {/* Gold hairline accent line */}
+      <div
+        className="w-14 h-px mb-6 sm:mb-8"
+        style={{ background: "rgba(200, 170, 110, 0.7)" }}
+      />
+
+      {/* Place */}
+      <div className="font-mono text-[13px] sm:text-[14px] text-[#6B645A] tracking-wider uppercase mb-2">
+        {stop.place}
+      </div>
+
+      {/* Role or course */}
+      <h3 className="display text-[28px] sm:text-[36px] lg:text-[42px] font-bold text-[#0B0B0B] tracking-tight leading-[1.05] mb-4">
+        {stop.role}
+      </h3>
+
+      {/* One line of what I did */}
+      <p className="text-[15px] sm:text-[17px] text-[#0B0B0B]/80 leading-relaxed font-sans max-w-[46ch]">
+        {stop.line}
+      </p>
+
+      {/* Forest accent indicator */}
+      {stop.tag && (
+        <div className="mt-6 flex items-center gap-2.5">
+          <span className="w-2 h-2 rounded-full bg-[#1F5A3A]" />
+          <span className="font-mono text-[11px] sm:text-[12px] text-[#1F5A3A] font-semibold tracking-wider uppercase">
+            {stop.tag}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function PageJourney({
+  active,
+  stop: controlledStop,
+  onSelectStop,
+  paged,
+}: {
+  active: boolean;
+  stop?: number;
+  onSelectStop?: (i: number) => void;
+  paged?: boolean;
+}) {
+  const [internalStop, setInternalStop] = useState(0);
+  const activeStop = controlledStop ?? internalStop;
+  const stops = journey.stops;
+
+  const [displayIndex, setDisplayIndex] = useState(activeStop);
+  const entryWrapRef = useRef<HTMLDivElement>(null);
+  const prevStopRef = useRef(activeStop);
+
+  const handleSelect = (idx: number) => {
+    if (onSelectStop) {
+      onSelectStop(idx);
+    } else {
+      setInternalStop(idx);
+    }
+  };
+
+  useEffect(() => {
+    if (activeStop === prevStopRef.current) return;
+    const from = prevStopRef.current;
+    const to = activeStop;
+    prevStopRef.current = activeStop;
+
+    const el = entryWrapRef.current;
+    if (!el || reduced()) {
+      setDisplayIndex(to);
+      return;
+    }
+
+    // When the stop changes, old entry slides up and fades, new one comes from below
+    gsap.killTweensOf(el);
+    gsap.to(el, {
+      y: -24,
+      opacity: 0,
+      duration: 0.35,
+      ease: "power2.in",
+      onComplete: () => {
+        setDisplayIndex(to);
+        gsap.fromTo(
+          el,
+          { y: 24, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.5, ease: "power2.out" }
+        );
+      },
+    });
+  }, [activeStop]);
+
+  // Touch swipe support
+  const touchStartY = useRef<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartY.current === null) return;
+    const dy = e.changedTouches[0].clientY - touchStartY.current;
+    touchStartY.current = null;
+    if (Math.abs(dy) < 40) return;
+    if (dy < 0) {
+      if (activeStop < stops.length - 1) handleSelect(activeStop + 1);
+    } else {
+      if (activeStop > 0) handleSelect(activeStop - 1);
+    }
+  };
+
+  const currentYear = stops[activeStop]?.year ?? "2021";
+  const displayedStop = stops[displayIndex] ?? stops[0];
+
+  return (
+    <div
+      className="page-inner relative h-full w-full min-h-0 flex flex-col justify-center overflow-hidden px-6 sm:px-12 lg:px-20"
+      style={{ background: "#E8DED0", color: "#0B0B0B" }}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
+      <h2 className="sr-only">{journey.heading}</h2>
+
+      {/* Main Container: 2 Columns on desktop, stacked on mobile */}
+      <div className="w-full max-w-[1360px] mx-auto min-h-0 flex flex-col items-center justify-center max-[899px]:gap-6 min-[900px]:grid min-[900px]:grid-cols-[1.1fr_1fr] min-[900px]:gap-12 lg:min-[900px]:gap-20">
+        {/* Left Half: 22vw Year Counter Odometer */}
+        <div className="w-full flex items-center justify-center min-[900px]:justify-end min-[900px]:pr-6 lg:min-[900px]:pr-10 shrink-0">
+          <YearOdometer year={currentYear} active={active} />
+        </div>
+
+        {/* Right Half: Active Stop Entry */}
+        <div className="w-full flex items-center justify-center min-[900px]:justify-start min-[900px]:pl-6 lg:min-[900px]:pl-10">
+          <div ref={entryWrapRef} className="w-full flex justify-center min-[900px]:justify-start">
+            <StopEntry stop={displayedStop} />
           </div>
-          <div className="min-h-0 flex-1"><Pipeline active={active} onNode={onNode} node={node} /></div>
         </div>
       </div>
+
+      {/* Far Right: Thin vertical line with 4 ticks */}
+      <aside
+        className="absolute right-3 sm:right-6 lg:right-10 top-1/2 -translate-y-1/2 flex flex-col items-center z-20 py-4"
+        aria-label="Journey stops navigation"
+      >
+        <div className="relative flex flex-col items-center justify-between h-[180px] sm:h-[220px]">
+          {/* Continuous background vertical line */}
+          <div
+            className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-px"
+            style={{ background: "rgba(11, 11, 11, 0.15)" }}
+            aria-hidden="true"
+          />
+
+          {/* Active track highlight */}
+          <div
+            className="absolute top-0 left-1/2 -translate-x-1/2 w-px transition-all duration-700 ease-out"
+            style={{
+              background: "#1F5A3A",
+              height: `${(activeStop / (stops.length - 1)) * 100}%`,
+            }}
+            aria-hidden="true"
+          />
+
+          {/* 4 Ticks */}
+          {stops.map((s, idx) => {
+            const isCurrent = activeStop === idx;
+            return (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => handleSelect(idx)}
+                aria-label={`Go to stop ${idx + 1}: ${s.year} ${s.role}`}
+                aria-current={isCurrent ? "step" : undefined}
+                className="group relative z-10 flex items-center justify-center p-2 cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-[#1F5A3A]"
+              >
+                {/* Visual Tick */}
+                <div
+                  className={`transition-all duration-300 rounded-full ${
+                    isCurrent
+                      ? "w-2.5 h-2.5 bg-[#1F5A3A] ring-4 ring-[#1F5A3A]/25"
+                      : "w-1.5 h-1.5 bg-[#0B0B0B]/35 group-hover:bg-[#1F5A3A] group-hover:scale-125"
+                  }`}
+                />
+                {/* Year label tooltip */}
+                <span
+                  className={`absolute right-7 font-mono text-[11px] tracking-wider transition-opacity duration-200 select-none whitespace-nowrap ${
+                    isCurrent
+                      ? "text-[#1F5A3A] font-semibold opacity-100"
+                      : "text-[#6B645A] opacity-0 group-hover:opacity-100"
+                  }`}
+                >
+                  {s.year}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </aside>
     </div>
   );
 }
