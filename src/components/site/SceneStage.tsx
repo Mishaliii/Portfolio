@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { performanceLayers, sceneResolution } from "@/lib/performance";
-import { coarse } from "@/lib/motion";
+import { coarse, reduced } from "@/lib/motion";
 import { boot, coverFit, markBoot, markSceneReady, stage, videoBlob, videoSrc, type SceneData } from "@/lib/stage";
 
 const VERT = `attribute vec2 aPos; varying vec2 vUv;
@@ -61,6 +61,9 @@ export function SceneStage() {
       // The opening shader is never needed again; release its texture and drawing buffer.
       glUpload = null; glRender = null;
       gl?.getExtension("WEBGL_lose_context")?.loseContext();
+      c.style.display = "none";
+      c.width = 0;
+      c.height = 0;
     };
     const fallback = () => {
       goNative(); el.classList.add("is-fallback");
@@ -204,14 +207,12 @@ export function SceneStage() {
         return;
       }
 
-      if (stage.controls) {
-        const idle = now - lastMove > 2500 && !dragging;
-        idleAmp += ((idle ? 1 : 0) - idleAmp) * (1 - Math.exp(-dt / 0.45));
-        if (touch && !dragging) { mt.x += vel; vel *= 0.92; mt.x *= Math.exp(-dt / 0.6); }
-        const sx = Math.sin((now / 12000) * Math.PI * 2) * 0.25 * idleAmp;
-        const tx = mt.x * (1 - idleAmp) + sx, ty = mt.y * (1 - idleAmp);
-        const k = 1 - Math.exp(-dt / 0.12);
-        m.x += (tx - m.x) * k; m.y += (ty - m.y) * k;
+      if (stage.controls && !touch && !reduced()) {
+        const idle = now - lastMove > 1000 && !dragging;
+        const tx = idle ? 0 : mt.x, ty = idle ? 0 : mt.y;
+        const k = 1 - Math.pow(0.001, dt);
+        m.x += (tx - m.x) * k;
+        m.y += (ty - m.y) * k;
       }
       const x = Math.round(-m.x * amp * 100) / 100, y = Math.round(m.y * amp * 60) / 100;
       const moving = x !== lastX || y !== lastY;
