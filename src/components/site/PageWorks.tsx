@@ -261,6 +261,18 @@ export function WorkCardShell({
   );
 }
 
+const DDSS_STAGE_KEYS = [
+  "ddss",
+  "ddss-2",
+  "ddss-4",
+  "ddss-5",
+  "ddss-6",
+  "ddss-7",
+  "ddss-8",
+  "ddss-9",
+  "ddss-10",
+];
+
 function DDSSCard({ p, active }: { p: Project; active: boolean }) {
   const [cs, setCs] = useState(false);
   const closeCs = useCallback(() => setCs(false), []);
@@ -275,6 +287,30 @@ function DDSSCard({ p, active }: { p: Project; active: boolean }) {
   const activeShotKey = selectedShot ?? shots[0]?.k ?? "ddss";
   const posterSrc = ddssImages["ddss"] ?? ddssImages["ddss-screen"];
 
+  // Pre-decode all stage images on idle so hovering/clicking never blocks the main thread
+  useEffect(() => {
+    const decodeAll = () => {
+      DDSS_STAGE_KEYS.forEach((key) => {
+        const src = ddssImages[key] ?? posterSrc;
+        if (!src) return;
+        const img = new Image();
+        img.src = src;
+        img.decode().catch(() => {});
+      });
+    };
+    if (typeof window !== "undefined") {
+      if ("requestIdleCallback" in window) {
+        const h = (window as any).requestIdleCallback(decodeAll);
+        return () => (window as any).cancelIdleCallback(h);
+      } else {
+        const t = setTimeout(decodeAll, 150);
+        return () => clearTimeout(t);
+      }
+    }
+    return undefined;
+  }, [posterSrc]);
+
+  // Video playback management: pause when inactive, drawer open (cs), hidden, or showing stills
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
@@ -288,24 +324,24 @@ function DDSSCard({ p, active }: { p: Project; active: boolean }) {
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
-    const shouldPlay = active && inView && showVideo && !videoFailed && !document.hidden;
+    const shouldPlay = active && inView && showVideo && !videoFailed && !document.hidden && !cs;
     if (shouldPlay) {
       v.play().catch(() => {});
     } else {
       v.pause();
     }
-  }, [active, inView, showVideo, videoFailed]);
+  }, [active, inView, showVideo, videoFailed, cs]);
 
   useEffect(() => {
     const onVisChange = () => {
       const v = videoRef.current;
       if (!v) return;
-      if (document.hidden) v.pause();
+      if (document.hidden || cs) v.pause();
       else if (active && inView && showVideo && !videoFailed) v.play().catch(() => {});
     };
     document.addEventListener("visibilitychange", onVisChange);
     return () => document.removeEventListener("visibilitychange", onVisChange);
-  }, [active, inView, showVideo, videoFailed]);
+  }, [active, inView, showVideo, videoFailed, cs]);
 
   const filmstrip = p.filmstrip ?? [
     { k: "ddss-2", t: "Dashboard" },
@@ -397,31 +433,46 @@ function DDSSCard({ p, active }: { p: Project; active: boolean }) {
         className="relative aspect-[16/10] w-full overflow-hidden rounded-[12px] border border-[#0B0B0B]/20 bg-[#0B0B0B] shadow-[0_8px_30px_rgb(0,0,0,0.06)]"
         data-sig
       >
-        {showVideo && !videoFailed ? (
-          <video
-            ref={videoRef}
-            src="/media/ddss-demo.mp4"
-            muted
-            loop
-            playsInline
-            preload="none"
-            poster={posterSrc}
-            onError={() => setVideoFailed(true)}
-            className="h-full w-full object-cover"
-            style={{ objectFit: "cover" }}
-          />
-        ) : (
-          <img
-            src={ddssImages[activeShotKey] ?? posterSrc}
-            alt={shots.find((s) => s.k === activeShotKey)?.t ?? "DDSS product capture"}
-            className="h-full w-full object-cover transition-transform duration-500 ease-out"
-            style={{
-              objectFit: "cover",
-              transform: isZoomed ? "scale(1.45) translate(-12%, -6%)" : "none",
-              transformOrigin: "top right",
-            }}
-          />
-        )}
+        {/* Looping video layer: paused when drawer is open or stills active */}
+        <video
+          ref={videoRef}
+          src="/media/ddss-demo.mp4"
+          muted
+          loop
+          playsInline
+          preload="none"
+          poster={posterSrc}
+          onError={() => setVideoFailed(true)}
+          className="absolute inset-0 h-full w-full object-cover transition-opacity duration-300 pointer-events-none"
+          style={{
+            objectFit: "cover",
+            opacity: showVideo && !videoFailed ? 1 : 0,
+            zIndex: 1,
+          }}
+        />
+
+        {/* Stacked stage images: opacity/transform only, pre-decoded on idle */}
+        {DDSS_STAGE_KEYS.map((key) => {
+          const isSelected = !showVideo && activeShotKey === key;
+          const isZoom = isSelected && isZoomed;
+          return (
+            <img
+              key={key}
+              src={ddssImages[key] ?? posterSrc}
+              alt={shots.find((s) => s.k === key)?.t ?? "DDSS product capture"}
+              decoding="async"
+              className="absolute inset-0 h-full w-full object-cover transition-[opacity,transform] duration-300 ease-out pointer-events-none"
+              style={{
+                objectFit: "cover",
+                opacity: isSelected ? 1 : 0,
+                transform: isZoom ? "scale(1.45) translate(-12%, -6%)" : "scale(1) translate(0, 0)",
+                transformOrigin: "top right",
+                zIndex: isSelected ? 2 : 0,
+                willChange: isSelected ? "transform, opacity" : "auto",
+              }}
+            />
+          );
+        })}
       </div>
 
       {/* Filmstrip: 8 small thumbnails 16:10 in one row, equal width, 8px gap */}
@@ -447,7 +498,7 @@ function DDSSCard({ p, active }: { p: Project; active: boolean }) {
                   title={s.t}
                   aria-label={s.t}
                 >
-                  <img src={ddssThumbs[s.k] || ddssImages[s.k]} alt="" className="h-full w-full object-cover" loading="lazy" />
+                  <img src={ddssThumbs[s.k] || ddssImages[s.k]} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" />
                 </button>
               );
             })}
@@ -609,12 +660,13 @@ function ProductivityExplorer({
       const feat = ROLE_FEATURES[idx];
       const pct = Math.min(100, Math.max(3, (v / feat.max) * 100));
       if (reduced()) {
-        gsap.set(el, { width: `${pct}%` });
+        gsap.set(el, { scaleX: pct / 100, transformOrigin: "left center" });
       } else {
         gsap.to(el, {
-          width: `${pct}%`,
+          scaleX: pct / 100,
           duration: 0.5,
           ease: "power3.out",
+          transformOrigin: "left center",
         });
       }
     });
@@ -711,7 +763,7 @@ function ProductivityExplorer({
                     barRefs.current[idx] = el;
                   }}
                   className="h-full bg-[#1F5A3A] rounded-full"
-                  style={{ width: `${initialPct}%` }}
+                  style={{ width: "100%", transform: `scaleX(${initialPct / 100})`, transformOrigin: "left center" }}
                 />
               </div>
               <span className="w-[42px] sm:w-[48px] text-right font-semibold text-[#0B0B0B]">

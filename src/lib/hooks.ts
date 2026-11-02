@@ -36,3 +36,6 @@ export function useCycle(n: number, ms: number, active = true) {
   }, [n, ms, active]);
   return i;
 }
+
+export { useScrollSpy } from "@/hooks/useScrollSpy";
+
