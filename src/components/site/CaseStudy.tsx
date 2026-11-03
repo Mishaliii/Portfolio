@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { gsap } from "gsap";
 import { works, type CaseStudyData } from "@/content";
@@ -18,16 +18,27 @@ export function CaseStudy({
   const box = useRef<HTMLElement>(null);
   const backdrop = useRef<HTMLDivElement>(null);
   const scrollArea = useRef<HTMLDivElement>(null);
+  const leftNavRef = useRef<HTMLElement>(null);
+  const [scrollEl, setScrollEl] = useState<HTMLDivElement | null>(null);
   const closeBtn = useRef<HTMLButtonElement>(null);
   const closing = useRef(false);
 
   const sectionIds = useMemo(() => c.sections.map((s) => s.id), [c.sections]);
-  const { activeSection, scrollTo } = useScrollSpy({
-    containerRef: scrollArea,
+  const { activeSection, setActiveSection, scrollTo } = useScrollSpy({
+    container: scrollEl,
     sectionIds,
     offset: 24,
     enabled: open,
   });
+
+  // Scroll active item into view inside left navigation
+  useEffect(() => {
+    if (!open || !activeSection || !leftNavRef.current) return;
+    const activeBtn = leftNavRef.current.querySelector(`[data-section-id="${activeSection}"]`);
+    if (activeBtn) {
+      (activeBtn as HTMLElement).scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+  }, [open, activeSection]);
 
   const close = useCallback(() => {
     const el = box.current;
@@ -53,7 +64,7 @@ export function CaseStudy({
     if (!el || !bd) return;
 
     if (scrollArea.current) {
-      scrollArea.current.scrollTop = 0;
+      scrollArea.current.scrollTop = 0; setActiveSection(sectionIds[0]);
     }
 
     const origHtmlOverflow = document.documentElement.style.overflow;
@@ -125,6 +136,7 @@ export function CaseStudy({
       {/* Full-height drawer from the right, 72% width */}
       <aside
         ref={box}
+        data-drawer
         data-pull
         data-lenis-prevent
         role="dialog"
@@ -156,18 +168,18 @@ export function CaseStudy({
         {/* Two-column drawer content */}
         <div className="flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-[180px_minmax(0,1fr)] gap-8 lg:gap-12 px-6 sm:px-10 py-6">
           {/* Left sticky section list (plain text, current one underlined) */}
-          <aside className="hidden md:block">
-            <nav className="sticky top-2 space-y-4 text-[13px] font-mono tracking-wider" aria-label="Sections">
+          <aside ref={leftNavRef} data-drawer data-lenis-prevent onWheel={(e) => e.stopPropagation()} onTouchMove={(e) => e.stopPropagation()} className="hidden md:block overflow-y-auto overscroll-contain pr-2" style={{ maxHeight: "calc(100dvh - 90px)", scrollbarWidth: "thin" }}>
+            <nav className="space-y-4 text-[13px] font-mono tracking-wider py-1" aria-label="Sections">
               {c.nav.map((item) => {
                 const isActive = activeSection === item.id;
                 return (
                   <button
                     key={item.id}
                     type="button"
-                    onClick={() => scrollTo(item.id)}
+                    data-section-id={item.id} aria-current={isActive ? "true" : undefined} onClick={() => scrollTo(item.id)}
                     className={`block text-left transition-colors cursor-pointer ${
                       isActive
-                        ? "text-[#1F5A3A] font-semibold underline underline-offset-8 decoration-[#1F5A3A] decoration-2"
+                        ? "is-active text-[#1F5A3A] font-semibold underline underline-offset-8 decoration-[#1F5A3A] decoration-2"
                         : "text-[#6B645A] hover:text-[#0B0B0B]"
                     }`}
                   >
@@ -179,7 +191,7 @@ export function CaseStudy({
           </aside>
 
           {/* Right scrolling content */}
-          <div ref={scrollArea} className="overflow-y-auto pr-3 sm:pr-6 space-y-16 pb-24" style={{ scrollbarWidth: "thin" }}>
+          <div ref={(node) => { scrollArea.current = node; setScrollEl(node); }} data-drawer data-drawer-content data-lenis-prevent onWheel={(e) => e.stopPropagation()} onTouchMove={(e) => e.stopPropagation()} className="overflow-y-auto overscroll-contain pr-3 sm:pr-6 space-y-16 pb-24" style={{ scrollbarWidth: "thin" }}>
             {c.sections.map((sec) => (
               <section key={sec.id} id={sec.id} className="scroll-mt-4">
                 <div className="border-t border-[#0B0B0B]/15 pt-4 mb-3">

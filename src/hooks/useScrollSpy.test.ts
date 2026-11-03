@@ -90,7 +90,7 @@ describe("useScrollSpy", () => {
     expect(result.current.activeSection).toBe("sec-3");
   });
 
-  it("activates the last section when scrollTop + clientHeight >= scrollHeight - 4", () => {
+  it("activates the last section when scrollTop is within 8px of maxScroll", () => {
     const { result } = renderHook(() =>
       useScrollSpy({
         containerRef: { current: container },
@@ -99,7 +99,44 @@ describe("useScrollSpy", () => {
     );
 
     act(() => {
-      // scrollHeight = 2000, clientHeight = 600 -> scroll to 1400 (bottom)
+      // scrollHeight = 2000, clientHeight = 600 -> maxScroll = 1400.
+      // Scroll to 1395px (within 8px of 1400px)
+      container.scrollTop = 1395;
+      result.current.updateSpy();
+    });
+
+    expect(result.current.activeSection).toBe("sec-4");
+  });
+
+  it("activates the last section when near bottom and last section is visible in container viewport", () => {
+    const { result } = renderHook(() =>
+      useScrollSpy({
+        containerRef: { current: container },
+        sectionIds,
+      })
+    );
+
+    act(() => {
+      // maxScroll is 1400. Scroll to 1365px (35px from bottom, within 48px).
+      // sec-4 relativeTop is 1400 - 1365 = 35px <= clientHeight (600px).
+      container.scrollTop = 1365;
+      result.current.updateSpy();
+    });
+
+    expect(result.current.activeSection).toBe("sec-4");
+  });
+
+  it("accepts direct container element prop", () => {
+    const { result } = renderHook(() =>
+      useScrollSpy({
+        container,
+        sectionIds,
+      })
+    );
+
+    expect(result.current.activeSection).toBe("sec-1");
+
+    act(() => {
       container.scrollTop = 1400;
       result.current.updateSpy();
     });

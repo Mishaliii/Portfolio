@@ -281,6 +281,7 @@ export function Site() {
     let lastEvt = 0, lastFire = 0, prevA = 0, armed = true;
     const onWheel = (e: WheelEvent) => {
       if (document.querySelector('[role="dialog"]') || document.documentElement.hasAttribute("data-modal-open")) return;
+      if (e.target && (e.target as HTMLElement).closest?.('[data-drawer], [data-pull], [role="dialog"]')) return;
       const t = performance.now(), a = Math.abs(e.deltaY);
       if (t - lastEvt > 250) armed = true;
       else if (a > prevA * 1.8 && a > 25 && t - lastFire > 450) armed = true;
@@ -288,7 +289,7 @@ export function Site() {
     };
     window.addEventListener("wheel", onWheel, { passive: true, capture: true });
     const obs = Observer.create({
-      target: window, type: "wheel,touch", ignore: "[data-pull]", wheelSpeed: -1, tolerance: 40, preventDefault: true,
+      target: window, type: "wheel,touch", ignore: "[data-pull], [data-drawer], [data-drawer] *, [role='dialog'], [role='dialog'] *", wheelSpeed: -1, tolerance: 40, preventDefault: true,
       onPress: () => { armed = true; },
       onChangeY: (self) => {
         if (!self.event.type.startsWith("touch") && !self.event.type.startsWith("pointer")) return;
@@ -324,6 +325,7 @@ export function Site() {
       if (pal || !booted) return;
       if ((e.target as HTMLElement)?.tagName === "INPUT") return;
       if (document.querySelector('[role="dialog"]') || document.documentElement.hasAttribute("data-modal-open")) return;
+      if (e.target && (e.target as HTMLElement).closest?.('[data-drawer], [data-pull], [role="dialog"]')) return;
       if (/^[1-6]$/.test(e.key)) go(+e.key - 1);
       else if (paged && (e.key === "ArrowDown" || e.key === "PageDown" || e.key === "j" || (e.key === " " && (e.target as HTMLElement)?.tagName !== "BUTTON"))) { e.preventDefault(); step(1); }
       else if (paged && (e.key === "ArrowUp" || e.key === "PageUp" || e.key === "k")) { e.preventDefault(); step(-1); }
