@@ -1,10 +1,11 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import { gsap } from "gsap";
 import { about, site, ui } from "@/content";
 import { ArrowDownToLine, ArrowUpRight } from "lucide-react";
 import { SplitReveal } from "./Split";
 import { HeadlineDissolve } from "./HeadlineDissolve";
 import { onPage } from "@/lib/motion";
+import { BendList } from "./BendList";
 import sideImg from "@/assets/portrait-side-composited.webp";
 import frontImg from "@/assets/portrait-front-composited.webp";
 
@@ -86,6 +87,100 @@ export function PageAbout({ go, active = true }: { go: (id: string) => void; act
     }
   }, [active]);
 
+  // Split bio into two sentences / paragraphs for items 1 & 2
+  const bioSentences = useMemo(() => {
+    const parts = about.bio.split(". ");
+    const part1 = parts.slice(0, 2).join(". ") + (parts.length > 2 ? "." : "");
+    const part2 = parts.slice(2).join(". ");
+    return { part1, part2 };
+  }, []);
+
+  const items = useMemo(() => {
+    const factEdu = about.facts[0];
+    const factExp = about.facts[1];
+    const factStack = about.facts[2];
+    const factStatus = about.facts[3];
+
+    return [
+      // 1) bio paragraph 1
+      <div key="bio-1" className="about-wheel-card">
+        <div className="about-wheel-label font-mono text-[11px] sm:text-[12px] uppercase tracking-wider text-[#1F5A3A] font-semibold mb-1">
+          ABOUT
+        </div>
+        <p className="about-wheel-body text-[clamp(13px,1.1vw,16px)] font-sans text-[#0B0B0B] leading-relaxed">
+          {bioSentences.part1}
+        </p>
+      </div>,
+
+      // 2) bio paragraph 2
+      <div key="bio-2" className="about-wheel-card">
+        <div className="about-wheel-label font-mono text-[11px] sm:text-[12px] uppercase tracking-wider text-[#1F5A3A] font-semibold mb-1">
+          FOCUS
+        </div>
+        <p className="about-wheel-body text-[clamp(13px,1.1vw,16px)] font-sans text-[#0B0B0B] leading-relaxed">
+          {bioSentences.part2}
+        </p>
+      </div>,
+
+      // 3) Education
+      <div key="edu" className="about-wheel-card">
+        <div className="about-wheel-label font-mono text-[11px] sm:text-[12px] uppercase tracking-wider text-[#1F5A3A] font-semibold mb-1">
+          {factEdu.label}
+        </div>
+        <p className="about-wheel-body text-[clamp(13px,1.1vw,16px)] font-sans text-[#0B0B0B] leading-relaxed">
+          <strong>{"bold" in factEdu ? factEdu.bold : ""}</strong>
+          {factEdu.text}
+        </p>
+        {"secondary" in factEdu && (
+          <p className="about-wheel-secondary text-[clamp(11px,0.95vw,13px)] text-[#6B645A] font-sans mt-1">
+            {factEdu.secondary}
+          </p>
+        )}
+      </div>,
+
+      // 4) Experience
+      <div key="exp" className="about-wheel-card">
+        <div className="about-wheel-label font-mono text-[11px] sm:text-[12px] uppercase tracking-wider text-[#1F5A3A] font-semibold mb-1">
+          {factExp.label}
+        </div>
+        <p className="about-wheel-body text-[clamp(13px,1.1vw,16px)] font-sans text-[#0B0B0B] leading-relaxed">
+          <strong>{"bold" in factExp ? factExp.bold : ""}</strong>
+          {factExp.text}
+        </p>
+        {"secondary" in factExp && (
+          <p className="about-wheel-secondary text-[clamp(11px,0.95vw,13px)] text-[#6B645A] font-sans mt-1">
+            {factExp.secondary}
+          </p>
+        )}
+      </div>,
+
+      // 5) Stack
+      <div key="stack" className="about-wheel-card">
+        <div className="about-wheel-label font-mono text-[11px] sm:text-[12px] uppercase tracking-wider text-[#1F5A3A] font-semibold mb-1">
+          {factStack.label}
+        </div>
+        <p className="about-wheel-body text-[clamp(13px,1.1vw,16px)] font-sans text-[#0B0B0B] leading-relaxed">
+          {factStack.text}
+        </p>
+      </div>,
+
+      // 6) Location + availability
+      <div key="loc" className="about-wheel-card">
+        <div className="about-wheel-label font-mono text-[11px] sm:text-[12px] uppercase tracking-wider text-[#1F5A3A] font-semibold mb-1 flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#1F5A3A]" aria-hidden="true" />
+          <span>LOCATION & AVAILABILITY</span>
+        </div>
+        <p className="about-wheel-body text-[clamp(13px,1.1vw,16px)] font-sans text-[#0B0B0B] leading-relaxed">
+          <strong>{"bold" in factStatus ? factStatus.bold : ""}</strong>
+          {factStatus.text}
+        </p>
+        <p className="about-wheel-secondary text-[clamp(11px,0.95vw,13px)] text-[#6B645A] font-sans mt-1">
+          {site.availability}
+        </p>
+      </div>,
+    ];
+  }, [bioSentences]);
+
   return (
     <div ref={section} className="about-section">
       <div className="about-portrait" aria-label={about.portraitAlt} role="img">
@@ -95,6 +190,7 @@ export function PageAbout({ go, active = true }: { go: (id: string) => void; act
         </div>
         <div className="about-portrait-fade" aria-hidden="true" />
       </div>
+
       <div className="about-content">
         <HeadlineDissolve className="about-name-dissolve">
           <h2 className="about-name display">
@@ -102,6 +198,7 @@ export function PageAbout({ go, active = true }: { go: (id: string) => void; act
             <span className="accent"><SplitReveal text={about.period} /></span>
           </h2>
         </HeadlineDissolve>
+
         <p className="about-role mono">
           <strong>
             {about.fullName.split(" ").map((word, i) => (
@@ -117,14 +214,9 @@ export function PageAbout({ go, active = true }: { go: (id: string) => void; act
             </span>
           ))}
         </p>
-        <p className="about-bio">
-          {about.bio.split(" ").map((word, i) => (
-            <span key={i}>
-              <span data-about-word>{word}</span>{" "}
-            </span>
-          ))}
-        </p>
-        <div className="about-actions" data-fade>
+
+        {/* Buttons remain exactly above with 24px gap below */}
+        <div className="about-actions mb-6 shrink-0" data-fade>
           <a href={site.cv} download className="btn btn-solid about-btn">
             <span>{ui.downloadCv}</span>
             <ArrowDownToLine size={15} />
@@ -141,19 +233,15 @@ export function PageAbout({ go, active = true }: { go: (id: string) => void; act
             <ArrowUpRight size={15} />
           </a>
         </div>
-        <dl className="about-facts">
-          {about.facts.map((fact) => (
-            <div className="about-fact" key={fact.label} data-about-fact>
-              <dt className="mono">{fact.label}</dt>
-              <dd>
-                {"live" in fact && fact.live && <span className="live-dot" aria-hidden="true" />}
-                {"bold" in fact && <strong>{fact.bold}</strong>}
-                {fact.text}
-                {"secondary" in fact && <span className="about-fact-secondary muted">{fact.secondary}</span>}
-              </dd>
-            </div>
-          ))}
-        </dl>
+
+        {/* BendList filling remaining column height */}
+        <BendList
+          pageId="about"
+          active={active}
+          showHint={true}
+          items={items}
+          className="about-bend-list"
+        />
       </div>
     </div>
   );

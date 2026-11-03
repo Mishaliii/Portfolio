@@ -11,6 +11,7 @@ import { Intro } from "./Intro";
 import { INTRO_KEY, introMode } from "@/lib/intro";
 import { boot, stage } from "@/lib/stage";
 import { performanceLayers } from "@/lib/performance";
+import { getWheelCapture } from "@/lib/wheel-capture";
 import { PerformancePanel } from "./PerformancePanel";
 import { SceneStage } from "./SceneStage";
 import { PageHero, heroEnter } from "./PageHero";
@@ -226,16 +227,22 @@ export function Site() {
 
   const step = useCallback((dir: 1 | -1) => {
     if (busy.current) return;
-    if (paged && curRef.current === 3) {
-      const ns = subRef.current + dir;
-      if (ns >= 0 && ns < works.projects.length) {
-        busy.current = true; setSub(ns); setTimeout(() => (busy.current = false), 920); return;
+    if (paged) {
+      const activePageId = pages[curRef.current]?.id;
+      if (activePageId) {
+        const capture = getWheelCapture(activePageId);
+        if (capture && capture.canConsume(dir)) {
+          capture.consume(dir);
+          return;
+        }
       }
-    }
-    if (paged && curRef.current === 4) {
-      const ns = jStopRef.current + dir;
-      if (ns >= 0 && ns < journey.stops.length) {
-        busy.current = true; setJStop(ns); setTimeout(() => (busy.current = false), 920); return;
+      if (curRef.current === 3) {
+        const ns = subRef.current + dir;
+        if (ns >= 0 && ns < works.projects.length) {
+          busy.current = true; setSub(ns);
+          setTimeout(() => (busy.current = false), 920);
+          return;
+        }
       }
     }
     go(curRef.current + dir);
@@ -330,8 +337,8 @@ export function Site() {
       else if (e.key === "Escape") setPal(false);
     };
     const pop = () => go(idx(location.hash.slice(1) || "overview"), false);
-    window.addEventListener("keydown", k); window.addEventListener("popstate", pop);
-    return () => { window.removeEventListener("keydown", k); window.removeEventListener("popstate", pop); };
+    window.addEventListener("keydown", k); window.addEventListener("popstate", pop); window.addEventListener("hashchange", pop);
+    return () => { window.removeEventListener("keydown", k); window.removeEventListener("popstate", pop); window.removeEventListener("hashchange", pop); };
   }, [go, step, pal, paged, booted]);
 
   // Dev-only frame monitor: warns when a frame takes over 100ms

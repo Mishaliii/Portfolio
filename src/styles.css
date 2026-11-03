@@ -917,3 +917,152 @@ html:not(.paged) .expertise-map { min-height: 480px; }
   outline: 2px solid #1F5A3A;
   outline-offset: 2px;
 }
+
+
+/* =========================================================================
+   BendList: 3D Curved Cylinder Wheel
+   ========================================================================= */
+.bend-list-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0%;
+  min-height: 0;
+  width: 100%;
+  outline: none;
+  touch-action: pan-x;
+}
+
+.bend-list-container {
+  position: relative;
+  perspective: 900px;
+  overflow: visible;
+  flex: 1 1 0%;
+  min-height: 0;
+  width: 100%;
+  transform-style: preserve-3d;
+}
+
+.bend-list-item {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  transform-origin: center center;
+  transition: none;
+}
+
+.bend-list-item.is-unfocused {
+  cursor: pointer;
+}
+
+.bend-list-indicator {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  z-index: 20;
+}
+
+.bend-list-hint {
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+  z-index: 30;
+}
+
+/* About Page BendList styling */
+.about-bend-list {
+  margin-top: 24px;
+  flex: 1 1 0%;
+  min-height: 0;
+  width: 100%;
+}
+
+.about-wheel-card {
+  width: 100%;
+  max-width: 460px;
+  padding-right: 24px;
+  box-sizing: border-box;
+}
+
+.about-wheel-label {
+  font-family: var(--font-mono, monospace);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #1F5A3A;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.about-wheel-body {
+  color: #0B0B0B;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.about-wheel-secondary {
+  color: #6B645A;
+  line-height: 1.4;
+}
+
+/* Journey Page BendList styling */
+.journey-bend-list {
+  height: 100%;
+  width: 100%;
+}
+
+@media (max-width: 899px) {
+  .about-bend-list {
+    height: 240px;
+    min-height: 220px;
+    flex: none;
+    margin-top: 16px;
+  }
+}
+
+/* prefers-reduced-motion fallback */
+@media (prefers-reduced-motion: reduce) {
+  .bend-list-container {
+    perspective: none !important;
+    transform-style: flat !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 20px !important;
+  }
+  .bend-list-item {
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    transform: none !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+  }
+  .bend-list-indicator,
+  .bend-list-hint {
+    display: none !important;
+  }
+}
+
+
+/* Hide BendList elements completely when parent page is not active */
+html.paged .page:not(.is-active) .bend-list-item,
+html.paged .page:not(.is-active) .bend-list-wrapper,
+html.paged .page:not(.is-active) .bend-list-indicator,
+html.paged .page:not(.is-active) .bend-list-hint {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
