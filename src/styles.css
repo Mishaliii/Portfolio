@@ -19,6 +19,7 @@
 }
 
 :root {
+  --nav-h: 57px;
   --cream: #eae0d0;
   --ink: #171615;
   --white: #ffffff;
@@ -280,7 +281,7 @@ html:not(.paged) .hero { height: 100svh; height: 100dvh; }
   position: fixed;
   z-index: 55;
   right: var(--pad);
-  top: clamp(60px, 7.5vh, 68px);
+  top: calc(var(--nav-h, 57px) + 12px);
   margin: 0;
   background: rgba(11, 11, 11, 0.45);
   backdrop-filter: blur(8px);
@@ -289,6 +290,13 @@ html:not(.paged) .hero { height: 100svh; height: 100dvh; }
   color: var(--cream);
   pointer-events: auto;
   transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+}
+@media (max-width: 767px) {
+  .hero-chip-tr {
+    right: 50%;
+    transform: translateX(50%);
+    top: calc(var(--nav-h, 57px) + 10px);
+  }
 }
 .hero-chip-tl,
 .hero-chip-bl {
@@ -770,7 +778,7 @@ html:not(.paged) .expertise-map { min-height: 480px; }
   position: relative;
   width: max-content;
   min-width: 120px;
-  max-width: 260px;
+  max-width: min(320px, calc(100vw - 32px));
   background: #F3ECE0;
   border: 1.5px solid #0B0B0B;
   border-radius: 14px;
@@ -784,6 +792,8 @@ html:not(.paged) .expertise-map { min-height: 480px; }
   opacity: 1;
   transition: opacity 0.35s ease;
   cursor: pointer;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .buddy-hl {
@@ -864,14 +874,14 @@ html:not(.paged) .expertise-map { min-height: 480px; }
 
 .buddy-transcript {
   flex: 1 1 auto;
-  min-height: 80px;
-  max-height: min(44dvh, 320px);
+  min-height: 140px;
+  max-height: 40vh;
   overflow-y: auto;
   overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 4px 2px;
+  gap: 10px;
+  padding: 6px 2px;
   scrollbar-width: thin;
   scrollbar-color: rgba(11, 11, 11, 0.2) transparent;
 }
@@ -883,21 +893,31 @@ html:not(.paged) .expertise-map { min-height: 480px; }
   border-radius: 4px;
 }
 
+.buddy-transcript-empty {
+  margin: auto;
+  text-align: center;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #6B645A;
+  padding: 16px;
+}
+
 .buddy-msg-user {
   align-self: flex-end;
-  background: #0B0B0B;
+  background: #1F5A3A;
   color: #E8DED0;
   border-radius: 14px 14px 2px 14px;
   padding: 8px 12px;
   font-size: 13px;
   line-height: 1.4;
-  max-width: 84%;
+  max-width: 85%;
   word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .buddy-msg-sprout {
   align-self: flex-start;
-  background: #F3ECE0;
+  background: #E8DED0;
   color: #0B0B0B;
   border: 1.5px solid #0B0B0B;
   border-radius: 14px 14px 14px 2px;
@@ -907,7 +927,18 @@ html:not(.paged) .expertise-map { min-height: 480px; }
   max-width: 88%;
   box-shadow: 0 4px 12px -4px rgba(0, 0, 0, 0.12);
   word-break: break-word;
+  overflow-wrap: anywhere;
   cursor: pointer;
+}
+
+.buddy-bubble a,
+.buddy-msg-sprout a {
+  color: #1F5A3A;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .buddy-typing-dots {

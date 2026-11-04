@@ -62,6 +62,7 @@ export const DEFAULT_FOLLOW_UPS = [
   "What has Mishal built?",
   "Tech stack?",
   "Why hire him?",
+  "Contact",
 ];
 
 export function matchBuddyIntent(rawInput: string, gameContext?: number): BuddyAnswer | null {

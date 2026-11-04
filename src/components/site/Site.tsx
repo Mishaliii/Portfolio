@@ -163,6 +163,7 @@ export function Site() {
 
   const go = useCallback((target: number, push = true) => {
     target = Math.max(0, Math.min(pages.length - 1, target));
+    window.dispatchEvent(new CustomEvent("page-change", { detail: { page: target } }));
     const from = curRef.current;
     if (!paged) {
       const el = pageEls.current[target];
