@@ -28,6 +28,7 @@ export const ui = {
   copied: "Copied",
   view: "View",
   pull: "Pull",
+  toggleDarkMode: "Toggle dark mode",
   skip: "Skip intro",
   paletteTitle: "Command palette",
   palettePlaceholder: "Type a command...",

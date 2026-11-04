@@ -130,16 +130,16 @@ export function CaseStudy({
         role="dialog"
         aria-modal="true"
         aria-label={Array.isArray(c.title) ? c.title.join(" ") : c.title}
-        className="fixed inset-y-0 right-0 z-[90] w-full md:w-[72%] max-w-[1200px] h-full flex flex-col bg-[#E8DED0] text-[#0B0B0B] shadow-[-8px_0_24px_rgba(0,0,0,0.12)] border-l border-[#0B0B0B]/15"
+        className="fixed inset-y-0 right-0 z-[90] w-full md:w-[72%] max-w-[1200px] h-full flex flex-col bg-[var(--drawer-bg)] text-[var(--ink)] shadow-[-8px_0_24px_rgba(0,0,0,0.12)] border-l border-[var(--line)]"
         style={{ willChange: "transform" }}
       >
         {/* Top bar with title and small Close button */}
-        <div className="flex items-center justify-between border-b border-[#0B0B0B]/15 px-6 sm:px-10 py-5 shrink-0 bg-[#E8DED0]">
+        <div className="flex items-center justify-between border-b border-[var(--line)] px-6 sm:px-10 py-5 shrink-0 bg-[var(--drawer-bg)]">
           <div className="flex items-baseline gap-3">
-            <span className="display text-[22px] tracking-tight text-[#0B0B0B]">
+            <span className="display text-[22px] tracking-tight text-[var(--ink)]">
               {Array.isArray(c.title) ? c.title.join(" ") : c.title}
             </span>
-            <span className="mono text-[11px] text-[#6B645A]">
+            <span className="mono text-[11px] text-[var(--muted)]">
               {badgeText}
             </span>
           </div>
@@ -147,7 +147,7 @@ export function CaseStudy({
             ref={closeBtn}
             type="button"
             onClick={close}
-            className="font-mono text-[13px] uppercase tracking-wider text-[#0B0B0B] hover:text-[#1F5A3A] transition-colors cursor-pointer"
+            className="font-mono text-[13px] uppercase tracking-wider text-[var(--ink)] hover:text-[var(--burgundy)] transition-colors cursor-pointer"
           >
             {c.close}
           </button>
@@ -167,8 +167,8 @@ export function CaseStudy({
                     onClick={() => scrollTo(item.id)}
                     className={`block text-left transition-colors cursor-pointer ${
                       isActive
-                        ? "text-[#1F5A3A] font-semibold underline underline-offset-8 decoration-[#1F5A3A] decoration-2"
-                        : "text-[#6B645A] hover:text-[#0B0B0B]"
+                        ? "text-[var(--burgundy)] font-semibold underline underline-offset-8 decoration-[var(--burgundy)] decoration-2"
+                        : "text-[var(--muted)] hover:text-[var(--ink)]"
                     }`}
                   >
                     {item.label}
@@ -182,8 +182,8 @@ export function CaseStudy({
           <div ref={scrollArea} className="overflow-y-auto pr-3 sm:pr-6 space-y-16 pb-24" style={{ scrollbarWidth: "thin" }}>
             {c.sections.map((sec) => (
               <section key={sec.id} id={sec.id} className="scroll-mt-4">
-                <div className="border-t border-[#0B0B0B]/15 pt-4 mb-3">
-                  <h3 className="display text-[26px] sm:text-[32px] tracking-tight text-[#0B0B0B]">
+                <div className="border-t border-[var(--line)] pt-4 mb-3">
+                  <h3 className="display text-[26px] sm:text-[32px] tracking-tight text-[var(--ink)]">
                     {sec.title}
                   </h3>
                 </div>
@@ -193,22 +193,22 @@ export function CaseStudy({
                   <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.15fr] gap-6 items-start">
                     <div>
                       {sec.text && (
-                        <p className="text-[16px] sm:text-[17px] leading-relaxed text-[#0B0B0B] mb-4">
+                        <p className="text-[16px] sm:text-[17px] leading-relaxed text-[var(--ink)] mb-4">
                           {sec.text}
                         </p>
                       )}
                       {sec.points && sec.points.length > 0 && (
                         <ul className="space-y-2.5">
                           {sec.points.map((pt) => (
-                            <li key={pt} className="flex gap-3 text-[15px] text-[#0B0B0B]">
-                              <span className="mono text-[#1F5A3A] shrink-0">•</span>
+                            <li key={pt} className="flex gap-3 text-[15px] text-[var(--ink)]">
+                              <span className="mono text-[var(--burgundy)] shrink-0">•</span>
                               <span>{pt}</span>
                             </li>
                           ))}
                         </ul>
                       )}
                     </div>
-                    <figure className="rounded-[10px] border border-[#0B0B0B]/15 overflow-hidden bg-[#0B0B0B] p-2 shadow-sm">
+                    <figure className="rounded-[10px] border border-[var(--line)] overflow-hidden bg-[var(--drawer-card-bg)] p-2 shadow-sm">
                       <img
                         src={ddssImages[sec.shot]}
                         alt={sec.shotCaption ?? sec.title}
@@ -216,7 +216,7 @@ export function CaseStudy({
                         loading="lazy"
                       />
                       {sec.shotCaption && (
-                        <figcaption className="mono text-[10px] text-[#E8DED0]/80 p-1.5">
+                        <figcaption className="mono text-[10px] text-[var(--drawer-card-text)]/80 p-1.5">
                           {sec.shotCaption}
                         </figcaption>
                       )}
@@ -225,7 +225,7 @@ export function CaseStudy({
                 ) : (
                   <>
                     {sec.text && (
-                      <p className="text-[16px] sm:text-[17px] leading-relaxed text-[#0B0B0B] max-w-[60ch] mb-4">
+                      <p className="text-[16px] sm:text-[17px] leading-relaxed text-[var(--ink)] max-w-[60ch] mb-4">
                         {sec.text}
                       </p>
                     )}
@@ -238,9 +238,9 @@ export function CaseStudy({
                     {sec.screens.map((item, idx) => (
                       <figure
                         key={item.shot}
-                        className="rounded-[10px] border border-[#0B0B0B]/15 overflow-hidden bg-[#0B0B0B] p-2.5 shadow-sm flex flex-col justify-between"
+                        className="rounded-[10px] border border-[var(--line)] overflow-hidden bg-[var(--drawer-card-bg)] p-2.5 shadow-sm flex flex-col justify-between"
                       >
-                        <div className="overflow-hidden rounded bg-[#161616] flex items-center justify-center">
+                        <div className="overflow-hidden rounded bg-[var(--drawer-card-inner)] flex items-center justify-center">
                           {ddssImages[item.shot] ? (
                             <img
                               src={ddssImages[item.shot]}
@@ -255,10 +255,10 @@ export function CaseStudy({
                           )}
                         </div>
                         <figcaption className="mt-2.5 px-1 pb-1">
-                          <span className="mono text-[11px] font-semibold text-[#E8DED0] uppercase tracking-wider block">
+                          <span className="mono text-[11px] font-semibold text-[var(--drawer-card-text)] uppercase tracking-wider block">
                             {String(idx + 1).padStart(2, "0")} · {item.label}
                           </span>
-                          <p className="text-[13px] text-[#E8DED0]/75 mt-1 leading-snug">
+                          <p className="text-[13px] text-[var(--drawer-card-text)]/75 mt-1 leading-snug">
                             {item.desc}
                           </p>
                         </figcaption>
@@ -271,14 +271,14 @@ export function CaseStudy({
                 {sec.shots && sec.shots.length > 0 && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
                     {sec.shots.map((shotKey) => (
-                      <figure key={shotKey} className="rounded-[10px] border border-[#0B0B0B]/15 overflow-hidden bg-[#0B0B0B] p-2 shadow-sm">
+                      <figure key={shotKey} className="rounded-[10px] border border-[var(--line)] overflow-hidden bg-[var(--drawer-card-bg)] p-2 shadow-sm">
                         <img
                           src={ddssImages[shotKey]}
                           alt={shotKey === "ddss-10" ? "Treatment plan screenshot" : "Dashboard screenshot"}
                           className="w-full h-auto object-contain rounded"
                           loading="lazy"
                         />
-                        <figcaption className="mono text-[10px] text-[#E8DED0]/80 p-1.5">
+                        <figcaption className="mono text-[10px] text-[var(--drawer-card-text)]/80 p-1.5">
                           {shotKey === "ddss-10" ? "Treatment plan and prescription saving" : "Clinician dashboard"}
                         </figcaption>
                       </figure>
@@ -290,11 +290,11 @@ export function CaseStudy({
                 {sec.methods && sec.methods.length > 0 && (
                   <div className="space-y-3 max-w-[58ch] mt-4">
                     {sec.methods.map((m) => (
-                      <div key={m.name} className="p-3.5 rounded border border-[#0B0B0B]/15 bg-[rgba(11,11,11,0.02)]">
-                        <span className="mono text-[12px] font-semibold text-[#1F5A3A] block">
+                      <div key={m.name} className="p-3.5 rounded border border-[var(--line)] bg-[var(--line)]/10">
+                        <span className="mono text-[12px] font-semibold text-[var(--burgundy)] block">
                           {m.name}
                         </span>
-                        <p className="text-[14px] text-[#6B645A] mt-0.5">
+                        <p className="text-[14px] text-[var(--muted)] mt-0.5">
                           {m.desc}
                         </p>
                       </div>
@@ -306,8 +306,8 @@ export function CaseStudy({
                 {(!sec.shot || !ddssImages[sec.shot]) && sec.points && sec.points.length > 0 && (
                   <ul className="space-y-2.5 max-w-[58ch] mt-4">
                     {sec.points.map((pt) => (
-                      <li key={pt} className="flex gap-3 text-[15px] text-[#0B0B0B]">
-                        <span className="mono text-[#1F5A3A] shrink-0">•</span>
+                      <li key={pt} className="flex gap-3 text-[15px] text-[var(--ink)]">
+                        <span className="mono text-[var(--burgundy)] shrink-0">•</span>
                         <span>{pt}</span>
                       </li>
                     ))}

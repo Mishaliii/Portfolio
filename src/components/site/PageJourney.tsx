@@ -60,7 +60,7 @@ function YearOdometer({ year, active }: { year: string; active: boolean }) {
 
   return (
     <div
-      className="display font-bold text-[#0B0B0B] tracking-tight inline-flex items-center justify-center select-none"
+      className="display font-bold text-[var(--ink)] tracking-tight inline-flex items-center justify-center select-none"
       style={{
         fontSize: "clamp(88px, 22vw, 320px)",
         lineHeight: 1,
@@ -84,25 +84,25 @@ function StopCard({ stop }: { stop: JourneyStop }) {
       />
 
       {/* Place */}
-      <div className="font-mono text-[11px] sm:text-[13px] text-[#6B645A] tracking-wider uppercase mb-1.5">
+      <div className="font-mono text-[11px] sm:text-[13px] text-[var(--muted)] tracking-wider uppercase mb-1.5">
         {stop.place}
       </div>
 
       {/* Role or course */}
-      <h3 className="display text-[clamp(20px,2.2vw,36px)] font-bold text-[#0B0B0B] tracking-tight leading-[1.1] mb-2 sm:mb-3">
+      <h3 className="display text-[clamp(20px,2.2vw,36px)] font-bold text-[var(--ink)] tracking-tight leading-[1.1] mb-2 sm:mb-3">
         {stop.role}
       </h3>
 
       {/* One line of what I did */}
-      <p className="text-[clamp(13px,1.05vw,16px)] text-[#0B0B0B]/80 leading-relaxed font-sans max-w-[46ch]">
+      <p className="text-[clamp(13px,1.05vw,16px)] text-[var(--ink)]/80 leading-relaxed font-sans max-w-[46ch]">
         {stop.line}
       </p>
 
       {/* Forest accent indicator */}
       {stop.tag && (
         <div className="mt-4 flex items-center gap-2">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#1F5A3A]" />
-          <span className="font-mono text-[11px] text-[#1F5A3A] font-semibold tracking-wider uppercase">
+          <span className="w-1.5 h-1.5 rounded-full bg-[var(--burgundy)]" />
+          <span className="font-mono text-[11px] text-[var(--burgundy)] font-semibold tracking-wider uppercase">
             {stop.tag}
           </span>
         </div>
@@ -145,7 +145,7 @@ export function PageJourney({
   return (
     <div
       className="page-inner relative h-full w-full min-h-0 flex flex-col justify-center overflow-hidden px-6 sm:px-12 lg:px-20"
-      style={{ background: "#E8DED0", color: "#0B0B0B" }}
+      style={{ background: "var(--cream)", color: "var(--ink)" }}
     >
       <h2 className="sr-only">{journey.heading}</h2>
 

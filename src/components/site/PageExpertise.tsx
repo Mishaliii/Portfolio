@@ -23,12 +23,23 @@ export function PageExpertise({ goProject, active = true }: { goProject: (id: st
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
     let ink = "", muted = "", green = "", gold = "", paper = "", grid = "", circle = "", circleLine = "", scanColor = "";
 
+    const readTokens = () => {
+      const s = getComputedStyle(document.documentElement);
+      ink = s.getPropertyValue("--ink").trim() || "#171615";
+      muted = s.getPropertyValue("--muted").trim() || "#6b645a";
+      green = s.getPropertyValue("--burgundy").trim() || "#214c3a";
+      gold = s.getPropertyValue("--gold").trim() || "#c9a24a";
+      paper = s.getPropertyValue("--cream").trim() || "#eae0d0";
+      grid = s.getPropertyValue("--line").trim() || "rgba(0,0,0,0.06)";
+      circle = s.getPropertyValue("--cream").trim() || "#eae0d0";
+      circleLine = s.getPropertyValue("--line").trim() || "rgba(0,0,0,0.12)";
+      scanColor = s.getPropertyValue("--accent-soft").trim() || "rgba(201,162,74,0.08)";
+    };
     const size = () => {
       const r = b.getBoundingClientRect(); W = r.width; H = r.height;
       const d = Math.min(1.5, window.devicePixelRatio || 1);
       c.width = Math.round(W*d); c.height = Math.round(H*d); ctx.setTransform(d,0,0,d,0,0);
-      const css = getComputedStyle(b), token = (s: string) => css.getPropertyValue(s).trim();
-      ink=token("--ink"); muted=token("--muted"); green=token("--accent-green"); gold=token("--gold"); paper=token("--cream"); grid=token("--map-grid"); circle=token("--map-circle"); circleLine=token("--map-circle-line"); scanColor=token("--map-scan");
+      readTokens();
     };
     size(); const ro = new ResizeObserver(size); ro.observe(b);
 
@@ -40,6 +51,7 @@ export function PageExpertise({ goProject, active = true }: { goProject: (id: st
     const click = (e: PointerEvent) => { move(e); const i=nearest(); pinned.current=pinned.current===i?-1:i; update(pinned.current); };
     const key = (e: KeyboardEvent) => { input(); if(e.key==="Escape"){pinned.current=-1;update(-1);} };
 
+    window.addEventListener("theme-change", readTokens);
     b.addEventListener("pointermove",move);b.addEventListener("pointerleave",leave);b.addEventListener("pointerup",click);
     window.addEventListener("keydown",key);window.addEventListener("wheel",input,{passive:true});window.addEventListener("pointerdown",input,{passive:true});window.addEventListener("pointermove",input,{passive:true});
 
@@ -93,7 +105,7 @@ export function PageExpertise({ goProject, active = true }: { goProject: (id: st
       ctx.globalAlpha=1;ctx.font="500 11px 'JetBrains Mono', monospace";
       for(let i=0;i<4;i++){const center=centers[i],r=Math.min(W,H)*.17;const name=expertise.clusters[i];const x=Math.max(8,center[0]*W-r),y=center[1]*H-r-10;ctx.fillStyle=paper;ctx.fillRect(x-4,y-12,ctx.measureText(name).width+8,18);ctx.fillStyle=gold;ctx.fillText(name,x,y);}
     });
-    return()=>{unsub();ro.disconnect();b.removeEventListener("pointermove",move);b.removeEventListener("pointerleave",leave);b.removeEventListener("pointerup",click);window.removeEventListener("keydown",key);window.removeEventListener("wheel",input);window.removeEventListener("pointerdown",input);window.removeEventListener("pointermove",input);};
+    return()=>{unsub();ro.disconnect();window.removeEventListener("theme-change", readTokens);b.removeEventListener("pointermove",move);b.removeEventListener("pointerleave",leave);b.removeEventListener("pointerup",click);window.removeEventListener("keydown",key);window.removeEventListener("wheel",input);window.removeEventListener("pointerdown",input);window.removeEventListener("pointermove",input);};
   },[active]);
 
   const skill = selected >= 0 ? expertise.skills[selected] : null;

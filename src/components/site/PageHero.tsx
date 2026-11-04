@@ -24,6 +24,7 @@ export function PageHero({ go }: { go: (id: string) => void }) {
   return (
     <div className="hero">
       <div className="hero-shade" aria-hidden />
+      <div className="hero-dark-scrim" aria-hidden />
       <span role="img" aria-label={hero.scene.alt} className="sr-only" />
       <div className="hero-top">
         <HeadlineDissolve erase auto wait className="w-fit max-w-full">

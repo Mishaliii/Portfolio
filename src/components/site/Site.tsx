@@ -28,6 +28,7 @@ function prefetchDeferred() {
   import("./RetrievalDemo");
 }
 import { PageConnect } from "./PageConnect";
+import { Lamp } from "./Lamp";
 
 const INV = new Set(["connect"]);
 const StableHero = memo(PageHero);
@@ -461,7 +462,8 @@ export function Site() {
             ))}
           </div>
         </nav>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Lamp className="-mt-3 self-start mr-1 sm:mr-2" />
           <a className="btn max-sm:!hidden" href={site.cv} download onMouseEnter={(e) => wobble(e.currentTarget)}><WobbleText text={ui.downloadCv} /></a>
           <button className="btn btn-solid" onClick={() => go(5)} onMouseEnter={(e) => wobble(e.currentTarget)}><WobbleText text={ui.sayHello} /></button>
         </div>

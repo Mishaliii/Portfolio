@@ -104,35 +104,35 @@ export function PageAbout({ go, active = true }: { go: (id: string) => void; act
     return [
       // 1) bio paragraph 1
       <div key="bio-1" className="about-wheel-card">
-        <div className="about-wheel-label font-mono text-[11px] sm:text-[12px] uppercase tracking-wider text-[#1F5A3A] font-semibold mb-1">
+        <div className="about-wheel-label font-mono text-[11px] sm:text-[12px] uppercase tracking-wider text-[var(--burgundy)] font-semibold mb-1">
           ABOUT
         </div>
-        <p className="about-wheel-body text-[clamp(13px,1.1vw,16px)] font-sans text-[#0B0B0B] leading-relaxed">
+        <p className="about-wheel-body text-[clamp(13px,1.1vw,16px)] font-sans text-[var(--ink)] leading-relaxed">
           {bioSentences.part1}
         </p>
       </div>,
 
       // 2) bio paragraph 2
       <div key="bio-2" className="about-wheel-card">
-        <div className="about-wheel-label font-mono text-[11px] sm:text-[12px] uppercase tracking-wider text-[#1F5A3A] font-semibold mb-1">
+        <div className="about-wheel-label font-mono text-[11px] sm:text-[12px] uppercase tracking-wider text-[var(--burgundy)] font-semibold mb-1">
           FOCUS
         </div>
-        <p className="about-wheel-body text-[clamp(13px,1.1vw,16px)] font-sans text-[#0B0B0B] leading-relaxed">
+        <p className="about-wheel-body text-[clamp(13px,1.1vw,16px)] font-sans text-[var(--ink)] leading-relaxed">
           {bioSentences.part2}
         </p>
       </div>,
 
       // 3) Education
       <div key="edu" className="about-wheel-card">
-        <div className="about-wheel-label font-mono text-[11px] sm:text-[12px] uppercase tracking-wider text-[#1F5A3A] font-semibold mb-1">
+        <div className="about-wheel-label font-mono text-[11px] sm:text-[12px] uppercase tracking-wider text-[var(--burgundy)] font-semibold mb-1">
           {factEdu.label}
         </div>
-        <p className="about-wheel-body text-[clamp(13px,1.1vw,16px)] font-sans text-[#0B0B0B] leading-relaxed">
+        <p className="about-wheel-body text-[clamp(13px,1.1vw,16px)] font-sans text-[var(--ink)] leading-relaxed">
           <strong>{"bold" in factEdu ? factEdu.bold : ""}</strong>
           {factEdu.text}
         </p>
         {"secondary" in factEdu && (
-          <p className="about-wheel-secondary text-[clamp(11px,0.95vw,13px)] text-[#6B645A] font-sans mt-1">
+          <p className="about-wheel-secondary text-[clamp(11px,0.95vw,13px)] text-[var(--muted)] font-sans mt-1">
             {factEdu.secondary}
           </p>
         )}
@@ -140,15 +140,15 @@ export function PageAbout({ go, active = true }: { go: (id: string) => void; act
 
       // 4) Experience
       <div key="exp" className="about-wheel-card">
-        <div className="about-wheel-label font-mono text-[11px] sm:text-[12px] uppercase tracking-wider text-[#1F5A3A] font-semibold mb-1">
+        <div className="about-wheel-label font-mono text-[11px] sm:text-[12px] uppercase tracking-wider text-[var(--burgundy)] font-semibold mb-1">
           {factExp.label}
         </div>
-        <p className="about-wheel-body text-[clamp(13px,1.1vw,16px)] font-sans text-[#0B0B0B] leading-relaxed">
+        <p className="about-wheel-body text-[clamp(13px,1.1vw,16px)] font-sans text-[var(--ink)] leading-relaxed">
           <strong>{"bold" in factExp ? factExp.bold : ""}</strong>
           {factExp.text}
         </p>
         {"secondary" in factExp && (
-          <p className="about-wheel-secondary text-[clamp(11px,0.95vw,13px)] text-[#6B645A] font-sans mt-1">
+          <p className="about-wheel-secondary text-[clamp(11px,0.95vw,13px)] text-[var(--muted)] font-sans mt-1">
             {factExp.secondary}
           </p>
         )}
@@ -156,25 +156,25 @@ export function PageAbout({ go, active = true }: { go: (id: string) => void; act
 
       // 5) Stack
       <div key="stack" className="about-wheel-card">
-        <div className="about-wheel-label font-mono text-[11px] sm:text-[12px] uppercase tracking-wider text-[#1F5A3A] font-semibold mb-1">
+        <div className="about-wheel-label font-mono text-[11px] sm:text-[12px] uppercase tracking-wider text-[var(--burgundy)] font-semibold mb-1">
           {factStack.label}
         </div>
-        <p className="about-wheel-body text-[clamp(13px,1.1vw,16px)] font-sans text-[#0B0B0B] leading-relaxed">
+        <p className="about-wheel-body text-[clamp(13px,1.1vw,16px)] font-sans text-[var(--ink)] leading-relaxed">
           {factStack.text}
         </p>
       </div>,
 
       // 6) Location + availability
       <div key="loc" className="about-wheel-card">
-        <div className="about-wheel-label font-mono text-[11px] sm:text-[12px] uppercase tracking-wider text-[#1F5A3A] font-semibold mb-1 flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#1F5A3A]" aria-hidden="true" />
+        <div className="about-wheel-label font-mono text-[11px] sm:text-[12px] uppercase tracking-wider text-[var(--burgundy)] font-semibold mb-1 flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-[var(--burgundy)]" aria-hidden="true" />
           <span>LOCATION & AVAILABILITY</span>
         </div>
-        <p className="about-wheel-body text-[clamp(13px,1.1vw,16px)] font-sans text-[#0B0B0B] leading-relaxed">
+        <p className="about-wheel-body text-[clamp(13px,1.1vw,16px)] font-sans text-[var(--ink)] leading-relaxed">
           <strong>{"bold" in factStatus ? factStatus.bold : ""}</strong>
           {factStatus.text}
         </p>
-        <p className="about-wheel-secondary text-[clamp(11px,0.95vw,13px)] text-[#6B645A] font-sans mt-1">
+        <p className="about-wheel-secondary text-[clamp(11px,0.95vw,13px)] text-[var(--muted)] font-sans mt-1">
           {site.availability}
         </p>
       </div>,

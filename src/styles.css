@@ -726,15 +726,15 @@ html:not(.paged) .expertise-map { min-height: 480px; }
   width: max-content;
   min-width: 120px;
   max-width: 260px;
-  background: #F3ECE0;
-  border: 1.5px solid #0B0B0B;
+  background: var(--chat-bg);
+  border: 1.5px solid var(--chat-border);
   border-radius: 14px;
   padding: 10px 14px;
   box-shadow: 0 10px 24px -12px rgba(0, 0, 0, 0.35);
   font-family: 'Manrope', var(--font-sans), sans-serif;
   font-size: 14px;
   line-height: 1.35;
-  color: #0B0B0B;
+  color: var(--chat-text);
   pointer-events: auto;
   opacity: 1;
   transition: opacity 0.35s ease;
@@ -742,7 +742,7 @@ html:not(.paged) .expertise-map { min-height: 480px; }
 
 .buddy-hl {
   font-weight: 700;
-  color: #1F5A3A;
+  color: var(--burgundy);
 }
 
 .buddy-bubble-tail {
@@ -783,8 +783,8 @@ html:not(.paged) .expertise-map { min-height: 480px; }
   right: calc(16px + env(safe-area-inset-right));
   bottom: calc(120px + env(safe-area-inset-bottom));
   width: min(86vw, 340px);
-  background: #F3ECE0;
-  border: 1.5px solid #0B0B0B;
+  background: var(--chat-bg);
+  border: 1.5px solid var(--chat-border);
   border-radius: 16px;
   padding: 14px;
   box-shadow: 0 14px 32px -10px rgba(0, 0, 0, 0.38);
@@ -818,7 +818,7 @@ html:not(.paged) .expertise-map { min-height: 480px; }
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: #0B0B0B;
+  color: var(--chat-text);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -827,13 +827,13 @@ html:not(.paged) .expertise-map { min-height: 480px; }
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #1F5A3A;
+  background: var(--burgundy);
 }
 
 .buddy-chat-close {
   background: transparent;
   border: none;
-  color: #0B0B0B;
+  color: var(--chat-text);
   font-size: 18px;
   line-height: 1;
   padding: 4px 6px;
@@ -845,7 +845,7 @@ html:not(.paged) .expertise-map { min-height: 480px; }
   background: rgba(11, 11, 11, 0.08);
 }
 .buddy-chat-close:focus-visible {
-  outline: 2px solid #1F5A3A;
+  outline: 2px solid var(--burgundy);
 }
 
 .buddy-chips {
@@ -855,24 +855,22 @@ html:not(.paged) .expertise-map { min-height: 480px; }
 }
 
 .buddy-chip {
-  background: #E8DED0;
+  background: var(--cream);
   border: 1px solid rgba(11, 11, 11, 0.2);
   border-radius: 9999px;
   padding: 5px 10px;
   font-size: 12px;
   font-family: 'Manrope', var(--font-sans), sans-serif;
-  color: #0B0B0B;
+  color: var(--ink);
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
 }
 .buddy-chip:hover {
-  background: #1F5A3A;
-  color: #E8DED0;
-  border-color: #1F5A3A;
+  background: var(--burgundy); color: var(--cream); border-color: var(--burgundy);
 }
 .buddy-chip:focus-visible {
-  outline: 2px solid #1F5A3A;
+  outline: 2px solid var(--burgundy);
   outline-offset: 1px;
 }
 
@@ -884,24 +882,23 @@ html:not(.paged) .expertise-map { min-height: 480px; }
 
 .buddy-chat-input {
   flex: 1;
-  background: #FFFFFF;
-  border: 1.5px solid #0B0B0B;
+  background: var(--chat-input-bg);
+  border: 1.5px solid var(--chat-border);
   border-radius: 8px;
   padding: 8px 10px;
   font-size: 13px;
   font-family: 'Manrope', var(--font-sans), sans-serif;
-  color: #0B0B0B;
+  color: var(--chat-input-text);
   outline: none;
 }
 .buddy-chat-input:focus {
-  border-color: #1F5A3A;
+  border-color: var(--burgundy);
   box-shadow: 0 0 0 2px rgba(31, 90, 58, 0.25);
 }
 
 .buddy-chat-btn {
-  background: #1F5A3A;
-  color: #E8DED0;
-  border: 1.5px solid #0B0B0B;
+  background: var(--burgundy); color: var(--cream);
+  border: 1.5px solid var(--chat-border);
   border-radius: 8px;
   padding: 8px 14px;
   font-size: 13px;
@@ -915,7 +912,7 @@ html:not(.paged) .expertise-map { min-height: 480px; }
   background: #17452c;
 }
 .buddy-chat-btn:focus-visible {
-  outline: 2px solid #1F5A3A;
+  outline: 2px solid var(--burgundy);
   outline-offset: 2px;
 }
 
@@ -1014,19 +1011,19 @@ html:not(.paged) .expertise-map { min-height: 480px; }
   font-family: var(--font-mono, monospace);
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #1F5A3A;
+  color: var(--burgundy);
   font-weight: 600;
   margin-bottom: 4px;
 }
 
 .about-wheel-body {
-  color: #0B0B0B;
+  color: var(--ink);
   line-height: 1.45;
   margin: 0;
 }
 
 .about-wheel-secondary {
-  color: #6B645A;
+  color: var(--muted);
   line-height: 1.4;
 }
 

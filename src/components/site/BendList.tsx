@@ -374,7 +374,7 @@ export function BendList({
                 role="tab"
                 aria-selected={isCur}
                 aria-label={`Go to item ${i + 1}`}
-                className={`bend-list-dot group relative p-1 cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-[#1F5A3A] ${
+                className={`bend-list-dot group relative p-1 cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-[var(--burgundy)] ${
                   isCur ? "is-active" : ""
                 }`}
                 onClick={(e) => {
@@ -385,8 +385,8 @@ export function BendList({
                 <div
                   className={`rounded-full transition-all duration-300 ${
                     isCur
-                      ? "w-1.5 h-5 bg-[#1F5A3A]"
-                      : "w-1.5 h-1.5 bg-[#0B0B0B]/25 group-hover:bg-[#1F5A3A]/70"
+                      ? "w-1.5 h-5 bg-[var(--burgundy)]"
+                      : "w-1.5 h-1.5 bg-[var(--ink)]/25 group-hover:bg-[var(--burgundy)]/70"
                   }`}
                 />
               </button>
@@ -401,10 +401,10 @@ export function BendList({
           className="bend-list-hint absolute bottom-1 left-1/2 -translate-x-1/2 flex items-center gap-1.5 pointer-events-none z-30 transition-opacity duration-300"
           aria-hidden="true"
         >
-          <span className="font-mono text-[11px] text-[#6B645A] tracking-wider uppercase">
+          <span className="font-mono text-[11px] text-[var(--muted)] tracking-wider uppercase">
             Scroll to read
           </span>
-          <ChevronDown className="w-3.5 h-3.5 text-[#1F5A3A] bend-list-hint-chevron" />
+          <ChevronDown className="w-3.5 h-3.5 text-[var(--burgundy)] bend-list-hint-chevron" />
         </div>
       )}
     </div>

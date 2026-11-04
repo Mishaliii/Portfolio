@@ -1118,7 +1118,7 @@ export function Buddy() {
                 left: `calc(50% - ${bubbleOffset.tailShiftX}px)`,
               }}
             >
-              <polygon points="0,0 14,0 7,8" fill="#F3ECE0" />
+              <polygon points="0,0 14,0 7,8" fill="var(--chat-bg, #F3ECE0)" />
               <polyline
                 points="0,0 7,8 14,0"
                 stroke="#0B0B0B"

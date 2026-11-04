@@ -152,12 +152,12 @@ function TypewriterStatus({
   if (!text) return null;
 
   return (
-    <p className="mt-1 text-[15px] italic text-[#6B645A] flex items-center min-h-[1.5em]">
+    <p className="mt-1 text-[15px] italic text-[var(--muted)] flex items-center min-h-[1.5em]">
       <span>{displayedText}</span>
       {showCaret && (
         <span
           aria-hidden="true"
-          className="typewriter-caret inline-block w-[2px] h-[1em] ml-1 bg-[#1F5A3A] align-middle"
+          className="typewriter-caret inline-block w-[2px] h-[1em] ml-1 bg-[var(--burgundy)] align-middle"
         />
       )}
     </p>
@@ -211,7 +211,7 @@ export function WorkCardShell({
         <div ref={titleWrapRef}>
           <HeadlineDissolve bg="var(--cream)" ink="var(--ink)" className="works-title-dissolve">
             <h3
-              className="display text-[#0B0B0B] tracking-tight"
+              className="display text-[var(--ink)] tracking-tight"
               style={{ fontSize: "clamp(40px, 5.2vw, 76px)", lineHeight: 0.95 }}
             >
               {title}
@@ -223,7 +223,7 @@ export function WorkCardShell({
           text={sentence}
           active={active}
           delay={0.15}
-          className="mt-4 text-[18px] sm:text-[20px] leading-snug text-[#0B0B0B] max-w-[46ch]"
+          className="mt-4 text-[18px] sm:text-[20px] leading-snug text-[var(--ink)] max-w-[46ch]"
         />
 
         {line && (
@@ -231,7 +231,7 @@ export function WorkCardShell({
             text={line}
             active={active}
             delay={0.25}
-            className="mt-3 text-[15px] leading-snug text-[#6B645A]"
+            className="mt-3 text-[15px] leading-snug text-[var(--muted)]"
           />
         )}
 
@@ -398,27 +398,27 @@ function DDSSCard({ p, active }: { p: Project; active: boolean }) {
             className="group flex items-center gap-3.5 cursor-pointer py-1.5 outline-none transition-colors"
           >
             <div className="flex flex-col items-center justify-center relative w-2.5 shrink-0">
-              {idx > 0 && <span className="absolute -top-3 bottom-1/2 w-px bg-[#0B0B0B]/25" />}
-              {idx < pipelineRows.length - 1 && <span className="absolute top-1/2 -bottom-3 w-px bg-[#0B0B0B]/25" />}
+              {idx > 0 && <span className="absolute -top-3 bottom-1/2 w-px bg-[var(--line)]" />}
+              {idx < pipelineRows.length - 1 && <span className="absolute top-1/2 -bottom-3 w-px bg-[var(--line)]" />}
               <span
                 className={`w-2 h-2 rounded-full transition-all relative z-10 ${
                   isStepActive
-                    ? "bg-[#1F5A3A] ring-2 ring-[#1F5A3A]/40 scale-125"
-                    : "bg-[#0B0B0B] group-hover:bg-[#1F5A3A]"
+                    ? "bg-[var(--burgundy)] ring-2 ring-[#1F5A3A]/40 scale-125"
+                    : "bg-[#0B0B0B] group-hover:bg-[var(--burgundy)]"
                 }`}
               />
             </div>
             <div className="relative inline-block transition-transform duration-200 ease-out group-hover:translate-x-[6px]">
               <span
                 className={`font-mono text-[13px] tracking-wide transition-colors ${
-                  isStepActive ? "text-[#1F5A3A] font-semibold" : "text-[#0B0B0B] group-hover:text-[#1F5A3A]"
+                  isStepActive ? "text-[var(--burgundy)] font-semibold" : "text-[var(--ink)] group-hover:text-[var(--burgundy)]"
                 }`}
               >
                 {step.label}
               </span>
               <span
                 aria-hidden="true"
-                className="absolute left-0 -bottom-0.5 h-px w-full bg-[#1F5A3A] origin-left scale-x-0 transition-transform duration-300 ease-out group-hover:scale-x-100"
+                className="absolute left-0 -bottom-0.5 h-px w-full bg-[var(--burgundy)] origin-left scale-x-0 transition-transform duration-300 ease-out group-hover:scale-x-100"
               />
             </div>
           </div>
@@ -430,7 +430,7 @@ function DDSSCard({ p, active }: { p: Project; active: boolean }) {
   const visualNode = (
     <>
       <div
-        className="relative aspect-[16/10] w-full overflow-hidden rounded-[12px] border border-[#0B0B0B]/20 bg-[#0B0B0B] shadow-[0_8px_30px_rgb(0,0,0,0.06)]"
+        className="relative aspect-[16/10] w-full overflow-hidden rounded-[12px] border border-[var(--line)] bg-[#0B0B0B] shadow-[0_8px_30px_rgb(0,0,0,0.06)]"
         data-sig
       >
         {/* Looping video layer: paused when drawer is open or stills active */}
@@ -490,9 +490,9 @@ function DDSSCard({ p, active }: { p: Project; active: boolean }) {
                     setIsZoomed(false);
                     setShowVideo(false);
                   }}
-                  className={`relative aspect-[16/10] w-[46px] sm:w-[54px] lg:w-[58px] shrink-0 overflow-hidden rounded-[3px] border border-[#0B0B0B]/15 transition-all cursor-pointer ${
+                  className={`relative aspect-[16/10] w-[46px] sm:w-[54px] lg:w-[58px] shrink-0 overflow-hidden rounded-[3px] border border-[var(--line)] transition-all cursor-pointer ${
                     isThumbSelected
-                      ? "after:absolute after:inset-x-0 after:bottom-0 after:h-[2px] after:bg-[#1F5A3A] opacity-100"
+                      ? "after:absolute after:inset-x-0 after:bottom-0 after:h-[2px] after:bg-[var(--burgundy)] opacity-100"
                       : "opacity-60 hover:opacity-100"
                   }`}
                   title={s.t}
@@ -512,7 +512,7 @@ function DDSSCard({ p, active }: { p: Project; active: boolean }) {
               setSelectedShot(null);
               setIsZoomed(false);
             }}
-            className="font-mono shrink-0 text-[11px] font-medium text-[#1F5A3A] hover:underline cursor-pointer pl-1 whitespace-nowrap"
+            className="font-mono shrink-0 text-[11px] font-medium text-[var(--burgundy)] hover:underline cursor-pointer pl-1 whitespace-nowrap"
           >
             {works.playDemo}
           </button>
@@ -627,7 +627,7 @@ function OdometerDigit({
 function OdometerScore({ value, active }: { value: number; active: boolean }) {
   const str = value.toFixed(2);
   return (
-    <span className="font-mono text-[22px] sm:text-[28px] font-bold text-[#0B0B0B] leading-none inline-flex items-center">
+    <span className="font-mono text-[22px] sm:text-[28px] font-bold text-[var(--ink)] leading-none inline-flex items-center">
       {str.split("").map((c, i) => (
         <OdometerDigit key={i} char={c} delay={i * 0.04} active={active} />
       ))}
@@ -713,13 +713,13 @@ function ProductivityExplorer({
 
   return (
     <div
-      className="relative aspect-[16/10] w-full overflow-hidden rounded-[12px] border border-[#0B0B0B]/20 bg-[#E8DED0] shadow-[0_8px_30px_rgb(0,0,0,0.06)] p-4 sm:p-5 flex flex-col justify-between"
+      className="relative aspect-[16/10] w-full overflow-hidden rounded-[12px] border border-[var(--line)] bg-[var(--cream)] shadow-[0_8px_30px_rgb(0,0,0,0.06)] p-4 sm:p-5 flex flex-col justify-between"
       data-sig
     >
       {/* Top row: Tab selectors */}
-      <div className="flex items-center justify-between border-b border-[#0B0B0B]/15 pb-2.5 shrink-0">
+      <div className="flex items-center justify-between border-b border-[var(--line)] pb-2.5 shrink-0">
         <div className="flex items-center gap-1.5 sm:gap-2">
-          <span className="mono text-[11px] text-[#6B645A] uppercase tracking-wider mr-1">
+          <span className="mono text-[11px] text-[var(--muted)] uppercase tracking-wider mr-1">
             Subject:
           </span>
           {(["S001", "S003", "S007"] as SubjectId[]).map((id) => (
@@ -730,14 +730,14 @@ function ProductivityExplorer({
               className={`px-3 py-1 rounded font-mono text-[12px] tracking-wider transition-all cursor-pointer ${
                 selectedId === id
                   ? "bg-[#0B0B0B] text-[#E8DED0] font-semibold shadow-sm"
-                  : "bg-[#0B0B0B]/5 text-[#6B645A] hover:text-[#0B0B0B] hover:bg-[#0B0B0B]/10"
+                  : "bg-[var(--line)]/30 text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--line)]/50"
               }`}
             >
               {id}
             </button>
           ))}
         </div>
-        <span className="mono text-[10px] sm:text-[11px] text-[#1F5A3A] font-semibold uppercase tracking-wider">
+        <span className="mono text-[10px] sm:text-[11px] text-[var(--burgundy)] font-semibold uppercase tracking-wider">
           Session Activity
         </span>
       </div>
@@ -746,7 +746,7 @@ function ProductivityExplorer({
       <div
         ref={barsContainerRef}
         className={`flex-1 flex flex-col justify-center py-2 space-y-1 sm:space-y-1.5 transition-all rounded-[8px] px-1 sm:px-2 ${
-          pulseTarget === "features" ? "ring-2 ring-[#1F5A3A]/40 bg-[#1F5A3A]/[0.03]" : ""
+          pulseTarget === "features" ? "ring-2 ring-[#1F5A3A]/40 bg-[var(--burgundy)]/[0.03]" : ""
         }`}
       >
         {ROLE_FEATURES.map((feat, idx) => {
@@ -754,19 +754,19 @@ function ProductivityExplorer({
           const initialPct = (val / feat.max) * 100;
           return (
             <div key={feat.key} className="flex items-center text-[11px] sm:text-[12px] mono leading-tight">
-              <span className="w-[125px] sm:w-[155px] truncate text-[#0B0B0B]/80 font-medium">
+              <span className="w-[125px] sm:w-[155px] truncate text-[var(--ink)]/80 font-medium">
                 {feat.label}
               </span>
-              <div className="flex-1 h-[6px] sm:h-[7px] bg-[#0B0B0B]/10 rounded-full overflow-hidden mx-2 sm:mx-3">
+              <div className="flex-1 h-[6px] sm:h-[7px] bg-[var(--line)]/50 rounded-full overflow-hidden mx-2 sm:mx-3">
                 <div
                   ref={(el) => {
                     barRefs.current[idx] = el;
                   }}
-                  className="h-full bg-[#1F5A3A] rounded-full"
+                  className="h-full bg-[var(--burgundy)] rounded-full"
                   style={{ width: "100%", transform: `scaleX(${initialPct / 100})`, transformOrigin: "left center" }}
                 />
               </div>
-              <span className="w-[42px] sm:w-[48px] text-right font-semibold text-[#0B0B0B]">
+              <span className="w-[42px] sm:w-[48px] text-right font-semibold text-[var(--ink)]">
                 {val}
               </span>
             </div>
@@ -775,31 +775,31 @@ function ProductivityExplorer({
       </div>
 
       {/* Bottom: Output Strip */}
-      <div className="border-t border-[#0B0B0B]/15 pt-2.5 flex items-center justify-between shrink-0">
+      <div className="border-t border-[var(--line)] pt-2.5 flex items-center justify-between shrink-0">
         <div
           ref={scoreBoxRef}
           className={`flex items-baseline gap-2 transition-all rounded px-2 py-0.5 ${
             pulseTarget === "regression" || pulseTarget === "score-role"
-              ? "ring-2 ring-[#1F5A3A] bg-[#1F5A3A]/10"
+              ? "ring-2 ring-[#1F5A3A] bg-[var(--burgundy)]/10"
               : ""
           }`}
         >
-          <span className="mono text-[10px] sm:text-[11px] uppercase tracking-wider text-[#6B645A]">
+          <span className="mono text-[10px] sm:text-[11px] uppercase tracking-wider text-[var(--muted)]">
             Productivity Score:
           </span>
           <OdometerScore value={subjectData.score} active={active} />
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="font-mono text-[11px] sm:text-[12px] px-2.5 py-0.5 rounded-full border border-[#0B0B0B]/20 bg-[#0B0B0B]/5 text-[#0B0B0B]">
+          <span className="font-mono text-[11px] sm:text-[12px] px-2.5 py-0.5 rounded-full border border-[var(--line)] bg-[var(--line)]/30 text-[var(--ink)]">
             {subjectData.label}
           </span>
           <span
             ref={roleChipRef}
             className={`font-mono text-[11px] sm:text-[12px] font-semibold px-2.5 py-0.5 rounded-full border transition-all ${
               pulseTarget === "clustering" || pulseTarget === "score-role"
-                ? "ring-2 ring-[#1F5A3A] bg-[#1F5A3A]/25 border-[#1F5A3A] text-[#1F5A3A]"
-                : "border-[#1F5A3A]/40 bg-[#1F5A3A]/10 text-[#1F5A3A]"
+                ? "ring-2 ring-[#1F5A3A] bg-[var(--burgundy)]/25 border-[#1F5A3A] text-[var(--burgundy)]"
+                : "border-[#1F5A3A]/40 bg-[var(--burgundy)]/10 text-[var(--burgundy)]"
             }`}
           >
             {subjectData.role}
@@ -847,27 +847,27 @@ function RoleCard({ p, active }: { p: Project; active: boolean }) {
             className="group flex items-center gap-3.5 cursor-pointer py-1.5 outline-none transition-colors"
           >
             <div className="flex flex-col items-center justify-center relative w-2.5 shrink-0">
-              {idx > 0 && <span className="absolute -top-3 bottom-1/2 w-px bg-[#0B0B0B]/25" />}
-              {idx < pipelineSteps.length - 1 && <span className="absolute top-1/2 -bottom-3 w-px bg-[#0B0B0B]/25" />}
+              {idx > 0 && <span className="absolute -top-3 bottom-1/2 w-px bg-[var(--line)]" />}
+              {idx < pipelineSteps.length - 1 && <span className="absolute top-1/2 -bottom-3 w-px bg-[var(--line)]" />}
               <span
                 className={`w-2 h-2 rounded-full transition-all relative z-10 ${
                   isHovered
-                    ? "bg-[#1F5A3A] ring-2 ring-[#1F5A3A]/40 scale-125"
-                    : "bg-[#0B0B0B] group-hover:bg-[#1F5A3A]"
+                    ? "bg-[var(--burgundy)] ring-2 ring-[#1F5A3A]/40 scale-125"
+                    : "bg-[#0B0B0B] group-hover:bg-[var(--burgundy)]"
                 }`}
               />
             </div>
             <div className="relative inline-block transition-transform duration-200 ease-out group-hover:translate-x-[6px]">
               <span
                 className={`font-mono text-[13px] tracking-wide transition-colors ${
-                  isHovered ? "text-[#1F5A3A] font-semibold" : "text-[#0B0B0B] group-hover:text-[#1F5A3A]"
+                  isHovered ? "text-[var(--burgundy)] font-semibold" : "text-[var(--ink)] group-hover:text-[var(--burgundy)]"
                 }`}
               >
                 {step.label}
               </span>
               <span
                 aria-hidden="true"
-                className="absolute left-0 -bottom-0.5 h-px w-full bg-[#1F5A3A] origin-left scale-x-0 transition-transform duration-300 ease-out group-hover:scale-x-100"
+                className="absolute left-0 -bottom-0.5 h-px w-full bg-[var(--burgundy)] origin-left scale-x-0 transition-transform duration-300 ease-out group-hover:scale-x-100"
               />
             </div>
           </div>
@@ -1044,15 +1044,15 @@ function CareerLensPipeline({ active }: { active: boolean }) {
 
   return (
     <div
-      className="relative aspect-[16/10] w-full overflow-hidden rounded-[12px] border border-[#0B0B0B]/20 bg-[#E8DED0] shadow-[0_8px_30px_rgb(0,0,0,0.06)] p-3 sm:p-5 flex flex-col justify-between"
+      className="relative aspect-[16/10] w-full overflow-hidden rounded-[12px] border border-[var(--line)] bg-[var(--cream)] shadow-[0_8px_30px_rgb(0,0,0,0.06)] p-3 sm:p-5 flex flex-col justify-between"
       data-sig
     >
       {/* Top Header */}
-      <div className="flex items-center justify-between border-b border-[#0B0B0B]/15 pb-2 shrink-0">
-        <span className="mono text-[11px] text-[#6B645A] uppercase tracking-wider">
+      <div className="flex items-center justify-between border-b border-[var(--line)] pb-2 shrink-0">
+        <span className="mono text-[11px] text-[var(--muted)] uppercase tracking-wider">
           Architecture Flow
         </span>
-        <span className="mono text-[10px] sm:text-[11px] text-[#1F5A3A] font-semibold uppercase tracking-wider">
+        <span className="mono text-[10px] sm:text-[11px] text-[var(--burgundy)] font-semibold uppercase tracking-wider">
           8 Pipeline Stages
         </span>
       </div>
@@ -1081,13 +1081,13 @@ function CareerLensPipeline({ active }: { active: boolean }) {
               L 100 215
               C 10 215, 10 48, 100 48
             "
-            stroke="#0B0B0B"
+            stroke="currentColor"
             strokeWidth="1.5"
             strokeOpacity="0.25"
             vectorEffect="non-scaling-stroke"
           />
           {/* Travelling ink dot */}
-          <circle ref={dotRef} cx="100" cy="48" r="4" fill="#0B0B0B" />
+          <circle ref={dotRef} cx="100" cy="48" r="4" fill="currentColor" />
         </svg>
 
         {/* Row 1: 4 Nodes (solid ink on cream) */}
@@ -1105,22 +1105,22 @@ function CareerLensPipeline({ active }: { active: boolean }) {
                 onMouseLeave={() => setHoveredIdx(null)}
                 onFocus={() => setHoveredIdx(idx)}
                 onBlur={() => setHoveredIdx(null)}
-                className={`p-2 sm:p-2.5 rounded-[8px] bg-[#E8DED0] border transition-all duration-200 cursor-pointer ${
+                className={`p-2 sm:p-2.5 rounded-[8px] bg-[var(--cream)] border transition-all duration-200 cursor-pointer ${
                   isHovered
                     ? "border-[#1F5A3A] ring-2 ring-[#1F5A3A]/40 shadow-sm"
-                    : "border-[#0B0B0B]/25 hover:border-[#1F5A3A]"
+                    : "border-[var(--line)] hover:border-[#1F5A3A]"
                 }`}
               >
                 <div className="flex items-center justify-between gap-1">
-                  <span className="mono text-[9px] sm:text-[10px] text-[#6B645A]">{node.num}</span>
-                  <span className="mono text-[8px] sm:text-[9px] uppercase font-semibold text-[#1F5A3A] px-1 py-0.2 rounded bg-[#1F5A3A]/10">
+                  <span className="mono text-[9px] sm:text-[10px] text-[var(--muted)]">{node.num}</span>
+                  <span className="mono text-[8px] sm:text-[9px] uppercase font-semibold text-[var(--burgundy)] px-1 py-0.2 rounded bg-[var(--burgundy)]/10">
                     Built
                   </span>
                 </div>
-                <div className="font-mono font-medium text-[10px] sm:text-[11px] text-[#0B0B0B] leading-tight mt-1 truncate">
+                <div className="font-mono font-medium text-[10px] sm:text-[11px] text-[var(--ink)] leading-tight mt-1 truncate">
                   {node.label}
                 </div>
-                <div className="mono text-[8px] sm:text-[9px] text-[#6B645A] leading-tight mt-0.5 truncate">
+                <div className="mono text-[8px] sm:text-[9px] text-[var(--muted)] leading-tight mt-0.5 truncate">
                   {node.caption}
                 </div>
               </div>
@@ -1144,10 +1144,10 @@ function CareerLensPipeline({ active }: { active: boolean }) {
                 onMouseLeave={() => setHoveredIdx(null)}
                 onFocus={() => setHoveredIdx(idx)}
                 onBlur={() => setHoveredIdx(null)}
-                className={`p-2 sm:p-2.5 rounded-[8px] bg-[#E8DED0] transition-all duration-200 cursor-pointer ${
+                className={`p-2 sm:p-2.5 rounded-[8px] bg-[var(--cream)] transition-all duration-200 cursor-pointer ${
                   node.built
-                    ? "border border-solid border-[#0B0B0B]/25"
-                    : "border border-dashed border-[#0B0B0B]/40 bg-[#E8DED0]/90"
+                    ? "border border-solid border-[var(--line)]"
+                    : "border border-dashed border-[#0B0B0B]/40 bg-[var(--cream)]/90"
                 } ${
                   isHovered
                     ? "border-[#1F5A3A] ring-2 ring-[#1F5A3A]/40 shadow-sm"
@@ -1155,23 +1155,23 @@ function CareerLensPipeline({ active }: { active: boolean }) {
                 }`}
               >
                 <div className="flex items-center justify-between gap-1">
-                  <span className="mono text-[9px] sm:text-[10px] text-[#6B645A]">{node.num}</span>
+                  <span className="mono text-[9px] sm:text-[10px] text-[var(--muted)]">{node.num}</span>
                   <span
                     className={`mono text-[8px] sm:text-[9px] uppercase font-semibold px-1 py-0.2 rounded ${
                       node.built
-                        ? "text-[#1F5A3A] bg-[#1F5A3A]/10"
+                        ? "text-[var(--burgundy)] bg-[var(--burgundy)]/10"
                         : node.label === "Front end"
                         ? "text-[#92400E] bg-[#92400E]/10"
-                        : "text-[#6B645A] bg-[#0B0B0B]/5"
+                        : "text-[var(--muted)] bg-[var(--line)]/30"
                     }`}
                   >
                     {node.built ? "Built" : node.caption}
                   </span>
                 </div>
-                <div className="font-mono font-medium text-[10px] sm:text-[11px] text-[#0B0B0B] leading-tight mt-1 truncate">
+                <div className="font-mono font-medium text-[10px] sm:text-[11px] text-[var(--ink)] leading-tight mt-1 truncate">
                   {node.label}
                 </div>
-                <div className="mono text-[8px] sm:text-[9px] text-[#6B645A] leading-tight mt-0.5 truncate">
+                <div className="mono text-[8px] sm:text-[9px] text-[var(--muted)] leading-tight mt-0.5 truncate">
                   {node.caption}
                 </div>
               </div>
@@ -1181,16 +1181,16 @@ function CareerLensPipeline({ active }: { active: boolean }) {
       </div>
 
       {/* Fixed-Height Info Slot (No tooltips, zero layout shift) */}
-      <div className="h-[42px] sm:h-[46px] px-3 py-1.5 rounded-[6px] border border-[#0B0B0B]/15 bg-[#0B0B0B]/[0.03] flex items-center justify-between text-[11px] sm:text-[12px] mono shrink-0">
+      <div className="h-[42px] sm:h-[46px] px-3 py-1.5 rounded-[6px] border border-[var(--line)] bg-[#0B0B0B]/[0.03] flex items-center justify-between text-[11px] sm:text-[12px] mono shrink-0">
         <div className="flex items-center gap-2 truncate">
-          <span className="font-semibold text-[#1F5A3A] shrink-0">
+          <span className="font-semibold text-[var(--burgundy)] shrink-0">
             {activeNode.num} / {activeNode.label.toUpperCase()}:
           </span>
-          <span className="text-[#0B0B0B] truncate text-[11px]">
+          <span className="text-[var(--ink)] truncate text-[11px]">
             {activeNode.desc}
           </span>
         </div>
-        <span className="shrink-0 text-[9px] sm:text-[10px] uppercase font-mono px-2 py-0.5 rounded border border-[#0B0B0B]/15 bg-[#E8DED0] text-[#6B645A] ml-2 hidden sm:inline-block">
+        <span className="shrink-0 text-[9px] sm:text-[10px] uppercase font-mono px-2 py-0.5 rounded border border-[var(--line)] bg-[var(--cream)] text-[var(--muted)] ml-2 hidden sm:inline-block">
           {activeNode.caption}
         </span>
       </div>
@@ -1223,17 +1223,17 @@ function CareerLensCard({ p, active }: { p: Project; active: boolean }) {
           className="group flex items-center gap-3.5 cursor-pointer py-1.5 outline-none transition-colors"
         >
           <div className="flex flex-col items-center justify-center relative w-2.5 shrink-0">
-            {idx > 0 && <span className="absolute -top-3 bottom-1/2 w-px bg-[#0B0B0B]/25" />}
-            {idx < pipelineSteps.length - 1 && <span className="absolute top-1/2 -bottom-3 w-px bg-[#0B0B0B]/25" />}
-            <span className="w-2 h-2 rounded-full transition-all relative z-10 bg-[#0B0B0B] group-hover:bg-[#1F5A3A]" />
+            {idx > 0 && <span className="absolute -top-3 bottom-1/2 w-px bg-[var(--line)]" />}
+            {idx < pipelineSteps.length - 1 && <span className="absolute top-1/2 -bottom-3 w-px bg-[var(--line)]" />}
+            <span className="w-2 h-2 rounded-full transition-all relative z-10 bg-[#0B0B0B] group-hover:bg-[var(--burgundy)]" />
           </div>
           <div className="relative inline-block transition-transform duration-200 ease-out group-hover:translate-x-[6px]">
-            <span className="font-mono text-[13px] tracking-wide transition-colors text-[#0B0B0B] group-hover:text-[#1F5A3A]">
+            <span className="font-mono text-[13px] tracking-wide transition-colors text-[var(--ink)] group-hover:text-[var(--burgundy)]">
               {step.label}
             </span>
             <span
               aria-hidden="true"
-              className="absolute left-0 -bottom-0.5 h-px w-full bg-[#1F5A3A] origin-left scale-x-0 transition-transform duration-300 ease-out group-hover:scale-x-100"
+              className="absolute left-0 -bottom-0.5 h-px w-full bg-[var(--burgundy)] origin-left scale-x-0 transition-transform duration-300 ease-out group-hover:scale-x-100"
             />
           </div>
         </div>
