@@ -476,7 +476,10 @@ export function Site() {
       </div>
 
       {booted && (
-        <span className="hero-chip hero-chip-bl mono" aria-label="Open to work">
+        <span
+          className={`hero-chip hero-chip-tl mono ${!inv ? "hero-chip-light" : ""}`}
+          aria-label="Open to work"
+        >
           <span className="live-dot" aria-hidden />
           <span className="hero-chip-text-full">Open to work, 2026</span>
           <span className="hero-chip-text-short">Open to work</span>

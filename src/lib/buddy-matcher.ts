@@ -51,7 +51,7 @@ const FALLBACK_VARIANTS = [
   "Hmm, that one flew over my leaves. I'm best at Mishal's projects, skills and hiring. Try one of these?",
   "My brain has 3 branches: projects, skills, hiring. That question lives on a 4th, which I don't have.",
   "I looked everywhere in my bark. Nothing. Pick one of these?",
-  "My acorn sensors didn't catch that one. Try asking about Mishal's work or stack!",
+  "My sensors didn't catch that one. Try asking about Mishal's work or stack!",
   "I'm just a small sprite with a curated memory. How about one of these instead?",
   "That's beyond my digital forest. Stick to Mishal's code, projects, or background!",
   "Leaf me hanging, did you? Let's get back to what I know best:",
@@ -120,8 +120,8 @@ export function matchBuddyIntent(rawInput: string, gameContext?: number): BuddyA
   // 1. Swear words / profanity (calm, light redirect)
   if (/\b(fuck|shit|bitch|asshole|bastard|dick|crap)\b/i.test(query)) {
     const text = pickVariant("swear", [
-      "Whoa there, keep it clean! Even acorns have sensitive bark.",
-      "Easy now! We keep this garden friendly.",
+      "Whoa there, keep it clean! Even sprites have sensitive ears.",
+      "Easy now! We keep this space friendly.",
       "Hey, language! Let's redirect that energy to machine learning.",
     ]);
     return {
@@ -137,7 +137,7 @@ export function matchBuddyIntent(rawInput: string, gameContext?: number): BuddyA
   if (/\b(dance|sing|song|groove|bust a move)\b/i.test(query)) {
     const text = pickVariant("dance", [
       "Look at those wooden moves! (No rhythm was harmed.)",
-      "Dancing like an acorn in a gentle autumn breeze.",
+      "Dancing like a little sprite in a gentle breeze.",
       "Branch-shaking groove activated!",
     ]);
     return {
@@ -155,7 +155,7 @@ export function matchBuddyIntent(rawInput: string, gameContext?: number): BuddyA
     const text = pickVariant("how_are_you", [
       "Photosynthesizing nicely, thanks! How can I help you explore Mishal's work?",
       "Bark is solid, leaves are green. Ready for any technical questions!",
-      "Living my best acorn life in the bottom-right corner. What are you curious about?",
+      "Living my best sprite life in the bottom-right corner. What are you curious about?",
       "Zero bugs in my digital branches today! What would you like to see?",
     ]);
     return {
@@ -170,8 +170,8 @@ export function matchBuddyIntent(rawInput: string, gameContext?: number): BuddyA
   // 4. Who are you / Are you AI / Real / Name
   if (/\b(who are you|your name|what are you|are you (ai|real|human|bot|robot))\b/i.test(query)) {
     const text = pickVariant("who_are_you", [
-      "I'm Sprout, a tiny rule-based chatbot Mishal built. No tree was harmed.",
-      "I'm Sprout! 0% neural network, 100% crafted acorn code.",
+      "I'm Sprout, a tiny rule-based assistant Mishal built. No tree was harmed.",
+      "I'm Sprout! 0% neural network, 100% handcrafted code.",
       "Sprout here! Mishal's pocket assistant carved from digital oak.",
     ]);
     return {
@@ -186,7 +186,7 @@ export function matchBuddyIntent(rawInput: string, gameContext?: number): BuddyA
   // 5. Who made you
   if (/\b(who made you|who built you|creator|who created you|author)\b/i.test(query)) {
     const text = pickVariant("who_made_you", [
-      `**${site.name}** built me! He wrote the lines, I bring the acorns.`,
+      `**${site.name}** built me! He wrote every single line of my code.`,
       `Mishal crafted me in TypeScript and GSAP. Don't worry, he treats me well.`,
       `Created by ${site.name} to guide visitors through his projects and experience.`,
     ]);
@@ -281,7 +281,7 @@ export function matchBuddyIntent(rawInput: string, gameContext?: number): BuddyA
   if (/\b(sorry|apologize|my bad|pardon)\b/i.test(query)) {
     const text = pickVariant("sorry", [
       "No worries at all! Water under the wooden bridge.",
-      "All good! Acorns have thick skin.",
+      "All good! Sprites have thick bark.",
       "Never mind! Let's get back to the cool projects.",
     ]);
     return {
@@ -436,7 +436,7 @@ export function matchBuddyIntent(rawInput: string, gameContext?: number): BuddyA
   if (/\b(secret|secrets|easter egg|hidden)\b/i.test(query)) {
     const text = pickVariant("secrets", [
       "Mishal once trained an image model overnight and woke up to 99% accuracy... on the training set only.",
-      "Secret: the acorn cap is actually my Wi-Fi antenna.",
+      "Secret: my wooden cap is actually my Wi-Fi antenna.",
       "Try poking me 6 times in a row. See what happens!",
     ]);
     return {

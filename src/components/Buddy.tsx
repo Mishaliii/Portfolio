@@ -74,7 +74,7 @@ const IDLE_BUBBLES_POOL: IdleBubbleItem[] = [
   { id: "g1", text: "I can tell jokes. They are bad.", action: "Tell me a joke", query: "Tell me a joke" },
   { id: "g2", text: "Poke me. I dare you." },
   { id: "g3", text: "Did you know Mishal is open to work?", action: "Is he available?", query: "Is Mishal available for hire?" },
-  { id: "g4", text: "Acorns don't sleep often, but I might doze off soon.", action: "Ask me anything", query: "What are your skills?" },
+  { id: "g4", text: "I don't sleep often, but I might doze off soon.", action: "Ask me anything", query: "What are your skills?" },
   { id: "g5", text: "Want to see my wooden dance moves?", action: "Dance for me", query: "Dance for me" },
   { id: "g6", text: "Tabs or spaces? Let's play a game.", action: "Play a game", query: "Play a game" },
 ];
@@ -83,7 +83,7 @@ const INITIAL_TRANSCRIPT: ChatMessage[] = [
   {
     id: "welcome",
     sender: "sprout",
-    text: "Hi there! I'm **Sprout**, Mishal's acorn assistant. Ask me about his projects, skills, education, or hiring!",
+    text: "Hi there! I'm **Sprout**, Mishal's portfolio assistant. Ask me about his projects, skills, education, or hiring!",
   },
 ];
 
@@ -95,6 +95,7 @@ export function Buddy() {
   const [bubbleText, setBubbleText] = useState<string | null>(null);
   const [bubbleAction, setBubbleAction] = useState<{ label: string; query: string } | null>(null);
   const [bubbleVisible, setBubbleVisible] = useState(false);
+  const [flipLeft, setFlipLeft] = useState(false);
   const [isAsleep, setIsAsleep] = useState(false);
   const [hasSitA, setHasSitA] = useState(false);
   const [hasSitB, setHasSitB] = useState(false);
@@ -185,13 +186,58 @@ export function Buddy() {
     return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   }, []);
 
-  // Bubble positioning: clamp horizontally with 12px viewport margins
+  // Bubble positioning: clamp horizontally with 12px viewport margins, and flip left if overlapping content
   const updateBubblePlacement = useCallback(() => {
     if (!walkerRef.current || !bubbleRef.current) return;
     const walkerRect = walkerRef.current.getBoundingClientRect();
     const walkerCenterX = walkerRect.left + walkerRect.width / 2;
     const bubbleWidth = bubbleRef.current.offsetWidth || 220;
+    const bubbleHeight = bubbleRef.current.offsetHeight || 60;
     const margin = 12;
+
+    // Check if on Works page or near right edge / content
+    const isWorks =
+      window.location.hash === "#works" ||
+      Boolean(document.querySelector("#works.is-active, [data-page='works'].is-active"));
+
+    // Check if placing above would overlap content area
+    // Sprout is at bottom right by default. In Works or near the right corner, placing above overlaps cards/metrics.
+    const canFlipLeft = walkerRect.left >= bubbleWidth + 24;
+    let shouldFlipLeft = false;
+
+    if (canFlipLeft) {
+      if (isWorks) {
+        shouldFlipLeft = true;
+      } else if (walkerRect.right > window.innerWidth - 300) {
+        const candidateAboveTop = walkerRect.top - bubbleHeight - 14;
+        const candidateAboveBottom = walkerRect.top - 6;
+        const candidateAboveLeft = walkerRect.left - (bubbleWidth - walkerRect.width) / 2;
+        const candidateAboveRight = candidateAboveLeft + bubbleWidth;
+
+        const checkPoints = [
+          { x: candidateAboveLeft + 15, y: candidateAboveTop + 15 },
+          { x: candidateAboveRight - 15, y: candidateAboveTop + 15 },
+          { x: (candidateAboveLeft + candidateAboveRight) / 2, y: (candidateAboveTop + candidateAboveBottom) / 2 },
+        ];
+        for (const pt of checkPoints) {
+          if (pt.x > 0 && pt.x < window.innerWidth && pt.y > 0 && pt.y < window.innerHeight) {
+            const el = document.elementFromPoint(pt.x, pt.y);
+            if (el && !walkerRef.current.contains(el)) {
+              if (
+                el.closest(
+                  "main h1, main h2, main h3, main p, main a, main button, main input, [data-content], .project-card, .case-study, .score-box, .interactive-explorer"
+                )
+              ) {
+                shouldFlipLeft = true;
+                break;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    setFlipLeft(shouldFlipLeft);
 
     const minCenter = margin + bubbleWidth / 2;
     const maxCenter = window.innerWidth - margin - bubbleWidth / 2;
@@ -208,13 +254,10 @@ export function Buddy() {
     return () => window.removeEventListener("resize", updateBubblePlacement);
   }, [updateBubblePlacement, bubbleText, bubbleVisible]);
 
-  // Auto-scroll transcript to bottom
+  // Auto-scroll transcript to bottom directly to prevent interval fighting
   useEffect(() => {
     if (chatOpen && transcriptScrollRef.current) {
-      transcriptScrollRef.current.scrollTo({
-        top: transcriptScrollRef.current.scrollHeight,
-        behavior: "smooth",
-      });
+      transcriptScrollRef.current.scrollTop = transcriptScrollRef.current.scrollHeight;
     }
   }, [transcript, chatOpen]);
 
@@ -268,7 +311,7 @@ export function Buddy() {
       setBubbleVisible(true);
       setBubbleText(text);
 
-      const fadeTime = action ? 8000 : 4000;
+      const fadeTime = 6000;
       bubbleFadeTimeout.current = window.setTimeout(() => {
         setBubbleVisible(false);
         setBubbleAction(null);
@@ -642,7 +685,7 @@ export function Buddy() {
         curPos.current.x = 20;
         runTo(0, 240, () => {
           setPose("wave");
-          speakReaction("Hi there! I'm **Sprout**, Mishal's acorn assistant.", "happy");
+          speakReaction("Hi there! I'm **Sprout**, Mishal's portfolio assistant.", "happy");
           setTimeout(() => setPose("idle"), 1200);
         });
       });
@@ -895,7 +938,7 @@ export function Buddy() {
     if (p === 1) {
       speakReaction("Hey! That tickles.", "happy");
     } else if (p === 2) {
-      speakReaction("Careful, acorns don't bend easily!", "surprised");
+      speakReaction("Careful, sprites don't bend easily!", "surprised");
     } else if (p === 3) {
       speakReaction("That's three pokes. Ask me something instead!", "shy");
     } else if (p === 4) {
@@ -1041,6 +1084,9 @@ export function Buddy() {
           setTranscript((prev) =>
             prev.map((m) => (m.id === sproutMsgId ? { ...m, isTyping: false, text: ans.text } : m))
           );
+          if (transcriptScrollRef.current) {
+            transcriptScrollRef.current.scrollTop = transcriptScrollRef.current.scrollHeight;
+          }
           setFollowUps(ans.followUps);
           if (ans.dance) performDance();
           if (window.innerWidth >= 640) chatInputRef.current?.focus();
@@ -1059,6 +1105,9 @@ export function Buddy() {
           setTranscript((prev) =>
             prev.map((m) => (m.id === sproutMsgId ? { ...m, isTyping: false, text: ans.text } : m))
           );
+          if (transcriptScrollRef.current) {
+            transcriptScrollRef.current.scrollTop = transcriptScrollRef.current.scrollHeight;
+          }
           setFollowUps(ans.followUps);
           if (ans.dance) performDance();
           if (window.innerWidth >= 640) chatInputRef.current?.focus();
@@ -1077,6 +1126,9 @@ export function Buddy() {
           setTranscript((prev) =>
             prev.map((m) => (m.id === sproutMsgId ? { ...m, isTyping: false, text: partial } : m))
           );
+          if (transcriptScrollRef.current) {
+            transcriptScrollRef.current.scrollTop = transcriptScrollRef.current.scrollHeight;
+          }
 
           // Mouth flap
           mouthToggle.current = !mouthToggle.current;
@@ -1273,31 +1325,58 @@ export function Buddy() {
 
         {/* Head Speech Bubble */}
         <div
-          className="buddy-bubble-wrap"
+          className={`buddy-bubble-wrap ${flipLeft ? "is-flipped-left" : ""}`}
           style={{
-            transform: `translateX(calc(-50% + ${bubbleOffset.shiftX}px))`,
+            transform: flipLeft ? "none" : `translateX(calc(-50% + ${bubbleOffset.shiftX}px))`,
             opacity: (bubbleVisible && bubbleText) || isAsleep ? 1 : 0,
             pointerEvents: (bubbleVisible && bubbleText) || isAsleep ? "auto" : "none",
           }}
         >
-          <div ref={bubbleRef} className="buddy-bubble" role="status" aria-live="polite">
+          <div
+            ref={bubbleRef}
+            className="buddy-bubble"
+            role="status"
+            aria-live="polite"
+            onPointerEnter={() => {
+              if (!isAsleep) {
+                setBubbleVisible(false);
+                setBubbleAction(null);
+              }
+            }}
+          >
             {renderFormattedBubble()}
-            <svg
-              className="buddy-bubble-tail"
-              viewBox="0 0 14 8"
-              xmlns="http://www.w3.org/2000/svg"
-              style={{
-                left: `calc(50% - ${bubbleOffset.tailShiftX}px)`,
-              }}
-            >
-              <polygon points="0,0 14,0 7,8" fill="#F3ECE0" />
-              <polyline
-                points="0,0 7,8 14,0"
-                stroke="#0B0B0B"
-                strokeWidth="1.5"
-                fill="none"
-              />
-            </svg>
+            {flipLeft ? (
+              <svg
+                className="buddy-bubble-tail-right"
+                viewBox="0 0 14 8"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <polygon points="0,0 14,0 7,8" fill="#F3ECE0" />
+                <polyline
+                  points="0,0 7,8 14,0"
+                  stroke="#0B0B0B"
+                  strokeWidth="1.5"
+                  fill="none"
+                />
+              </svg>
+            ) : (
+              <svg
+                className="buddy-bubble-tail"
+                viewBox="0 0 14 8"
+                xmlns="http://www.w3.org/2000/svg"
+                style={{
+                  left: `calc(50% - ${bubbleOffset.tailShiftX}px)`,
+                }}
+              >
+                <polygon points="0,0 14,0 7,8" fill="#F3ECE0" />
+                <polyline
+                  points="0,0 7,8 14,0"
+                  stroke="#0B0B0B"
+                  strokeWidth="1.5"
+                  fill="none"
+                />
+              </svg>
+            )}
           </div>
         </div>
       </button>
