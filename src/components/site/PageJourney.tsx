@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import { gsap } from "gsap";
 import { journey, type JourneyStop } from "@/content";
+import { Odometer } from "@/components/Odometer";
 import { reduced } from "@/lib/motion";
 import { BendList } from "./BendList";
 
@@ -56,8 +57,6 @@ function YearDigitColumn({
 }
 
 function YearOdometer({ year, active }: { year: string; active: boolean }) {
-  const digits = year.split("").map((c) => parseInt(c, 10));
-
   return (
     <div
       className="display font-bold text-[#0B0B0B] tracking-tight inline-flex items-center justify-center select-none"
@@ -65,16 +64,13 @@ function YearOdometer({ year, active }: { year: string; active: boolean }) {
         fontSize: "clamp(88px, 22vw, 320px)",
         lineHeight: 1,
       }}
-      aria-label={year}
     >
-      {digits.map((d, i) => (
-        <YearDigitColumn key={i} targetDigit={d} active={active} />
-      ))}
+      <Odometer value={year} active={active} />
     </div>
   );
 }
 
-function StopCard({ stop }: { stop: JourneyStop }) {
+function StopCard({ stop, active }: { stop: JourneyStop; active: boolean }) {
   return (
     <div className="flex flex-col justify-center w-full max-w-[500px] pr-8 box-border select-none">
       {/* Gold hairline accent line */}
@@ -89,8 +85,12 @@ function StopCard({ stop }: { stop: JourneyStop }) {
       </div>
 
       {/* Role or course */}
-      <h3 className="display text-[clamp(20px,2.2vw,36px)] font-bold text-[#0B0B0B] tracking-tight leading-[1.1] mb-2 sm:mb-3">
-        {stop.role}
+<h3 className="display text-[clamp(20px,2.2vw,36px)] font-bold text-[#0B0B0B] tracking-tight leading-[1.1] mb-2 sm:mb-3">
+        {stop.role === "MCA · CGPA 8.33" ? (
+          <>MCA · CGPA <Odometer value="8.33" active={active} /></>
+        ) : (
+          stop.role
+        )}
       </h3>
 
       {/* One line of what I did */}
@@ -156,6 +156,7 @@ export function PageJourney({
           <YearOdometer year={currentYear} active={active} />
         </div>
 
+
         {/* Right Half: BendList of Stops */}
         <div className="w-full h-[min(480px,65vh)] flex items-center justify-center min-[900px]:justify-start min-[900px]:pl-6 lg:min-[900px]:pl-10">
           <BendList
@@ -166,6 +167,7 @@ export function PageJourney({
             onActive={handleActive}
             className="journey-bend-list"
           />
+
         </div>
       </div>
     </div>

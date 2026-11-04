@@ -1100,7 +1100,9 @@ html:not(.paged) .expertise-map { min-height: 480px; }
 }
 
 
-/* =========================================================================
+
+/* 
+==================================================================
    BendList: 3D Curved Cylinder Wheel
    ========================================================================= */
 .bend-list-wrapper {
@@ -1260,4 +1262,46 @@ html.paged .page:not(.is-active) .bend-list-hint {
   visibility: hidden !important;
   opacity: 0 !important;
   pointer-events: none !important;
+=======
+/* Mechanical Odometer */
+.odometer {
+  display: inline-flex;
+  align-items: baseline;
+  vertical-align: baseline;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+  cursor: default;
+  position: relative;
+  user-select: none;
+  line-height: 1;
+}
+
+.odometer-digit-col {
+  display: inline-block;
+  height: 1em;
+  line-height: 1;
+  overflow: hidden;
+  position: relative;
+  vertical-align: baseline;
+  mask-image: linear-gradient(to bottom, transparent 0%, black 18%, black 82%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 18%, black 82%, transparent 100%);
+}
+
+.odometer-digit-strip {
+  display: flex;
+  flex-direction: column;
+}
+
+.odometer-num {
+  display: block;
+  height: 1em;
+  line-height: 1;
+  text-align: center;
+}
+
+.odometer-static {
+  display: inline-block;
+  line-height: 1;
+  vertical-align: baseline;
+
 }

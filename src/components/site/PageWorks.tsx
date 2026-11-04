@@ -12,6 +12,7 @@ import { HeadlineDissolve } from "./HeadlineDissolve";
 import { EASE, reduced } from "@/lib/motion";
 const CaseStudy = lazy(() => import("./CaseStudy").then((m) => ({ default: m.CaseStudy })));
 import { ddssImages, ddssThumbs, preloadScreenshots } from "./ScreenshotGallery";
+import { Odometer } from "@/components/Odometer";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(SplitText);
@@ -578,61 +579,13 @@ const SUBJECT_ROWS: Record<
   },
 };
 
-function OdometerDigit({
-  char,
-  delay = 0,
-  active,
-}: {
-  char: string;
-  delay?: number;
-  active: boolean;
-}) {
-  const isDigit = /^[0-9]$/.test(char);
-  const targetDigit = isDigit ? parseInt(char, 10) : 0;
-  const colRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = colRef.current;
-    if (!el || !isDigit) return;
-
-    if (reduced() || !active) {
-      gsap.set(el, { yPercent: -targetDigit * 10 });
-      return;
-    }
-
-    gsap.to(el, {
-      yPercent: -targetDigit * 10,
-      duration: 0.65,
-      delay,
-      ease: "power2.out",
-    });
-  }, [targetDigit, isDigit, delay, active]);
-
-  if (!isDigit) {
-    return <span className="inline-block px-[1px]">{char}</span>;
-  }
-
-  return (
-    <span className="inline-block overflow-hidden h-[1.15em] leading-none align-baseline">
-      <span ref={colRef} className="flex flex-col select-none will-change-transform">
-        {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
-          <span key={n} className="h-[1.15em] leading-none flex items-center justify-center">
-            {n}
-          </span>
-        ))}
-      </span>
-    </span>
-  );
-}
-
 function OdometerScore({ value, active }: { value: number; active: boolean }) {
-  const str = value.toFixed(2);
   return (
-    <span className="font-mono text-[22px] sm:text-[28px] font-bold text-[#0B0B0B] leading-none inline-flex items-center">
-      {str.split("").map((c, i) => (
-        <OdometerDigit key={i} char={c} delay={i * 0.04} active={active} />
-      ))}
-    </span>
+    <Odometer
+      value={value.toFixed(2)}
+      active={active}
+      className="font-mono text-[22px] sm:text-[28px] font-bold text-[#0B0B0B] leading-none"
+    />
   );
 }
 
@@ -767,8 +720,8 @@ function ProductivityExplorer({
                   style={{ width: "100%", transform: `scaleX(${initialPct / 100})`, transformOrigin: "left center" }}
                 />
               </div>
-              <span className="w-[42px] sm:w-[48px] text-right font-semibold text-[#0B0B0B]">
-                {val}
+              <span className="w-[42px] sm:w-[48px] text-right font-semibold text-[#0B0B0B] inline-flex justify-end">
+                <Odometer value={val} active={active} />
               </span>
             </div>
           );
@@ -1054,7 +1007,7 @@ function CareerLensPipeline({ active }: { active: boolean }) {
           Architecture Flow
         </span>
         <span className="mono text-[10px] sm:text-[11px] text-[#1F5A3A] font-semibold uppercase tracking-wider">
-          8 Pipeline Stages
+          <><Odometer value="8" active={active} /> Pipeline Stages</>
         </span>
       </div>
 

@@ -3,6 +3,7 @@ import { gsap } from "gsap";
 import { about, site, ui } from "@/content";
 import { ArrowDownToLine, ArrowUpRight } from "lucide-react";
 import { SplitReveal } from "./Split";
+import { Odometer } from "@/components/Odometer";
 import { HeadlineDissolve } from "./HeadlineDissolve";
 import { onPage } from "@/lib/motion";
 import { BendList } from "./BendList";
@@ -124,7 +125,13 @@ export function PageAbout({ go, active = true }: { go: (id: string) => void; act
           {factEdu.label}
         </div>
         <p className="about-wheel-body text-[clamp(13px,1.1vw,16px)] font-sans text-[#0B0B0B] leading-relaxed">
-          <strong>{"bold" in factEdu ? factEdu.bold : ""}</strong>
+          <strong>
+            {"bold" in factEdu && factEdu.bold === "MCA · CGPA 8.33" ? (
+              <>MCA · CGPA <Odometer value="8.33" active={active} delay={0.2} /></>
+            ) : (
+              "bold" in factEdu ? factEdu.bold : ""
+            )}
+          </strong>
           {factEdu.text}
         </p>
         {"secondary" in factEdu && (
@@ -167,7 +174,13 @@ export function PageAbout({ go, active = true }: { go: (id: string) => void; act
           <span>LOCATION & AVAILABILITY</span>
         </div>
         <p className="about-wheel-body text-[clamp(13px,1.1vw,16px)] font-sans text-[#0B0B0B] leading-relaxed">
-          <strong>{"bold" in factStatus ? factStatus.bold : ""}</strong>
+          <strong>
+            {"bold" in factStatus && factStatus.bold === "Open to work, 2026" ? (
+              <>Open to work, <Odometer value="2026" active={active} delay={0.2} /></>
+            ) : (
+              "bold" in factStatus ? factStatus.bold : ""
+            )}
+          </strong>
           {factStatus.text}
         </p>
         <p className="about-wheel-secondary text-[clamp(11px,0.95vw,13px)] text-[#6B645A] font-sans mt-1">
@@ -175,7 +188,7 @@ export function PageAbout({ go, active = true }: { go: (id: string) => void; act
         </p>
       </div>,
     ];
-  }, [bioSentences]);
+  }, [bioSentences, active]);
 
   return (
     <div ref={section} className="about-section">
@@ -229,6 +242,7 @@ export function PageAbout({ go, active = true }: { go: (id: string) => void; act
           </a>
         </div>
 
+
         {/* BendList filling remaining column height */}
         <BendList
           pageId="about"
@@ -237,6 +251,7 @@ export function PageAbout({ go, active = true }: { go: (id: string) => void; act
           items={items}
           className="about-bend-list"
         />
+
       </div>
     </div>
   );
