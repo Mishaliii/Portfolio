@@ -60,7 +60,11 @@ export function markBoot(k: BootPart, v = 1) {
   progress = loadingProgress(parts);
   listeners.forEach((f) => f(progress));
 }
-export function markSceneReady() { stage.frameUploaded = true; listeners.forEach((f) => f(progress)); }
+export function markSceneReady() {
+  stage.frameUploaded = true;
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("stage-frame-uploaded"));
+  listeners.forEach((f) => f(progress));
+}
 /** Resolved blob URL of the fully downloaded video, so looping never touches the network. */
 export let videoBlob: Promise<string | null> = Promise.resolve(null);
 

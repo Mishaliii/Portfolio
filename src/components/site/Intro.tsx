@@ -10,6 +10,10 @@ import {
 } from "@/lib/intro";
 import { reduced } from "@/lib/motion";
 import { stage } from "@/lib/stage";
+import sideImg from "@/assets/portrait-side-composited.webp";
+import frontImg from "@/assets/portrait-front-composited.webp";
+import { ddssImages, ddssThumbs } from "./ScreenshotGallery";
+import { headlineInstances, headlineReady } from "./HeadlineDissolve";
 
 /**
  * "Lights on" loading screen:
@@ -101,22 +105,111 @@ export function Intro({
     };
     flicker();
 
-    // 2. Track asset readiness (fonts + hero poster/frame)
+    // 2. Comprehensive Loader Gate: fonts, hero video, portraits, project stills, headline canvases, buddy idle
     let assetsReady = false;
-    const fontsPromise = document.fonts ? document.fonts.ready : Promise.resolve();
+    const t0Gate = performance.now();
+    const gateTimings = {
+      fonts: 0,
+      heroVideo: 0,
+      aboutPortraits: 0,
+      projectStills: 0,
+      headlineDissolve: 0,
+      buddyIdle: 0,
+      allReady: 0,
+    };
+    (window as any).__gateTimings = gateTimings;
 
-    const poster = new Image();
-    poster.src = "/hero/poster.webp";
-    const posterPromise = poster.decode().catch(() => {});
+    const decodeOne = (src: string) => {
+      const img = new Image();
+      img.src = src;
+      return img.decode().catch(() => {});
+    };
 
-    Promise.all([fontsPromise, posterPromise]).then(() => {
-      assetsReady = true;
+    // A. document.fonts.ready
+    const fontsPromise = (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => {
+      gateTimings.fonts = Math.round(performance.now() - t0Gate);
     });
 
-    const onFrameUploaded = () => {
+    // B. Hero video: readyState >= 3 / canplay and first frame painted (stage.frameUploaded or fallback)
+    const heroVideoPromise = new Promise<void>((resolve) => {
+      const check = () => {
+        const v = document.querySelector<HTMLVideoElement>(".scene-video");
+        const videoCanPlay = Boolean(v && v.readyState >= 3);
+        const framePainted = stage.frameUploaded || stage.fallback;
+        if (videoCanPlay && framePainted) {
+          gateTimings.heroVideo = Math.round(performance.now() - t0Gate);
+          resolve();
+          return true;
+        }
+        return false;
+      };
+      if (check()) return;
+      const onStageEvent = () => {
+        if (check()) {
+          window.removeEventListener("stage-fallback", onStageEvent);
+          window.removeEventListener("stage-frame-uploaded", onStageEvent);
+        }
+      };
+      window.addEventListener("stage-fallback", onStageEvent);
+      window.addEventListener("stage-frame-uploaded", onStageEvent);
+      const iv = setInterval(() => {
+        if (check()) clearInterval(iv);
+      }, 30);
+    });
+
+    // C. Both About portrait images decoded
+    const aboutPortraitsPromise = Promise.all([decodeOne(sideImg), decodeOne(frontImg)]).then(() => {
+      gateTimings.aboutPortraits = Math.round(performance.now() - t0Gate);
+    });
+
+    // D. First DDSS stage image and first still of each project decoded
+    const ddssFirst = ddssImages["ddss"] || ddssImages["ddss-screen"] || Object.values(ddssImages)[0];
+    const projectStills = [
+      ddssFirst,
+      "/hero/poster.webp",
+      ddssThumbs["ddss-2"] || ddssImages["ddss-2"],
+    ].filter(Boolean);
+    const projectStillsPromise = Promise.all(projectStills.map(decodeOne)).then(() => {
+      gateTimings.projectStills = Math.round(performance.now() - t0Gate);
+    });
+
+    // E. HeadlineDissolve canvases measured bounds and drawn first frame
+    const headlinePromise = new Promise<void>((resolve) => {
+      const check = () => {
+        if (headlineInstances.size > 0 && headlineReady.size >= headlineInstances.size) {
+          gateTimings.headlineDissolve = Math.round(performance.now() - t0Gate);
+          resolve();
+          return true;
+        }
+        return false;
+      };
+      if (check()) return;
+      const onFrame = () => {
+        if (check()) window.removeEventListener("headline-first-frame", onFrame);
+      };
+      window.addEventListener("headline-first-frame", onFrame);
+      const iv = setInterval(() => {
+        if (check()) clearInterval(iv);
+      }, 25);
+    });
+
+    // F. Buddy idle sprite decoded
+    const buddyIdlePromise = decodeOne("/buddy/idle.webp").then(() => {
+      gateTimings.buddyIdle = Math.round(performance.now() - t0Gate);
+    });
+
+    // Parallel gate resolution
+    Promise.all([
+      fontsPromise,
+      heroVideoPromise,
+      aboutPortraitsPromise,
+      projectStillsPromise,
+      headlinePromise,
+      buddyIdlePromise,
+    ]).then(() => {
+      gateTimings.allReady = Math.round(performance.now() - t0Gate);
       assetsReady = true;
-    };
-    window.addEventListener("stage-fallback", onFrameUploaded);
+    });
 
     // 3. Switch-on reveal sequence
     const triggerSwitchOn = () => {
@@ -238,8 +331,7 @@ export function Intro({
     return () => {
       alive = false;
       window.removeEventListener("resize", updateCenter);
-      window.removeEventListener("stage-fallback", onFrameUploaded);
-      clearInterval(checkInterval);
+            clearInterval(checkInterval);
       clearTimeout(flickerTimer);
       clearTimeout(safetyTimer);
     };

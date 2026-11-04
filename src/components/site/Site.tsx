@@ -179,7 +179,14 @@ export function Site() {
       busy.current = false; stage.covered = false;
       document.documentElement.removeAttribute("data-page-transition");
       window.dispatchEvent(new Event("page-motion-resume"));
+      window.dispatchEvent(new Event("page-transition-end"));
       if (wipe.current) wipe.current.style.willChange = "auto";
+      if (oldEl) oldEl.style.willChange = "auto";
+      if (newEl) newEl.style.willChange = "auto";
+      // Promote only NEXT page's layers while idle to avoid GPU memory explosion
+      const nextIdx = target < pages.length - 1 ? target + 1 : 0;
+      const nextEl = pageEls.current[nextIdx];
+      if (nextEl) nextEl.style.willChange = "transform, opacity";
       const p = pending.current; pending.current = null;
       if (p !== null && p !== curRef.current) setTimeout(() => goRef.current(p), 0);
     };
@@ -221,7 +228,8 @@ export function Site() {
     tl.add(() => { stage.covered = target !== 0; newEl.classList.remove("is-prepared"); setCur(target); curRef.current = target; if (target !== 0) stage.heroOn = false; oldEl.classList.remove("is-active"); newEl.classList.add("is-active"); gsap.set(oldEl.querySelectorAll("[data-char],[data-fade],[data-lines],[data-sig]"), { clearProps: "x,clipPath" }); }, 0.66);
     tl.to(label, { opacity: 0, yPercent: down ? -30 : 30, duration: 0.25, ease: "power3.in" }, 0.75);
     tl.to(w, { yPercent: down ? -100 : 100, duration: 0.55, ease: EASE.tr }, 0.8);
-    tl.add(() => { if (target === 0) heroEnter(newEl); else { enterPage(newEl); settlePage(newEl); } }, 0.88);
+    // Reveal during last 40% of page wipe (wipe exit is 0.8s to 1.35s)
+    tl.add(() => { if (target === 0) heroEnter(newEl); else { enterPage(newEl); settlePage(newEl); } }, 1.0);
   }, [paged]);
   const goRef = useRef(go); goRef.current = go;
 
@@ -260,6 +268,38 @@ export function Site() {
     window.dispatchEvent(new CustomEvent("site-loader-done"));
     const first = pageEls.current[curRef.current];
     first?.focus({ preventScroll: true });
+
+    // Warm-up pass after loader (idle time only, requestIdleCallback with timeout, 1 page per idle slice)
+    const scheduleIdle = typeof window !== "undefined" && "requestIdleCallback" in window
+      ? (window as any).requestIdleCallback
+      : (cb: () => void) => setTimeout(cb, 100);
+
+    const pagesToWarm = [1, 2, 3, 4, 5];
+    let warmIdx = 0;
+    const warmNext = () => {
+      if (warmIdx >= pagesToWarm.length) return;
+      const pIndex = pagesToWarm[warmIdx++];
+      scheduleIdle(() => {
+        const el = pageEls.current[pIndex];
+        if (el) {
+          presplit(el);
+          const origVis = el.style.visibility;
+          const origOp = el.style.opacity;
+          const origPE = el.style.pointerEvents;
+          el.style.visibility = "hidden";
+          el.style.opacity = "0";
+          el.style.pointerEvents = "none";
+          const tl = enterPage(el);
+          tl.progress(1);
+          tl.kill();
+          el.style.visibility = origVis;
+          el.style.opacity = origOp;
+          el.style.pointerEvents = origPE;
+        }
+        warmNext();
+      }, { timeout: 1200 });
+    };
+    warmNext();
   }, []);
 
   // initial page enter after boot

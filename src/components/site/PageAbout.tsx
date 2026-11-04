@@ -49,43 +49,39 @@ export function PageAbout({ go, active = true }: { go: (id: string) => void; act
     };
 
     const io = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting && active && onPage(root) && !document.hidden) {
-        tl.play();
-      } else {
+      if (!entry.isIntersecting) {
         tl.pause();
+      } else {
+        syncPlayback();
       }
     });
     io.observe(root);
 
-    const onVisChange = () => syncPlayback();
-    const onPause = () => tl.pause();
-    const onResume = () => syncPlayback();
-
-    document.addEventListener("visibilitychange", onVisChange);
-    window.addEventListener("page-motion-pause", onPause);
-    window.addEventListener("page-motion-resume", onResume);
+    const onVis = () => syncPlayback();
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("page-motion-resume", syncPlayback);
 
     syncPlayback();
 
     return () => {
-      tl.kill();
-      tlRef.current = null;
       io.disconnect();
-      document.removeEventListener("visibilitychange", onVisChange);
-      window.removeEventListener("page-motion-pause", onPause);
-      window.removeEventListener("page-motion-resume", onResume);
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("page-motion-resume", syncPlayback);
+      tl.kill();
     };
   }, [active]);
 
+  // Decode portrait images ahead of time
   useEffect(() => {
-    const tl = tlRef.current;
-    if (!tl) return;
-    if (active && !document.hidden && onPage(section.current)) {
-      if (tl.paused()) tl.play();
-    } else {
-      if (!tl.paused()) tl.pause();
+    if (typeof window !== "undefined") {
+      const imgA = new Image();
+      imgA.src = sideImg;
+      imgA.decode().catch(() => {});
+      const imgB = new Image();
+      imgB.src = frontImg;
+      imgB.decode().catch(() => {});
     }
-  }, [active]);
+  }, []);
 
   // Split bio into two sentences / paragraphs for items 1 & 2
   const bioSentences = useMemo(() => {
@@ -192,13 +188,12 @@ export function PageAbout({ go, active = true }: { go: (id: string) => void; act
       </div>
 
       <div className="about-content">
-        <HeadlineDissolve className="about-name-dissolve">
+        <HeadlineDissolve auto className="about-name-dissolve">
           <h2 className="about-name display">
             <SplitReveal text={about.name} />
             <span className="accent"><SplitReveal text={about.period} /></span>
           </h2>
         </HeadlineDissolve>
-
         <p className="about-role mono">
           <strong>
             {about.fullName.split(" ").map((word, i) => (
