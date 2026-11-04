@@ -276,6 +276,20 @@ html:not(.paged) .hero { height: 100svh; height: 100dvh; }
 @media (max-width: 767px) { .hero-top { top: 84px; } }
 .hero-chip-br { position: absolute; z-index: 2; right: var(--pad); bottom: clamp(20px, 5dvh, 56px); margin: 0; background: rgba(11,11,11,.35); }
 .hero-chip { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border: 1px solid rgba(232,222,208,.35); border-radius: 999px; color: var(--cream); }
+.hero-chip-tr {
+  position: fixed;
+  z-index: 55;
+  right: var(--pad);
+  top: clamp(60px, 7.5vh, 68px);
+  margin: 0;
+  background: rgba(11, 11, 11, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(232, 222, 208, 0.25);
+  color: var(--cream);
+  pointer-events: auto;
+  transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+}
 .hero-chip-tl,
 .hero-chip-bl {
   position: fixed;

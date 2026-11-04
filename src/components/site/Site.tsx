@@ -477,7 +477,7 @@ export function Site() {
 
       {booted && (
         <span
-          className={`hero-chip hero-chip-tl mono ${!inv ? "hero-chip-light" : ""}`}
+          className={`hero-chip hero-chip-tr mono ${!inv ? "hero-chip-light" : ""}`}
           aria-label="Open to work"
         >
           <span className="live-dot" aria-hidden />
