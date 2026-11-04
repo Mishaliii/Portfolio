@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 
 export type WheelCaptureHandler = {
+  isPointerOver?: () => boolean;
   canConsume: (dir: 1 | -1) => boolean;
   consume: (dir: 1 | -1) => void;
 };
@@ -36,6 +37,7 @@ export function useWheelCapture(pageId: string, handler: WheelCaptureHandler | n
       return;
     }
     const bridge: WheelCaptureHandler = {
+      isPointerOver: () => handlerRef.current?.isPointerOver?.() ?? true,
       canConsume: (dir) => handlerRef.current?.canConsume(dir) ?? false,
       consume: (dir) => handlerRef.current?.consume(dir),
     };

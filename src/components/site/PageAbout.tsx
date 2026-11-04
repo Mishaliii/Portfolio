@@ -6,7 +6,7 @@ import { SplitReveal } from "./Split";
 import { Odometer } from "@/components/Odometer";
 import { HeadlineDissolve } from "./HeadlineDissolve";
 import { onPage } from "@/lib/motion";
-import { BendList } from "./BendList";
+import { BendList, type BendListHandle } from "./BendList";
 import sideImg from "@/assets/portrait-side-composited.webp";
 import frontImg from "@/assets/portrait-front-composited.webp";
 
@@ -16,6 +16,16 @@ export function PageAbout({ go, active = true }: { go: (id: string) => void; act
   const front = useRef<HTMLImageElement>(null);
   const portrait = useRef<HTMLDivElement>(null);
   const tlRef = useRef<gsap.core.Timeline | null>(null);
+  const bendListRef = useRef<BendListHandle>(null);
+
+  // Reset BendList on page enter from another page (and page leave)
+  const prevActive = useRef(active);
+  useEffect(() => {
+    if (prevActive.current !== active) {
+      bendListRef.current?.reset();
+      prevActive.current = active;
+    }
+  }, [active]);
 
   useEffect(() => {
     const root = section.current, a = up.current, b = front.current;
@@ -245,6 +255,7 @@ export function PageAbout({ go, active = true }: { go: (id: string) => void; act
 
         {/* BendList filling remaining column height */}
         <BendList
+          ref={bendListRef}
           pageId="about"
           active={active}
           showHint={true}
