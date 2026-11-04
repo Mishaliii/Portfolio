@@ -17,6 +17,10 @@ type TextLayout = {
   color: string;
 };
 
+// Global registry for loader gate readiness
+export const headlineInstances = new Set<string>();
+export const headlineReady = new Set<string>();
+
 /**
  * Canvas overlay sized to the headline.
  * In normal mode (About, Connect): stamps background-coloured dots over the DOM text.
@@ -42,11 +46,21 @@ export function HeadlineDissolve({
 }) {
   const wrap = useRef<HTMLDivElement>(null);
   const cv = useRef<HTMLCanvasElement>(null);
+  const instanceId = useRef<string>(Math.random().toString(36).slice(2));
+
+  useEffect(() => {
+    const id = instanceId.current;
+    headlineInstances.add(id);
+    return () => {
+      headlineInstances.delete(id);
+      headlineReady.delete(id);
+    };
+  }, []);
 
   useEffect(() => {
     const w = wrap.current, c = cv.current;
     if (!w || !c) return;
-    const ctx = c.getContext("2d");
+    const ctx = c.getContext("2d", { willReadFrequently: false });
     if (!ctx) return;
 
     const pointerEnabled = !coarse() && !reduced();
@@ -116,6 +130,18 @@ export function HeadlineDissolve({
       return { lines, dot, font, letterSpacing, wordSpacing, color };
     };
 
+    let bounds = c.getBoundingClientRect();
+
+    const refreshBounds = () => {
+      if (!onPage(w)) return;
+      bounds = c.getBoundingClientRect();
+      W = bounds.width;
+      H = bounds.height;
+      if (erase && assembled) {
+        textLayout = measureLayout();
+      }
+    };
+
     const size = () => {
       const targetEl = (erase && h1) ? h1 : w;
       const b = targetEl.getBoundingClientRect();
@@ -136,6 +162,11 @@ export function HeadlineDissolve({
       if (erase && assembled) {
         textLayout = measureLayout();
       }
+      bounds = c.getBoundingClientRect();
+
+      // Mark this canvas as initialized and drawn for loader gate
+      headlineReady.add(instanceId.current);
+      window.dispatchEvent(new Event("headline-first-frame"));
     };
     size();
     const ro = new ResizeObserver(size);
@@ -146,7 +177,6 @@ export function HeadlineDissolve({
     const dots: Dot[] = [], specks: Speck[] = [];
     const pool: Dot[] = Array.from({ length: 4100 }, () => ({ x: 0, y: 0, r: 0, life: 0 }));
     const speckPool: Speck[] = Array.from({ length: 150 }, () => ({ x: 0, y: 0, vx: 0, vy: 0, life: 0 }));
-    let bounds = w.getBoundingClientRect();
     let unsub: (() => void) | undefined;
     let timer = 0;
 
@@ -180,14 +210,15 @@ export function HeadlineDissolve({
     };
 
     let mx = -1e4, my = -1e4, inside = false, still = 0, lastMove = 0, visible = true;
-    let sweep = -1, nextSweep = wait ? Infinity : performance.now() + 2600;
+    let sweep = -1;
+    // Delay initial auto sweep so it demos only after visitor has settled on the page (5s after entrance)
+    let nextSweep = wait || !auto ? Infinity : performance.now() + 5000;
     const io = new IntersectionObserver(([e]) => (visible = e.isIntersecting));
     io.observe(w);
 
     const move = (e: PointerEvent) => {
       if (!onPage(w) || !performanceLayers.headline) return;
-      const targetEl = (erase && h1) ? h1 : w;
-      bounds = targetEl.getBoundingClientRect();
+      // Pre-cached bounds from pointerenter, page-transition-end, resize, or scroll (zero reflows)
       mx = e.clientX - bounds.left;
       my = e.clientY - bounds.top;
       inside = mx >= 0 && my >= 0 && mx <= W && my <= H;
@@ -199,8 +230,8 @@ export function HeadlineDissolve({
     const assemble = () => {
       if (!w.closest("#overview")) return;
       assembled = true;
-      nextSweep = performance.now() + 6000;
-      bounds = w.getBoundingClientRect();
+      nextSweep = auto ? performance.now() + 6000 : Infinity;
+      refreshBounds();
       if (erase && pointerEnabled) {
         textLayout = measureLayout();
         if (h1 && textLayout && textLayout.lines.length > 0) {
@@ -211,7 +242,7 @@ export function HeadlineDissolve({
     };
     window.addEventListener("hero-assemble", assemble);
 
-    // If hero is already booted (e.g. repeat visit or deep link), activate erase mode directly
+    // If hero is already booted, activate erase mode directly
     if (erase && pointerEnabled && typeof document !== "undefined") {
       const isLoaded = !document.querySelector(".site-shell.is-loading");
       if (isLoaded) {
@@ -219,7 +250,11 @@ export function HeadlineDissolve({
       }
     }
 
-    if (pointerEnabled) window.addEventListener("pointermove", move);
+    if (pointerEnabled) {
+      window.addEventListener("pointermove", move);
+      w.addEventListener("pointerenter", refreshBounds);
+    }
+
     let prev = performance.now(), drawn = false;
     const LEVELS = 10;
 
@@ -388,7 +423,10 @@ export function HeadlineDissolve({
 
     const refresh = () => {
       if (!onPage(w)) return;
-      bounds = (erase && h1) ? h1.getBoundingClientRect() : w.getBoundingClientRect();
+      refreshBounds();
+      if (auto && !erase) {
+        nextSweep = performance.now() + 5000;
+      }
       if (erase && assembled) {
         textLayout = measureLayout();
         if (h1 && textLayout && textLayout.lines.length > 0 && pointerEnabled) {
@@ -406,7 +444,9 @@ export function HeadlineDissolve({
     };
 
     window.addEventListener("page-motion-resume", refresh);
+    window.addEventListener("page-transition-end", refresh);
     window.addEventListener("resize", refresh);
+    window.addEventListener("scroll", refresh, { passive: true });
     window.addEventListener("perf-layer-change", refresh);
     schedule();
 
@@ -417,9 +457,14 @@ export function HeadlineDissolve({
       io.disconnect();
       if (h1) h1.style.opacity = "";
       window.removeEventListener("page-motion-resume", refresh);
+      window.removeEventListener("page-transition-end", refresh);
       window.removeEventListener("resize", refresh);
+      window.removeEventListener("scroll", refresh);
       window.removeEventListener("perf-layer-change", refresh);
       window.removeEventListener("pointermove", move);
+      if (pointerEnabled) {
+        w.removeEventListener("pointerenter", refreshBounds);
+      }
       window.removeEventListener("hero-assemble", assemble);
     };
   }, [bg, ink, auto, wait, erase]);

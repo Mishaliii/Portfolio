@@ -196,7 +196,7 @@ export function WorkCardShell({
       gsap.fromTo(
         chars,
         { yPercent: 120, scale: 1.04 },
-        { yPercent: 0, scale: 1, duration: 1.0, ease: EASE.in, stagger: 0.015, overwrite: "auto" }
+        { yPercent: 0, scale: 1, duration: 0.48, ease: EASE.in, stagger: 0.008, overwrite: "auto" }
       );
     }
   }, [active]);
@@ -430,7 +430,7 @@ function DDSSCard({ p, active }: { p: Project; active: boolean }) {
   const visualNode = (
     <>
       <div
-        className="relative aspect-[16/10] w-full overflow-hidden rounded-[12px] border border-[#0B0B0B]/20 bg-[#0B0B0B] shadow-[0_8px_30px_rgb(0,0,0,0.06)]"
+        className="relative aspect-[16/10] w-full overflow-hidden rounded-[12px] border border-[#0B0B0B]/20 bg-[#E8DED0] shadow-[0_8px_30px_rgb(0,0,0,0.06)]"
         data-sig
       >
         {/* Looping video layer: paused when drawer is open or stills active */}
@@ -440,7 +440,7 @@ function DDSSCard({ p, active }: { p: Project; active: boolean }) {
           muted
           loop
           playsInline
-          preload="none"
+          preload="auto"
           poster={posterSrc}
           onError={() => setVideoFailed(true)}
           className="absolute inset-0 h-full w-full object-cover transition-opacity duration-300 pointer-events-none"
