@@ -35,7 +35,7 @@ export function PageConnect({ copyEmail, go }: { copyEmail: () => void; go: (id:
         </div>
       </div>
       <div data-fade><ElasticLine stroke="var(--line-inv)" /></div>
-      <div className="mono flex justify-between pt-3" data-fade>
+      <div className="mono flex justify-between pt-3 max-sm:pb-14 max-sm:flex-wrap max-sm:gap-2" style={{ paddingLeft: "clamp(0px, 15vw, 175px)" }} data-fade>
         <span>{ui.copyright}</span>
         <button onClick={() => go("overview")} className="underline-offset-4 hover:underline">{ui.backToOverview}</button>
         <span className="muted">{ui.paletteHint}</span>

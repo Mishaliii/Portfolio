@@ -37,7 +37,6 @@ export function PageHero({ go }: { go: (id: string) => void }) {
           <HeroBtn label={ui.viewProjects} onClick={() => go("works")} />
         </div>
       </div>
-      <span data-hui className="hero-chip hero-chip-br mono"><span className="live-dot" aria-hidden />{hero.chip}</span>
     </div>
   );
 }

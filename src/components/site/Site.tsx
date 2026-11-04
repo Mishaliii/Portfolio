@@ -482,6 +482,17 @@ export function Site() {
         <div data-progress className="absolute inset-x-0 bottom-0 h-[2px] origin-left" style={{ background: "var(--burgundy)", transform: "scaleX(0)" }} />
       </div>
 
+      {booted && (
+        <span
+          className={`hero-chip hero-chip-tr mono ${!inv ? "hero-chip-light" : ""}`}
+          aria-label="Open to work"
+        >
+          <span className="live-dot" aria-hidden />
+          <span className="hero-chip-text-full">Open to work, 2026</span>
+          <span className="hero-chip-text-short">Open to work</span>
+        </span>
+      )}
+
       <Palette open={pal} onClose={() => setPal(false)} run={run} />
       <div role="status" aria-live="polite" className="mono fixed bottom-6 left-1/2 z-[85] -translate-x-1/2 rounded-full px-4 py-2 transition-opacity" style={{ background: "var(--ink)", color: "var(--cream)", opacity: toast ? 1 : 0 }}>{toast}</div>
     </div>
