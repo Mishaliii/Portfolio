@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Odometer } from "@/components/Odometer";
 import { createPortal } from "react-dom";
 import { gsap } from "gsap";
 import { works, type CaseStudyData } from "@/content";
@@ -20,6 +21,7 @@ export function CaseStudy({
   const scrollArea = useRef<HTMLDivElement>(null);
   const closeBtn = useRef<HTMLButtonElement>(null);
   const closing = useRef(false);
+  const [drawerOpened, setDrawerOpened] = useState(false);
 
   const sectionIds = useMemo(() => c.sections.map((s) => s.id), [c.sections]);
   const { activeSection, scrollTo } = useScrollSpy({
@@ -34,6 +36,7 @@ export function CaseStudy({
     const bd = backdrop.current;
     if (!el || closing.current) return;
     closing.current = true;
+    setDrawerOpened(false);
     gsap.killTweensOf([el, bd]);
     gsap.timeline({
       onComplete: () => {
@@ -70,8 +73,9 @@ export function CaseStudy({
     bd.addEventListener("wheel", stopScroll, { passive: false });
     bd.addEventListener("touchmove", stopScroll, { passive: false });
 
+    setDrawerOpened(false);
     gsap.fromTo(bd, { opacity: 0 }, { opacity: 1, duration: 0.3, ease: "linear" });
-    gsap.fromTo(el, { xPercent: 100 }, { xPercent: 0, duration: 0.42, ease: "power3.out" });
+    gsap.fromTo(el, { xPercent: 100 }, { xPercent: 0, duration: 0.42, ease: "power3.out", onComplete: () => setDrawerOpened(true) });
 
     closeBtn.current?.focus({ preventScroll: true });
 
@@ -142,6 +146,11 @@ export function CaseStudy({
             <span className="mono text-[11px] text-[#6B645A]">
               {badgeText}
             </span>
+            {"galleryLabel" in c && c.galleryLabel && (
+              <span className="mono text-[11px] text-[#1F5A3A] hidden sm:inline-block border-l border-[#0B0B0B]/15 pl-3">
+                PRODUCT SCREENS / <Odometer value="10" active={drawerOpened} /> CAPTURES
+              </span>
+            )}
           </div>
           <button
             ref={closeBtn}
@@ -183,8 +192,11 @@ export function CaseStudy({
             {c.sections.map((sec) => (
               <section key={sec.id} id={sec.id} className="scroll-mt-4">
                 <div className="border-t border-[#0B0B0B]/15 pt-4 mb-3">
-                  <h3 className="display text-[26px] sm:text-[32px] tracking-tight text-[#0B0B0B]">
-                    {sec.title}
+                  <h3 className="display text-[26px] sm:text-[32px] tracking-tight text-[#0B0B0B] flex items-baseline gap-2">
+                    <span className="mono text-[16px] sm:text-[18px] text-[#1F5A3A] font-normal">
+                      0<Odometer value={sec.num} active={drawerOpened} />
+                    </span>
+                    <span>{sec.title}</span>
                   </h3>
                 </div>
 

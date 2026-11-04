@@ -3,6 +3,7 @@ import { gsap } from "gsap";
 import { about, site, ui } from "@/content";
 import { ArrowDownToLine, ArrowUpRight } from "lucide-react";
 import { SplitReveal } from "./Split";
+import { Odometer } from "@/components/Odometer";
 import { HeadlineDissolve } from "./HeadlineDissolve";
 import { onPage } from "@/lib/motion";
 import sideImg from "@/assets/portrait-side-composited.webp";
@@ -141,13 +142,50 @@ export function PageAbout({ go, active = true }: { go: (id: string) => void; act
             <ArrowUpRight size={15} />
           </a>
         </div>
+        <div className="about-stats-row grid grid-cols-2 sm:grid-cols-4 gap-4 py-4 border-y border-[#0B0B0B]/10 font-mono my-2" data-fade>
+          <div>
+            <div className="text-[26px] sm:text-[32px] font-bold text-[#0B0B0B] leading-none">
+              <Odometer value="3" active={active} delay={0.1} />
+            </div>
+            <div className="text-[11px] text-[#6B645A] uppercase tracking-wider mt-1.5">ML Projects</div>
+          </div>
+          <div>
+            <div className="text-[26px] sm:text-[32px] font-bold text-[#1F5A3A] leading-none">
+              <Odometer value="8.33" active={active} delay={0.18} />
+            </div>
+            <div className="text-[11px] text-[#6B645A] uppercase tracking-wider mt-1.5">MCA CGPA</div>
+          </div>
+          <div>
+            <div className="text-[26px] sm:text-[32px] font-bold text-[#0B0B0B] leading-none">
+              <Odometer value="768" active={active} delay={0.26} />
+              <span className="text-[16px] font-normal text-[#6B645A] ml-0.5">-d</span>
+            </div>
+            <div className="text-[11px] text-[#6B645A] uppercase tracking-wider mt-1.5">DINOv2 Embed</div>
+          </div>
+          <div>
+            <div className="text-[26px] sm:text-[32px] font-bold text-[#0B0B0B] leading-none">
+              <Odometer value="2026" active={active} delay={0.34} />
+            </div>
+            <div className="text-[11px] text-[#6B645A] uppercase tracking-wider mt-1.5">Available</div>
+          </div>
+        </div>
         <dl className="about-facts">
           {about.facts.map((fact) => (
             <div className="about-fact" key={fact.label} data-about-fact>
               <dt className="mono">{fact.label}</dt>
               <dd>
                 {"live" in fact && fact.live && <span className="live-dot" aria-hidden="true" />}
-                {"bold" in fact && <strong>{fact.bold}</strong>}
+                {"bold" in fact && (
+                  <strong>
+                    {fact.bold === "MCA · CGPA 8.33" ? (
+                      <>MCA · CGPA <Odometer value="8.33" active={active} delay={0.2} /></>
+                    ) : fact.bold === "Open to work, 2026" ? (
+                      <>Open to work, <Odometer value="2026" active={active} delay={0.2} /></>
+                    ) : (
+                      fact.bold
+                    )}
+                  </strong>
+                )}
                 {fact.text}
                 {"secondary" in fact && <span className="about-fact-secondary muted">{fact.secondary}</span>}
               </dd>

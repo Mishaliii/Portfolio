@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { journey, type JourneyStop } from "@/content";
+import { Odometer } from "@/components/Odometer";
 import { reduced } from "@/lib/motion";
 
 function YearDigitColumn({
@@ -55,8 +56,6 @@ function YearDigitColumn({
 }
 
 function YearOdometer({ year, active }: { year: string; active: boolean }) {
-  const digits = year.split("").map((c) => parseInt(c, 10));
-
   return (
     <div
       className="display font-bold text-[#0B0B0B] tracking-tight inline-flex items-center justify-center select-none"
@@ -64,16 +63,13 @@ function YearOdometer({ year, active }: { year: string; active: boolean }) {
         fontSize: "clamp(88px, 22vw, 320px)",
         lineHeight: 1,
       }}
-      aria-label={year}
     >
-      {digits.map((d, i) => (
-        <YearDigitColumn key={i} targetDigit={d} active={active} />
-      ))}
+      <Odometer value={year} active={active} />
     </div>
   );
 }
 
-function StopEntry({ stop }: { stop: JourneyStop }) {
+function StopEntry({ stop, active }: { stop: JourneyStop; active: boolean }) {
   return (
     <div className="flex flex-col justify-center w-full max-w-[520px]">
       {/* Gold hairline accent line */}
@@ -89,7 +85,11 @@ function StopEntry({ stop }: { stop: JourneyStop }) {
 
       {/* Role or course */}
       <h3 className="display text-[28px] sm:text-[36px] lg:text-[42px] font-bold text-[#0B0B0B] tracking-tight leading-[1.05] mb-4">
-        {stop.role}
+        {stop.role === "MCA · CGPA 8.33" ? (
+          <>MCA · CGPA <Odometer value="8.33" active={active} /></>
+        ) : (
+          stop.role
+        )}
       </h3>
 
       {/* One line of what I did */}
@@ -208,7 +208,7 @@ export function PageJourney({
         {/* Right Half: Active Stop Entry */}
         <div className="w-full flex items-center justify-center min-[900px]:justify-start min-[900px]:pl-6 lg:min-[900px]:pl-10">
           <div ref={entryWrapRef} className="w-full flex justify-center min-[900px]:justify-start">
-            <StopEntry stop={displayedStop} />
+            <StopEntry stop={displayedStop} active={active} />
           </div>
         </div>
       </div>

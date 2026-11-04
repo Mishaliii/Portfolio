@@ -917,3 +917,46 @@ html:not(.paged) .expertise-map { min-height: 480px; }
   outline: 2px solid #1F5A3A;
   outline-offset: 2px;
 }
+
+
+/* Mechanical Odometer */
+.odometer {
+  display: inline-flex;
+  align-items: baseline;
+  vertical-align: baseline;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+  cursor: default;
+  position: relative;
+  user-select: none;
+  line-height: 1;
+}
+
+.odometer-digit-col {
+  display: inline-block;
+  height: 1em;
+  line-height: 1;
+  overflow: hidden;
+  position: relative;
+  vertical-align: baseline;
+  mask-image: linear-gradient(to bottom, transparent 0%, black 18%, black 82%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 18%, black 82%, transparent 100%);
+}
+
+.odometer-digit-strip {
+  display: flex;
+  flex-direction: column;
+}
+
+.odometer-num {
+  display: block;
+  height: 1em;
+  line-height: 1;
+  text-align: center;
+}
+
+.odometer-static {
+  display: inline-block;
+  line-height: 1;
+  vertical-align: baseline;
+}
