@@ -289,6 +289,7 @@ function DDSSCard({ p, active }: { p: Project; active: boolean }) {
 
   // Pre-decode all stage images on idle so hovering/clicking never blocks the main thread
   useEffect(() => {
+    if (!active) return;
     const decodeAll = () => {
       DDSS_STAGE_KEYS.forEach((key) => {
         const src = ddssImages[key] ?? posterSrc;
@@ -308,7 +309,7 @@ function DDSSCard({ p, active }: { p: Project; active: boolean }) {
       }
     }
     return undefined;
-  }, [posterSrc]);
+  }, [active, posterSrc]);
 
   // Video playback management: pause when inactive, drawer open (cs), hidden, or showing stills
   useEffect(() => {

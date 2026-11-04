@@ -12,6 +12,7 @@ import { useEffect, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportError } from "../lib/error-reporting";
+import { DevPerfOverlay } from "@/components/site/DevPerfOverlay";
 
 function NotFoundComponent() {
   return (
@@ -174,6 +175,7 @@ function RootComponent() {
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
       <RootBuddy />
+      <DevPerfOverlay />
     </QueryClientProvider>
   );
 }

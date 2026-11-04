@@ -31,7 +31,7 @@ export function PageAbout({ go, active = true }: { go: (id: string) => void; act
     gsap.set(b, { opacity: 0 });
 
     // Image A holds 4s, fades to B over 1.2s, holds 4s, fades to A over 1.2s, loops
-    const tl = gsap.timeline({ repeat: -1 });
+    const tl = gsap.timeline({ repeat: -1, paused: true });
     tlRef.current = tl;
     tl.to(b, { opacity: 1, duration: 1.2, ease: "power2.inOut" }, "+=4")
       .to(a, { opacity: 0, duration: 1.2, ease: "power2.inOut" }, "<")

@@ -116,6 +116,7 @@ export function HeadlineDissolve({
       return { lines, dot, font, letterSpacing, wordSpacing, color };
     };
 
+    let bounds = w.getBoundingClientRect();
     const size = () => {
       const targetEl = (erase && h1) ? h1 : w;
       const b = targetEl.getBoundingClientRect();
@@ -136,6 +137,7 @@ export function HeadlineDissolve({
       if (erase && assembled) {
         textLayout = measureLayout();
       }
+      bounds = b;
     };
     size();
     const ro = new ResizeObserver(size);
@@ -146,7 +148,6 @@ export function HeadlineDissolve({
     const dots: Dot[] = [], specks: Speck[] = [];
     const pool: Dot[] = Array.from({ length: 4100 }, () => ({ x: 0, y: 0, r: 0, life: 0 }));
     const speckPool: Speck[] = Array.from({ length: 150 }, () => ({ x: 0, y: 0, vx: 0, vy: 0, life: 0 }));
-    let bounds = w.getBoundingClientRect();
     let unsub: (() => void) | undefined;
     let timer = 0;
 
@@ -184,10 +185,13 @@ export function HeadlineDissolve({
     const io = new IntersectionObserver(([e]) => (visible = e.isIntersecting));
     io.observe(w);
 
-    const move = (e: PointerEvent) => {
-      if (!onPage(w) || !performanceLayers.headline) return;
+    const updateBounds = () => {
       const targetEl = (erase && h1) ? h1 : w;
       bounds = targetEl.getBoundingClientRect();
+    };
+
+    const move = (e: PointerEvent) => {
+      if (!onPage(w) || !performanceLayers.headline) return;
       mx = e.clientX - bounds.left;
       my = e.clientY - bounds.top;
       inside = mx >= 0 && my >= 0 && mx <= W && my <= H;
@@ -408,6 +412,7 @@ export function HeadlineDissolve({
     window.addEventListener("page-motion-resume", refresh);
     window.addEventListener("resize", refresh);
     window.addEventListener("perf-layer-change", refresh);
+    window.addEventListener("scroll", updateBounds, { passive: true });
     schedule();
 
     return () => {
@@ -419,6 +424,7 @@ export function HeadlineDissolve({
       window.removeEventListener("page-motion-resume", refresh);
       window.removeEventListener("resize", refresh);
       window.removeEventListener("perf-layer-change", refresh);
+      window.removeEventListener("scroll", updateBounds);
       window.removeEventListener("pointermove", move);
       window.removeEventListener("hero-assemble", assemble);
     };
