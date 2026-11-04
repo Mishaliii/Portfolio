@@ -252,6 +252,7 @@ export function Buddy() {
     const tailShiftX = shiftX;
 
     setBubbleOffset({ shiftX, tailShiftX });
+  }, []);
 
   useEffect(() => {
     updateBubblePlacement();
