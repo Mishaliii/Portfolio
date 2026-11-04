@@ -47,10 +47,15 @@ export function BendList({
 
   const containerRef = useRef<HTMLDivElement>(null);
   const itemEls = useRef<(HTMLDivElement | null)[]>([]);
+  const cachedHeights = useRef<number[]>([]);
   const stateRef = useRef({ p: initialIndex });
   const tweenRef = useRef<gsap.core.Tween | null>(null);
   const activeIndexRef = useRef(activeIndex);
   activeIndexRef.current = activeIndex;
+
+  const measureHeights = useCallback(() => {
+    cachedHeights.current = itemEls.current.map((el) => el?.offsetHeight || 100);
+  }, []);
 
   const dismissHint = useCallback(() => {
     if (!hintDismissed.current) {
@@ -63,7 +68,7 @@ export function BendList({
     if (!enableHint) return;
     const timer = setTimeout(() => {
       dismissHint();
-    }, 4000);
+    }, 3500);
     return () => clearTimeout(timer);
   }, [enableHint, dismissHint]);
 
@@ -84,7 +89,7 @@ export function BendList({
     controllerRef.current.setItemCount(items.length);
   }, [items.length]);
 
-  // Render transforms on all items in one pass
+  // Render transforms on all items in one pass using cached item heights
   const renderTransforms = useCallback(
     (p: number) => {
       if (reduced()) return;
@@ -99,8 +104,7 @@ export function BendList({
         return;
       }
       const focusedIdx = Math.max(0, Math.min(items.length - 1, Math.round(p)));
-      const focusedEl = itemEls.current[focusedIdx];
-      const focusedHeight = focusedEl?.offsetHeight || 100;
+      const focusedHeight = cachedHeights.current[focusedIdx] || 100;
       const gap = focusedHeight + 16;
 
       for (let i = 0; i < items.length; i++) {
@@ -124,7 +128,7 @@ export function BendList({
         el.style.zIndex = String(100 - Math.round(absD * 10));
       }
     },
-    [items.length]
+    [active, items.length]
   );
 
   const animateTo = useCallback(
@@ -163,13 +167,14 @@ export function BendList({
           itemEls.current.forEach((el) => {
             if (el) el.style.willChange = "auto";
           });
+          measureHeights();
           setActiveIndex(clamped);
           controllerRef.current.setIndex(clamped);
           onActive?.(clamped);
         },
       });
     },
-    [items.length, onActive, renderTransforms, dismissHint]
+    [items.length, onActive, renderTransforms, dismissHint, measureHeights]
   );
 
   const goTo = useCallback(
@@ -180,15 +185,17 @@ export function BendList({
     [animateTo]
   );
 
-  // Initial layout render
+  // Initial layout render & height measurements
   useEffect(() => {
+    measureHeights();
     renderTransforms(stateRef.current.p);
     const handleResize = () => {
+      measureHeights();
       renderTransforms(stateRef.current.p);
     };
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, [renderTransforms, active]);
+  }, [measureHeights, renderTransforms, active]);
 
   // Wheel capture registration with Site.tsx
   const wheelCaptureHandler = wheelCapture && pageId && active
@@ -259,7 +266,7 @@ export function BendList({
     if (e.pointerId !== pointerState.current.pointerId) return;
 
     const dy = e.clientY - pointerState.current.startY;
-    // 40px per item: dragging upwards (negative dy) advances progress forward (positive)
+    // 40px per item: dragging upwards advances progress forward
     const progressDiff = -dy / 40;
     const nextP = Math.max(
       0,
@@ -339,7 +346,7 @@ export function BendList({
               }}
             >
               <div
-                className="bend-list-item-content w-full"
+                className="bend-list-item-content w-full flex justify-center"
                 style={{
                   pointerEvents: isFocused ? "auto" : "none", // Inner contents only interactive when focused
                 }}
@@ -388,7 +395,7 @@ export function BendList({
         </aside>
       )}
 
-      {/* 4-second interaction hint */}
+      {/* 3.5-second interaction hint with finite bounce */}
       {hintVisible && (
         <div
           className="bend-list-hint absolute bottom-1 left-1/2 -translate-x-1/2 flex items-center gap-1.5 pointer-events-none z-30 transition-opacity duration-300"
@@ -397,7 +404,7 @@ export function BendList({
           <span className="font-mono text-[11px] text-[#6B645A] tracking-wider uppercase">
             Scroll to read
           </span>
-          <ChevronDown className="w-3.5 h-3.5 text-[#1F5A3A] animate-bounce" />
+          <ChevronDown className="w-3.5 h-3.5 text-[#1F5A3A] bend-list-hint-chevron" />
         </div>
       )}
     </div>

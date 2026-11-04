@@ -120,19 +120,30 @@ export function Buddy() {
   }, []);
 
   const updateBubblePlacement = useCallback(() => {
-    if (!walkerRef.current || !bubbleRef.current) return;
+    if (!bubbleText || !walkerRef.current || !bubbleRef.current) return;
     const wRect = walkerRef.current.getBoundingClientRect();
     const bRect = bubbleRef.current.getBoundingClientRect();
     const sproutX = wRect.left + wRect.width / 2;
     const bw = bRect.width || 180;
-    const minCenter = 12 + bw / 2;
+
+    // Ensure bubble does not overlap BendList / main content area
+    let safeMinX = 12 + bw / 2;
+    const bendListEl = document.querySelector(".page.is-active .bend-list-wrapper");
+    if (bendListEl) {
+      const blRect = bendListEl.getBoundingClientRect();
+      if (blRect.right > 0 && blRect.right < window.innerWidth * 0.75) {
+        safeMinX = Math.max(safeMinX, blRect.right + 24 + bw / 2);
+      }
+    }
+
+    const minCenter = safeMinX;
     const maxCenter = window.innerWidth - 12 - bw / 2;
     const targetCenter = Math.max(minCenter, Math.min(maxCenter, sproutX));
     const shift = targetCenter - sproutX;
     const maxTail = Math.max(0, bw / 2 - 20);
     const tailShift = Math.max(-maxTail, Math.min(maxTail, -shift));
     setBubbleOffset({ shiftX: Math.round(shift), tailShiftX: Math.round(tailShift) });
-  }, []);
+  }, [bubbleText]);
 
   useEffect(() => {
     updateBubblePlacement();
@@ -236,9 +247,9 @@ export function Buddy() {
         if (/[a-zA-Z]/i.test(currentChar)) {
           mouthToggle.current = !mouthToggle.current;
           if (mouthToggle.current && mouthRef.current) {
-            const h = 5 + Math.random() * 2;
+            const sy = 0.8 + Math.random() * 0.4;
             gsap.to(mouthRef.current, {
-              height: h,
+              scaleY: sy,
               duration: 0.03,
               yoyo: true,
               repeat: 1,
@@ -265,7 +276,7 @@ export function Buddy() {
         if (charIdx >= totalChars) {
           if (talkInterval.current) clearInterval(talkInterval.current);
           isTalking.current = false;
-          if (mouthRef.current) gsap.set(mouthRef.current, { height: 0 });
+          if (mouthRef.current) gsap.set(mouthRef.current, { scaleY: 0 });
 
           // Fade out 9s after line finishes
           bubbleFadeTimeout.current = window.setTimeout(() => {
@@ -319,7 +330,6 @@ export function Buddy() {
               y: curPos.current.y,
               force3D: true,
             });
-            updateBubblePlacement();
           }
         },
         onComplete: () => {
@@ -492,7 +502,6 @@ export function Buddy() {
               y: curPos.current.y,
               force3D: true,
             });
-            updateBubblePlacement();
           }
         },
         onComplete: () => {
@@ -573,9 +582,8 @@ export function Buddy() {
         walkerRef.current &&
         !prefersReduced()
       ) {
-        const rect = walkerRef.current.getBoundingClientRect();
-        const cx = rect.left + rect.width / 2;
-        const cy = rect.top + rect.height / 2;
+        const cx = window.innerWidth - 124 + curPos.current.x;
+        const cy = window.innerHeight - 72 + curPos.current.y;
         const dist = Math.hypot(e.clientX - cx, e.clientY - cy);
 
         if (dist < 110 && perkArmed.current) {
@@ -700,8 +708,8 @@ export function Buddy() {
           perchOnDoor();
         } else {
           // Roam across screen
-          const maxLeft = -(window.innerWidth - 180);
-          const roamDist = maxLeft * (0.3 + Math.random() * 0.6);
+          const maxLeft = -Math.min(200, window.innerWidth * 0.18);
+          const roamDist = maxLeft * (0.35 + Math.random() * 0.55);
           runTo(roamDist, 270, () => {
             const line =
               IDLE_ROAM_LINES[Math.floor(Math.random() * IDLE_ROAM_LINES.length)];
