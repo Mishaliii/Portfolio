@@ -70,7 +70,7 @@ function YearOdometer({ year, active }: { year: string; active: boolean }) {
   );
 }
 
-function StopCard({ stop, active }: { stop: JourneyStop; active: boolean }) {
+function StopCard({ stop, active = true }: { stop: JourneyStop; active?: boolean }) {
   return (
     <div className="flex flex-col justify-center w-full max-w-[500px] pr-8 box-border select-none">
       {/* Gold hairline accent line */}
@@ -136,8 +136,8 @@ export function PageJourney({
   };
 
   const stopItems = useMemo(
-    () => stops.map((s, idx) => <StopCard key={idx} stop={s} />),
-    [stops]
+    () => stops.map((s, idx) => <StopCard key={idx} stop={s} active={active} />),
+    [stops, active]
   );
 
   const currentYear = stops[activeStop]?.year ?? "2021";

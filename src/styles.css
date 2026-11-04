@@ -1262,7 +1262,8 @@ html.paged .page:not(.is-active) .bend-list-hint {
   visibility: hidden !important;
   opacity: 0 !important;
   pointer-events: none !important;
-=======
+}
+
 /* Mechanical Odometer */
 .odometer {
   display: inline-flex;
