@@ -126,6 +126,8 @@ export function Site() {
       setBooted(true);
       setShowIntro(false);
       window.dispatchEvent(new CustomEvent("site-loader-done"));
+      window.dispatchEvent(new CustomEvent("intro-end"));
+      window.dispatchEvent(new CustomEvent("hero-assemble"));
     }
     const h = location.hash.slice(1);
     if (h) {
@@ -260,12 +262,19 @@ export function Site() {
     introPlayed.current = true;
     setRevealing(true);
     const first = pageEls.current[0];
-    if (first) first.classList.add("is-active");
+    if (first) {
+      first.classList.add("is-active");
+      heroEnter(first, gsap.timeline(), 0, true);
+    }
+    window.dispatchEvent(new CustomEvent("intro-reveal"));
+    window.dispatchEvent(new CustomEvent("sprout-enter"));
   }, []);
   const finishIntro = useCallback(() => {
     (window as any).__siteBooted = true;
     setBooted(true); setShowIntro(false);
     window.dispatchEvent(new CustomEvent("site-loader-done"));
+    window.dispatchEvent(new CustomEvent("intro-end"));
+    window.dispatchEvent(new CustomEvent("hero-assemble"));
     const first = pageEls.current[curRef.current];
     first?.focus({ preventScroll: true });
 

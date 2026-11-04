@@ -68,6 +68,9 @@ export const pages = [
 
 export const intro = {
   status: "Loading portfolio",
+  name: "MISHAL",
+  role: "AI / ML ENGINEER",
+  location: "Kollam, Kerala",
   skip: "SKIP",
   clusters: ["Backend", "Vision", "Retrieval", "Practice"],
   lines: ["loading embeddings", "indexing 3 projects", "top-k ready"],

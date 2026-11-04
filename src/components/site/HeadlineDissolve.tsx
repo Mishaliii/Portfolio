@@ -241,6 +241,8 @@ export function HeadlineDissolve({
       wake();
     };
     window.addEventListener("hero-assemble", assemble);
+    window.addEventListener("intro-end", assemble);
+    window.addEventListener("site-loader-done", assemble);
 
     // If hero is already booted, activate erase mode directly
     if (erase && pointerEnabled && typeof document !== "undefined") {
@@ -466,6 +468,8 @@ export function HeadlineDissolve({
         w.removeEventListener("pointerenter", refreshBounds);
       }
       window.removeEventListener("hero-assemble", assemble);
+      window.removeEventListener("intro-end", assemble);
+      window.removeEventListener("site-loader-done", assemble);
     };
   }, [bg, ink, auto, wait, erase]);
 

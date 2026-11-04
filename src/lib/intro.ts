@@ -2,18 +2,20 @@
  * Lights On intro timing and rule constants.
  *
  * Rules:
- * 1. Minimum hold time: 900ms before cord pull and switch on.
- * 2. Asset timeout fallback: if assets take >1600ms, switch on anyway.
- * 3. Total screen time hard limit: never exceed 2400ms under any network conditions.
- * 4. Shown once per session (sessionStorage), skipped on repeat visits or deep links.
- * 5. Reduced motion: 200ms simple fade.
+ * 1. Full intro: ~3.4s on first visit per session.
+ * 2. Short intro: ~1.0s on repeat visits in the same session.
+ * 3. Asset timeout fallback: preload gate waits for assets with 2.4s hard ceiling.
+ * 4. Skipped on deep links (#works, #about, etc.).
+ * 5. Reduced motion: 400ms crossfade.
  */
 
 export const INTRO_KEY = "lightsOnSeen";
+export const FULL_INTRO_MS = 3400;
+export const SHORT_INTRO_MS = 1000;
+export const REDUCED_FADE_MS = 400;
 export const MIN_HOLD_MS = 900;
 export const ASSET_TIMEOUT_MS = 1600;
 export const HARD_LIMIT_MS = 2400;
-export const REDUCED_FADE_MS = 200;
 
 // Kept for backward compatibility with stage.ts
 export const INTRO_TIMEOUT_MS = HARD_LIMIT_MS;
@@ -38,20 +40,19 @@ export function isHardTimeout(elapsedMs: number): boolean {
   return elapsedMs >= HARD_LIMIT_MS;
 }
 
-/** Determines whether the loading screen should play: once per session, skipped on deep links. */
+/** Determines whether the loading screen should play: skipped on deep links. */
 export function shouldShowIntro(seen: boolean, hash = ""): boolean {
-  if (seen) return false;
   if (hash && hash !== "#overview") return false;
   return true;
 }
 
 /**
  * Returns intro mode for Site.tsx:
- * "full" on first visit without deep link, "none" otherwise.
+ * "full" on first visit without deep link, "short" on repeat visits in same session, "none" on deep links.
  */
 export function introMode(seen: boolean, hash: string): "full" | "short" | "none" {
   if (!shouldShowIntro(seen, hash)) return "none";
-  return "full";
+  return seen ? "short" : "full";
 }
 
 /** Legacy helper kept for compatibility */

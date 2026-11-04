@@ -36,11 +36,11 @@ describe("lights on loading screen rules", () => {
     expect(isHardTimeout(3000)).toBe(true);
   });
 
-  it("plays once per session and skips on subsequent visits", () => {
+  it("plays full on first visit and short on subsequent visits", () => {
     expect(shouldShowIntro(false, "")).toBe(true);
     expect(shouldShowIntro(false, "#overview")).toBe(true);
-    expect(shouldShowIntro(true, "")).toBe(false);
-    expect(shouldShowIntro(true, "#overview")).toBe(false);
+    expect(shouldShowIntro(true, "")).toBe(true);
+    expect(shouldShowIntro(true, "#overview")).toBe(true);
   });
 
   it("skips loading screen on deep links", () => {
@@ -52,11 +52,12 @@ describe("lights on loading screen rules", () => {
   it("returns correct mode for Site.tsx", () => {
     expect(introMode(false, "")).toBe("full");
     expect(introMode(false, "#overview")).toBe("full");
-    expect(introMode(true, "")).toBe("none");
+    expect(introMode(true, "")).toBe("short");
+    expect(introMode(true, "#overview")).toBe("short");
     expect(introMode(false, "#works")).toBe("none");
   });
 
-  it("defines reduced motion fade time as 200ms", () => {
-    expect(REDUCED_FADE_MS).toBe(200);
+  it("defines reduced motion fade time as 400ms", () => {
+    expect(REDUCED_FADE_MS).toBe(400);
   });
 });

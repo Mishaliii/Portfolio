@@ -682,18 +682,34 @@ export function Buddy() {
     } catch {}
 
     if (!hasEntered && !prefersReduced()) {
-      try {
-        sessionStorage.setItem("sprout_entered", "1");
-      } catch {}
+      const triggerEntrance = () => {
+        try {
+          sessionStorage.setItem("sprout_entered", "1");
+        } catch {}
 
-      openDoor(() => {
-        curPos.current.x = 20;
-        runTo(0, 240, () => {
-          setPose("wave");
-          speakReaction("Hi there! I'm **Sprout**, Mishal's portfolio assistant.", "happy");
-          setTimeout(() => setPose("idle"), 1200);
+        openDoor(() => {
+          curPos.current.x = 40;
+          runTo(0, 240, () => {
+            setPose("wave");
+            speakReaction("Hi there! I'm **Sprout**, Mishal's portfolio assistant.", "happy");
+            setTimeout(() => setPose("idle"), 1400);
+          });
         });
-      });
+      };
+
+      const isIntroActive =
+        typeof document !== "undefined" && Boolean(document.querySelector(".site-shell.is-loading"));
+      if (isIntroActive) {
+        const onStart = () => {
+          window.removeEventListener("sprout-enter", onStart);
+          window.removeEventListener("site-loader-done", onStart);
+          triggerEntrance();
+        };
+        window.addEventListener("sprout-enter", onStart);
+        window.addEventListener("site-loader-done", onStart);
+      } else {
+        triggerEntrance();
+      }
     } else {
       startIdleBob();
     }
