@@ -126,6 +126,8 @@ export function Site() {
       setBooted(true);
       setShowIntro(false);
       window.dispatchEvent(new CustomEvent("site-loader-done"));
+      window.dispatchEvent(new CustomEvent("intro-end"));
+      window.dispatchEvent(new CustomEvent("hero-assemble"));
     }
     const h = location.hash.slice(1);
     if (h) {
@@ -266,6 +268,8 @@ export function Site() {
     (window as any).__siteBooted = true;
     setBooted(true); setShowIntro(false);
     window.dispatchEvent(new CustomEvent("site-loader-done"));
+    window.dispatchEvent(new CustomEvent("intro-end"));
+    window.dispatchEvent(new CustomEvent("hero-assemble"));
     const first = pageEls.current[curRef.current];
     first?.focus({ preventScroll: true });
 
