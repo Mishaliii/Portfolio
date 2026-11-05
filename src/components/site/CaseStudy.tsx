@@ -36,6 +36,9 @@ export function CaseStudy({
     enabled: open,
   });
 
+  const activeSectionRef = useRef(activeSection);
+  activeSectionRef.current = activeSection;
+
   // Snap to the nearest section heading if within 25% of the viewport height
   const snapToNearestSection = useCallback(() => {
     const container = scrollArea.current;
@@ -150,7 +153,18 @@ export function CaseStudy({
         closeTl.current = null;
         onClose();
         // Return focus to the trigger Details button
-        triggerBtnRef.current?.focus({ preventScroll: true });
+        if (
+          triggerBtnRef.current &&
+          typeof triggerBtnRef.current.focus === "function" &&
+          document.body.contains(triggerBtnRef.current)
+        ) {
+          triggerBtnRef.current.focus({ preventScroll: true });
+        } else {
+          const activeBtn =
+            document.querySelector<HTMLElement>('[data-card][data-active="true"] button') ||
+            document.querySelector<HTMLElement>('[data-card] button');
+          activeBtn?.focus({ preventScroll: true });
+        }
       },
     });
     closeTl.current = tl;
@@ -199,7 +213,17 @@ export function CaseStudy({
     if (!el || !bd) return;
 
     // Save trigger element for focus restoration
-    triggerBtnRef.current = document.activeElement as HTMLElement | null;
+    if (
+      document.activeElement &&
+      document.activeElement !== document.body &&
+      document.activeElement !== document.documentElement
+    ) {
+      triggerBtnRef.current = document.activeElement as HTMLElement | null;
+    } else {
+      triggerBtnRef.current =
+        document.querySelector<HTMLElement>('[data-card][data-active="true"] button') ||
+        document.querySelector<HTMLElement>('[data-card] button');
+    }
 
     // Reset before opening animation starts (while hidden)
     if (scrollArea.current) {
@@ -326,7 +350,7 @@ export function CaseStudy({
 
       if (e.key === "PageDown" || e.key === "j" || e.key === "J") {
         e.preventDefault();
-        const currIdx = c.sections.findIndex((s) => s.id === activeSection);
+        const currIdx = c.sections.findIndex((s) => s.id === activeSectionRef.current);
         const nextIdx = Math.min(
           c.sections.length - 1,
           (currIdx >= 0 ? currIdx : 0) + 1
@@ -337,7 +361,7 @@ export function CaseStudy({
 
       if (e.key === "PageUp" || e.key === "k" || e.key === "K") {
         e.preventDefault();
-        const currIdx = c.sections.findIndex((s) => s.id === activeSection);
+        const currIdx = c.sections.findIndex((s) => s.id === activeSectionRef.current);
         const prevIdx = Math.max(0, (currIdx >= 0 ? currIdx : 0) - 1);
         scrollToSection(c.sections[prevIdx].id);
         return;
@@ -388,7 +412,7 @@ export function CaseStudy({
       }
       window.removeEventListener("keydown", key, true);
     };
-  }, [open, close, c, snapToNearestSection, scrollToSection, activeSection, updateSpy, setActiveSection]);
+  }, [open, close, c, snapToNearestSection, scrollToSection, updateSpy, setActiveSection]);
 
   if (!open || typeof document === "undefined") return null;
 
