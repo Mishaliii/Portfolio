@@ -201,7 +201,7 @@ export function Site() {
     newEl.classList.add("is-prepared");
     presplit(newEl);
     if (target === 3) { setSub(requestedProject.current ?? (down ? 0 : works.projects.length - 1)); requestedProject.current = null; }
-    if (target === 4) { setJStop(down ? 0 : journey.stops.length - 1); }
+    if (target === 4) { setJStop(0); }
     const label = wipeLabel.current;
     if (!label) { done(); return; }
     label.textContent = `${pages[target].num} ${pages[target].label.toUpperCase()}`;
@@ -242,9 +242,12 @@ export function Site() {
       const activePageId = pages[curRef.current]?.id;
       if (activePageId) {
         const capture = getWheelCapture(activePageId);
-        if (capture && capture.canConsume(dir)) {
-          capture.consume(dir);
-          return;
+        if (capture) {
+          const isOver = capture.isPointerOver ? capture.isPointerOver() : true;
+          if (isOver && capture.canConsume(dir)) {
+            capture.consume(dir);
+            return;
+          }
         }
       }
       if (curRef.current === 3) {

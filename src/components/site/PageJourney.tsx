@@ -3,7 +3,7 @@ import { gsap } from "gsap";
 import { journey, type JourneyStop } from "@/content";
 import { Odometer } from "@/components/Odometer";
 import { reduced } from "@/lib/motion";
-import { BendList } from "./BendList";
+import { BendList, type BendListHandle } from "./BendList";
 
 function YearDigitColumn({
   targetDigit,
@@ -123,10 +123,22 @@ export function PageJourney({
 }) {
   const stops = journey.stops;
   const [activeStop, setActiveStop] = useState(controlledStop ?? 0);
+  const bendListRef = useRef<BendListHandle>(null);
+
+  // Reset to first stop on page enter from another page (and page leave)
+  const prevActive = useRef(active);
+  useEffect(() => {
+    if (prevActive.current !== active) {
+      setActiveStop(0);
+      bendListRef.current?.reset();
+      prevActive.current = active;
+    }
+  }, [active]);
 
   useEffect(() => {
     if (controlledStop !== undefined && controlledStop !== activeStop) {
       setActiveStop(controlledStop);
+      bendListRef.current?.goTo(controlledStop);
     }
   }, [controlledStop]);
 
@@ -160,6 +172,7 @@ export function PageJourney({
         {/* Right Half: BendList of Stops */}
         <div className="w-full h-[min(480px,65vh)] flex items-center justify-center min-[900px]:justify-start min-[900px]:pl-6 lg:min-[900px]:pl-10">
           <BendList
+            ref={bendListRef}
             pageId="journey"
             active={active}
             items={stopItems}
