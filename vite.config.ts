@@ -8,4 +8,46 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  vite: {
+    server: {
+      watch: {
+        ignored: [
+          "**/.git/**",
+          "**/.output/**",
+          "**/.tanstack/**",
+          "**/node_modules/**",
+          "**/scratch/**",
+        ],
+      },
+    },
+    optimizeDeps: {
+      include: [
+        "react",
+        "react-dom",
+        "react-dom/client",
+        "react/jsx-runtime",
+        "react/jsx-dev-runtime",
+        "@tanstack/react-router",
+        "@tanstack/react-query",
+        "@tanstack/query-core",
+        "gsap",
+        "gsap/SplitText",
+        "gsap/Observer",
+        "gsap/ScrollTrigger",
+        "lenis",
+        "lucide-react",
+        "clsx",
+        "tailwind-merge",
+        "class-variance-authority",
+      ],
+      exclude: [
+        "@tanstack/react-start",
+        "@tanstack/start-storage-context",
+      ],
+      entries: [
+        "src/routes/**",
+        "src/components/**",
+      ],
+    },
+  },
 });

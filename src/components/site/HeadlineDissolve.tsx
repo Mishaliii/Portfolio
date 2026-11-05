@@ -124,8 +124,18 @@ export function HeadlineDissolve({
         span.remove();
 
         const hr = hline.getBoundingClientRect();
-        const x = hr.left - wrapRect.left;
-        const y = sr.bottom - wrapRect.top;
+        let dx = 0, dy = 0;
+        try {
+          const tf = getComputedStyle(hline).transform;
+          if (tf && tf !== "none") {
+            const m = new DOMMatrixReadOnly(tf);
+            dx = m.m41;
+            dy = m.m42;
+          }
+        } catch {}
+
+        const x = hr.left - dx - wrapRect.left;
+        const y = sr.bottom - dy - wrapRect.top;
         return { text: cs.textTransform === "uppercase" ? text.toUpperCase() : text, x, y };
       });
 
@@ -134,9 +144,19 @@ export function HeadlineDissolve({
       if (dotEl) {
         const dr = dotEl.getBoundingClientRect();
         const dcs = getComputedStyle(dotEl);
+        let dx = 0, dy = 0;
+        try {
+          const parentHline = dotEl.closest<HTMLElement>("[data-hline]");
+          const tf = getComputedStyle(parentHline || dotEl).transform;
+          if (tf && tf !== "none") {
+            const m = new DOMMatrixReadOnly(tf);
+            dx = m.m41;
+            dy = m.m42;
+          }
+        } catch {}
         dot = {
-          x: dr.left - wrapRect.left + dr.width / 2,
-          y: dr.top - wrapRect.top + dr.height / 2,
+          x: dr.left - dx - wrapRect.left + dr.width / 2,
+          y: dr.top - dy - wrapRect.top + dr.height / 2,
           r: dr.width / 2,
           color: dcs.backgroundColor || greenc,
         };
@@ -238,6 +258,11 @@ export function HeadlineDissolve({
 
     const move = (e: PointerEvent) => {
       if (!onPage(w) || !performanceLayers.headline || destroyed) return;
+      if (bounds.width === 0 || bounds.height === 0 || W === 0 || H === 0) {
+        bounds = c.getBoundingClientRect();
+        W = bounds.width;
+        H = bounds.height;
+      }
       mx = e.clientX - bounds.left;
       my = e.clientY - bounds.top;
       inside = mx >= 0 && my >= 0 && mx <= W && my <= H;
@@ -259,7 +284,10 @@ export function HeadlineDissolve({
       }
       if (destroyed) return;
 
-      // 2. Wait for intro handoff if wait is true
+      // 2. Initial size and readiness for loader gate
+      applyLayoutAndSize();
+
+      // 3. If wait is true and intro is still active, listen for handoff
       if (wait) {
         const isIntroDone = () => {
           if (typeof window === "undefined") return true;
@@ -275,7 +303,11 @@ export function HeadlineDissolve({
             window.removeEventListener("hero-assemble", onHandoff);
             if (!destroyed) {
               assembled = true;
-              init();
+              applyLayoutAndSize();
+              if (erase && pointerEnabled) {
+                drawn = false;
+                wake();
+              }
             }
           };
           window.addEventListener("intro-end", onHandoff);
@@ -285,9 +317,6 @@ export function HeadlineDissolve({
         }
         assembled = true;
       }
-
-      // 3. Idempotently size and measure layout
-      applyLayoutAndSize();
 
       if (erase && pointerEnabled) {
         drawn = false;

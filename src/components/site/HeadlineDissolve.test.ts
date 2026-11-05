@@ -59,4 +59,24 @@ describe("HeadlineDissolve runtime draw loop and readiness assertions", () => {
 
     activeHeadlineDrawLoops.clear();
   });
+
+  it("handles headline readiness gate correctly across instances", () => {
+    headlineInstances.clear();
+    headlineReady.clear();
+
+    headlineInstances.add("hero");
+    headlineInstances.add("about");
+
+    expect(headlineReady.size).toBe(0);
+    expect(headlineReady.size >= headlineInstances.size).toBe(false);
+
+    headlineReady.add("hero");
+    expect(headlineReady.size >= headlineInstances.size).toBe(false);
+
+    headlineReady.add("about");
+    expect(headlineReady.size >= headlineInstances.size).toBe(true);
+
+    headlineInstances.clear();
+    headlineReady.clear();
+  });
 });
