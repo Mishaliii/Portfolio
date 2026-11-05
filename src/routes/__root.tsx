@@ -107,7 +107,7 @@ function RootShell({ children }: { children: ReactNode }) {
     <html lang="en">
       <head>
         <HeadContent />
-        <script dangerouslySetInnerHTML={{ __html: `if(!window.__heroFetch){var v=document.createElement('video');var small=innerWidth<1500;var mp4=v.canPlayType('video/mp4; codecs="avc1.64001f"');var src='/hero/hero'+(small?'-sm':'')+(mp4?'.mp4':'.webm');window.__heroFetch=fetch(src).catch(function(){return null;});}` }} />
+        <script dangerouslySetInnerHTML={{ __html: `if(!window.__heroFetch){var v=document.createElement('video');var small=innerWidth<=1366;var mp4=v.canPlayType('video/mp4; codecs="avc1.64001f"');var src='/hero/hero'+(small?'-sm':'')+(mp4?'.mp4':'.webm');window.__heroFetch=fetch(src).catch(function(){return null;});}` }} />
       </head>
       <body>
         {children}

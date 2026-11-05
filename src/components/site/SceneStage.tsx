@@ -54,9 +54,10 @@ export function SceneStage() {
     let lastWrapTime = performance.now();
     let playing = false;
 
-    const CROSSFADE_SEC = 0.4;
-    const VIDEO_LEN_SEC = 6.0;
-    const HANDOFF_SEC = VIDEO_LEN_SEC - CROSSFADE_SEC;
+    const VIDEO_LEN_SEC = 7.041667;
+    const QUEUE_SEC = VIDEO_LEN_SEC - 0.08;
+    const HANDOFF_SEC = VIDEO_LEN_SEC - 0.04;
+    let nextQueued = false;
 
     // Reuse the loader's download: no competing range fetch and no source swap at a loop boundary.
     let sourceReady = false;
@@ -75,37 +76,37 @@ export function SceneStage() {
     const pingPongFrame: VideoFrameRequestCallback = (now, meta) => {
       if (dead || !native) return;
       const t = meta.mediaTime;
+      const len = currentVid.duration && isFinite(currentVid.duration) && currentVid.duration > 0
+        ? currentVid.duration
+        : VIDEO_LEN_SEC;
+      const queueTime = len - 0.08;
+      const handoffTime = len - 0.04;
 
-      if (!crossfading && t >= HANDOFF_SEC) {
-        crossfading = true;
+      if (!nextQueued && t >= queueTime) {
+        nextQueued = true;
         nextVid.currentTime = 0;
         void nextVid.play().catch(() => {});
       }
 
-      if (crossfading) {
-        const progress = Math.min(1, Math.max(0, (t - HANDOFF_SEC) / CROSSFADE_SEC));
-        nextVid.style.opacity = progress.toFixed(3);
-        currentVid.style.opacity = (1 - progress).toFixed(3);
+      if (t >= handoffTime || (nextQueued && t < 0.2 && meta.presentedFrames > 5)) {
+        // Plain seamless handover without double-crossfade dip
+        currentVid.pause();
+        currentVid.currentTime = 0;
+        currentVid.style.opacity = "0";
+        nextVid.style.opacity = "1";
 
-        if (progress >= 1 || t >= VIDEO_LEN_SEC - 0.04) {
-          currentVid.pause();
-          currentVid.currentTime = 0;
-          currentVid.style.opacity = "0";
-          nextVid.style.opacity = "1";
+        const loopGap = Math.round((now - lastWrapTime) * 10) / 10;
+        lastWrapTime = now;
+        window.dispatchEvent(new CustomEvent("hero-loop-gap", { detail: { gapMs: loopGap } }));
 
-          const loopGap = Math.round((now - lastWrapTime) * 10) / 10;
-          lastWrapTime = now;
-          window.dispatchEvent(new CustomEvent("hero-loop-gap", { detail: { gapMs: loopGap } }));
+        const temp = currentVid;
+        currentVid = nextVid;
+        nextVid = temp;
+        nextQueued = false;
 
-          const temp = currentVid;
-          currentVid = nextVid;
-          nextVid = temp;
-          crossfading = false;
-
-          if (currentVid.requestVideoFrameCallback) {
-            vfcHandle = currentVid.requestVideoFrameCallback(pingPongFrame);
-            return;
-          }
+        if (currentVid.requestVideoFrameCallback) {
+          vfcHandle = currentVid.requestVideoFrameCallback(pingPongFrame);
+          return;
         }
       }
 
@@ -302,7 +303,7 @@ export function SceneStage() {
       typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     const applyTransform = (x: number, y: number) => {
-      mv.style.transform = `translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, 0) scale(1.06)`;
+      mv.style.transform = `translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, 0)`;
     };
 
     const parallaxStep = () => {
@@ -477,6 +478,7 @@ export function SceneStage() {
       <div ref={mover} className="scene-move">
         <video ref={vidA} className="scene-video scene-video-a" muted playsInline preload="auto" />
         <video ref={vidB} className="scene-video scene-video-b" muted playsInline preload="auto" style={{ opacity: 0 }} />
+        <div className="scene-grain" aria-hidden="true" />
       </div>
       <canvas ref={cv} className="scene-canvas" />
       <div ref={dimEl} className="scene-dim" />

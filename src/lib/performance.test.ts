@@ -5,8 +5,8 @@ describe("performance brief limits", () => {
     expect(sceneResolution(1918, 926, 2)).toEqual({ width: 1600, height: 772 });
     expect(sceneResolution(1280, 720, 2)).toEqual({ width: 1280, height: 720 });
   });
-  it("uses the small video only below 1500 pixels", () => {
-    expect(useSmallVideo(1499)).toBe(true);
-    expect(useSmallVideo(1500)).toBe(false);
+  it("uses the small video only for screens up to 1366 pixels", () => {
+    expect(useSmallVideo(1366)).toBe(true);
+    expect(useSmallVideo(1367)).toBe(false);
   });
 });
