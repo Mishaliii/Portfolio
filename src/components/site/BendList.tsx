@@ -139,7 +139,7 @@ export const BendList = forwardRef<BendListHandle, BendListProps>(function BendL
         return;
       }
       const focusedIdx = Math.max(0, Math.min(items.length - 1, Math.round(p)));
-      const focusedHeight = cachedHeights.current[focusedIdx] || 100;
+      const focusedHeight = cachedHeights.current[focusedIdx] || itemEls.current[focusedIdx]?.offsetHeight || 100;
       const gap = focusedHeight + 16;
 
       for (let i = 0; i < items.length; i++) {
@@ -536,7 +536,7 @@ export const BendList = forwardRef<BendListHandle, BendListProps>(function BendL
     };
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, [measureHeights, renderTransforms, active]);
+  }, [measureHeights, renderTransforms, active, items]);
 
   return (
     <div

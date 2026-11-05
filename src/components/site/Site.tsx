@@ -466,10 +466,9 @@ export function Site() {
     }
   }, [selectWorksSub]);
   const selectJourneyStop = useCallback((targetStop: number) => {
-    if (busy.current || targetStop === jStopRef.current) return;
-    busy.current = true;
+    if (targetStop === jStopRef.current) return;
+    jStopRef.current = targetStop;
     setJStop(targetStop);
-    setTimeout(() => (busy.current = false), 920);
   }, []);
   const aboutOn = !paged || cur === 1;
   const expertiseOn = !paged || cur === 2;
