@@ -74,7 +74,32 @@ export const BendList = forwardRef<BendListHandle, BendListProps>(function BendL
   // Pointer hover tracking for list column
   const isPointerOverRef = useRef(false);
   const isPointerOver = useCallback(() => {
-    return isPointerOverRef.current || Boolean(containerRef.current?.matches(":hover"));
+    if (isPointerOverRef.current) return true;
+    if (typeof document !== "undefined" && containerRef.current) {
+      if (containerRef.current.matches(":hover")) return true;
+      const hovered = document.querySelector(":hover");
+      if (hovered && containerRef.current.contains(hovered)) return true;
+    }
+    return false;
+  }, []);
+
+  useEffect(() => {
+    const updatePointer = (e: MouseEvent | PointerEvent) => {
+      if (!containerRef.current) return;
+      const r = containerRef.current.getBoundingClientRect();
+      const inside =
+        e.clientX >= r.left &&
+        e.clientX <= r.right &&
+        e.clientY >= r.top &&
+        e.clientY <= r.bottom;
+      isPointerOverRef.current = inside;
+    };
+    window.addEventListener("pointermove", updatePointer, { passive: true });
+    window.addEventListener("mousemove", updatePointer, { passive: true });
+    return () => {
+      window.removeEventListener("pointermove", updatePointer);
+      window.removeEventListener("mousemove", updatePointer);
+    };
   }, []);
 
   // Boundary gesture tracking: first extra gesture shows 12px push, next after 250ms moves page
@@ -328,6 +353,13 @@ export const BendList = forwardRef<BendListHandle, BendListProps>(function BendL
               boundaryState.current = { dir, time: now };
               triggerBoundaryPush(dir);
             }
+          } else {
+            const now = Date.now();
+            if (now - lastWheelTimeRef.current >= 50) {
+              lastWheelTimeRef.current = now;
+              const nextTarget = Math.max(0, Math.min(items.length - 1, focusedIndexRef.current + dir));
+              goTo(nextTarget);
+            }
           }
         },
       }
@@ -336,9 +368,10 @@ export const BendList = forwardRef<BendListHandle, BendListProps>(function BendL
   useWheelCapture(pageId || "", wheelCaptureHandler.current);
 
   // Handle local wheel on the list column with continuous physics
-  const handleWheel = (e: ReactWheelEvent) => {
+  const handleWheel = useCallback((e: ReactWheelEvent | WheelEvent) => {
     if (reduced()) return;
     dismissHint();
+    isPointerOverRef.current = true;
 
     const dy = normalizeWheelDelta(e);
     if (Math.abs(dy) < 0.5) return;
@@ -416,7 +449,20 @@ export const BendList = forwardRef<BendListHandle, BendListProps>(function BendL
     settleTimer.current = setTimeout(() => {
       settleToNearest();
     }, 140);
-  };
+  }, [items.length, settleToNearest, triggerBoundaryPush, renderTransforms, onActive, dismissHint]);
+
+  // Bind native wheel directly to container to ensure reliable wheel events
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const onNativeWheel = (e: WheelEvent) => {
+      handleWheel(e);
+    };
+    el.addEventListener("wheel", onNativeWheel, { passive: true });
+    return () => {
+      el.removeEventListener("wheel", onNativeWheel);
+    };
+  }, [handleWheel]);
 
   // Touch / pointer drag: 40px per item
   const pointerState = useRef<{
