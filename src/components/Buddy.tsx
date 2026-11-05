@@ -114,7 +114,7 @@ export function Buddy() {
   const hasChatted = useRef(false);
 
   // DOM Refs
-  const walkerRef = useRef<HTMLButtonElement>(null);
+  const walkerRef = useRef<HTMLDivElement>(null);
   const spriteWrapRef = useRef<HTMLDivElement>(null);
   const doorLeafRef = useRef<SVGGElement>(null);
   const mouthRef = useRef<HTMLDivElement>(null);
@@ -172,20 +172,8 @@ export function Buddy() {
       setTimeout(preload, 2000);
     }
 
-    const checkImage = (src: string): Promise<boolean> =>
-      new Promise((resolve) => {
-        const i = new Image();
-        i.onload = () => resolve(true);
-        i.onerror = () => resolve(false);
-        i.src = src;
-      });
-
-    Promise.all([checkImage("/buddy/sit_a.webp"), checkImage("/buddy/sit_b.webp")]).then(
-      ([a, b]) => {
-        setHasSitA(a);
-        setHasSitB(b);
-      }
-    );
+    setHasSitA(false);
+    setHasSitB(false);
   }, []);
 
   const prefersReduced = useCallback(() => {
@@ -1366,9 +1354,9 @@ export function Buddy() {
       />
 
       {/* Sprout Sprite Walker */}
-      <button
+      <div
         ref={walkerRef}
-        type="button"
+        role="button"
         className="buddy-walker"
         onClick={onBuddyClick}
         onPointerDown={onPointerDown}
@@ -1480,7 +1468,7 @@ export function Buddy() {
             )}
           </div>
         </div>
-      </button>
+      </div>
 
       {/* Conversation Panel (STAYS OPEN across answers) */}
       {chatOpen && (

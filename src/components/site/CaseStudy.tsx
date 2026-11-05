@@ -456,9 +456,7 @@ export function CaseStudy({
             )}
           </div>
           <button
-            ref={closeBtn}
-            type="button"
-            onClick={close}
+            ref={closeBtn} type="button" onClick={close} aria-label="Close case study"
             className="font-mono text-[13px] uppercase tracking-wider text-[#0B0B0B] hover:text-[#1F5A3A] transition-colors cursor-pointer"
           >
             {c.close}
@@ -480,6 +478,7 @@ export function CaseStudy({
                     key={item.id}
                     type="button"
                     onClick={() => scrollToSection(item.id)}
+                    aria-current={isActive ? 'true' : undefined}
                     className={`block text-left transition-colors cursor-pointer ${
                       isActive
                         ? "text-[#1F5A3A] font-semibold underline underline-offset-8 decoration-[#1F5A3A] decoration-2"

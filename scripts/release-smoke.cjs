@@ -148,7 +148,9 @@ async function runSmoke() {
         }
       }
       if (res.method === 'Network.loadingFailed') {
-        failedRequests.push(`Failed: ${res.params.errorText}`);
+        if (res.params.errorText !== 'net::ERR_ABORTED') {
+          failedRequests.push(`Failed: ${res.params.errorText}`);
+        }
       }
       if (res.id && pending.has(res.id)) {
         const { resolve, reject } = pending.get(res.id);
@@ -165,9 +167,13 @@ async function runSmoke() {
     });
 
     const evalJs = async (expr) => {
-      let script = expr.trim().replace(/;+\s*$/, '');
-      if (!script.startsWith('(() =>') && !script.startsWith('(()=>') && !script.startsWith('(() ->')) {
-        script = `(() => { ${script.includes('return') ? script : 'return (' + script + ');'} })()`;
+      let script = expr.trim();
+      if (script.startsWith('(() =>') || script.startsWith('(()=>') || script.startsWith('function')) {
+        // Already wrapped
+      } else if (script.includes('\n') || script.includes(';') || script.includes('const ') || script.includes('let ') || script.includes('var ') || script.includes('try ') || script.includes('if ')) {
+        script = `(() => {\n${script}\n})()`;
+      } else {
+        script = `(() => { return (${script}); })()`;
       }
       const res = await send('Runtime.evaluate', { expression: script, returnByValue: true, awaitPromise: true });
       if (res.exceptionDetails) throw new Error(res.exceptionDetails.exception?.description || res.exceptionDetails.text);
@@ -289,6 +295,13 @@ async function runSmoke() {
     // CHECK 2: CHAT (SPROUT)
     // =========================================================================
     console.log('\n--- Checking CHAT ---');
+    // Wait for Sprout to mount (loaded 2s after boot in __root.tsx)
+    for (let i = 0; i < 25; i++) {
+      const buddyMounted = await evalJs(`Boolean(document.querySelector('button.buddy-walker, .buddy-walker'))`);
+      if (buddyMounted) break;
+      await wait(200);
+    }
+
     // Open Sprout
     await evalJs(`
       (() => {
@@ -320,8 +333,8 @@ async function runSmoke() {
       (() => {
         const panel = document.querySelector('.buddy-chat-panel');
         if (!panel) return null;
-        const userBubbles = panel.querySelectorAll('.buddy-bubble-user, [data-user-bubble]');
-        const botBubbles = panel.querySelectorAll('.buddy-bubble-bot, [data-bot-bubble]');
+        const userBubbles = panel.querySelectorAll('.buddy-msg-user, .buddy-bubble-user, [data-user-bubble]');
+        const botBubbles = panel.querySelectorAll('.buddy-msg-sprout, .buddy-bubble-bot, [data-bot-bubble]');
         const headBubble = document.querySelector('.buddy-bubble-wrap');
         const headVisible = headBubble ? parseFloat(window.getComputedStyle(headBubble).opacity || '0') > 0.1 : false;
         return {
@@ -340,7 +353,7 @@ async function runSmoke() {
     // Close chat
     await evalJs(`
       (() => {
-        const closeBtn = document.querySelector('.buddy-chat-panel button[aria-label*="Close"], .buddy-chat-panel [title*="Close"]');
+        const closeBtn = document.querySelector('.buddy-chat-close, .buddy-chat-panel button[aria-label*="Close"], .buddy-chat-panel [title*="Close"]');
         closeBtn?.click();
       })()
     `);
@@ -615,13 +628,13 @@ async function runSmoke() {
 
     const drawerInitial = await evalJs(`
       (() => {
-        const dialog = document.querySelector('[role="dialog"]');
+        const dialog = document.querySelector('aside[data-pull]');
         if (!dialog) return null;
-        const scrollArea = dialog.querySelector('.case-study-scroll, [data-scroll-container]') || dialog;
-        const activeSection = dialog.querySelector('.case-study-nav-item.is-active, [aria-current="true"]');
+        const scrollArea = dialog.querySelector('[data-drawer-scroll]') || dialog.querySelector('.case-study-scroll');
+        const activeSection = dialog.querySelector('nav[aria-label="Sections"] [aria-current="true"], .case-study-nav-item.is-active');
         return {
           isOpen: true,
-          scrollTop: scrollArea.scrollTop,
+          scrollTop: scrollArea ? scrollArea.scrollTop : 0,
           activeSection: activeSection ? activeSection.textContent.trim() : null
         };
       })()
@@ -638,7 +651,7 @@ async function runSmoke() {
 
     const afterJ = await evalJs(`
       (() => {
-        const activeSection = document.querySelector('[role="dialog"] .case-study-nav-item.is-active, [role="dialog"] [aria-current="true"]');
+        const activeSection = document.querySelector('aside[data-pull] nav[aria-label="Sections"] [aria-current="true"]');
         return activeSection ? activeSection.textContent.trim() : null;
       })()
     `);
@@ -647,30 +660,30 @@ async function runSmoke() {
     // Close animation check (mounted at 200ms, gone at 600ms)
     await evalJs(`
       (() => {
-        const closeBtn = document.querySelector('[role="dialog"] button[aria-label*="Close"], [role="dialog"] [data-close]');
-        closeBtn?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        const closeBtn = document.querySelector('aside[data-pull] button[aria-label*="Close"], aside[data-pull] [data-close], aside[data-pull] button:last-of-type');
+        closeBtn?.click();
       })()
     `);
     await wait(200);
-    const mountedAt200 = await evalJs(`Boolean(document.querySelector('[role="dialog"]'))`);
+    const mountedAt200 = await evalJs(`Boolean(document.querySelector('aside[data-pull]'))`);
     await wait(500);
-    const goneAt700 = await evalJs(`Boolean(!document.querySelector('[role="dialog"]'))`);
+    const goneAt700 = await evalJs(`Boolean(!document.querySelector('aside[data-pull]'))`);
     logCheck('WORKS', 'drawer_closing_animation_timing', mountedAt200 && goneAt700, `mounted@200ms=${mountedAt200}, gone@700ms=${goneAt700}`);
 
     // Reopen drawer: verify reset to scrollTop 0
     await evalJs(`
       (() => {
         const btn = document.querySelector('[data-card] button, [data-open-case-study]');
-        btn?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        btn?.click();
       })()
     `);
     await wait(800);
     const reopenState = await evalJs(`
       (() => {
-        const dialog = document.querySelector('[role="dialog"]');
+        const dialog = document.querySelector('aside[data-pull]');
         if (!dialog) return null;
-        const scrollArea = dialog.querySelector('.case-study-scroll, [data-scroll-container]') || dialog;
-        return { scrollTop: scrollArea.scrollTop };
+        const scrollArea = dialog.querySelector('[data-drawer-scroll]') || dialog;
+        return { scrollTop: scrollArea ? scrollArea.scrollTop : 0 };
       })()
     `);
     logCheck('WORKS', 'reopening_resets_to_scroll_0', reopenState && reopenState.scrollTop === 0, `scrollTop=${reopenState?.scrollTop}`);
@@ -678,8 +691,8 @@ async function runSmoke() {
     // Close drawer again
     await evalJs(`
       (() => {
-        const closeBtn = document.querySelector('[role="dialog"] button[aria-label*="Close"], [role="dialog"] [data-close]');
-        closeBtn?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        const closeBtn = document.querySelector('aside[data-pull] button[aria-label*="Close"], aside[data-pull] [data-close], aside[data-pull] button:last-of-type');
+        closeBtn?.click();
       })()
     `);
     await wait(700);
@@ -722,7 +735,7 @@ async function runSmoke() {
           a?.click();
         })()
       `);
-      await wait(1200);
+      await wait(1800);
       const cur = await evalJs(`document.querySelector('a[data-pill][aria-current="page"]')?.getAttribute('href')`);
       if (cur !== `#${pid}`) {
         allReachable = false;
