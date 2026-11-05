@@ -15,18 +15,24 @@ export type BuddyPose =
 
 interface TextToken {
   text: string;
-  bold: boolean;
+  bold?: boolean;
+  link?: string;
 }
 
 function parseTokens(str: string): TextToken[] {
-  const parts = str.split(/(\*\*[^*]+\*\*)/g);
+  const regex = /(\[[^\]]+\]\([^)]+\)|\*\*[^*]+\*\*)/g;
+  const parts = str.split(regex);
   return parts
-    .filter((p) => p.length > 0)
+    .filter((p) => p && p.length > 0)
     .map((part) => {
       if (part.startsWith("**") && part.endsWith("**")) {
         return { text: part.slice(2, -2), bold: true };
       }
-      return { text: part, bold: false };
+      const linkMatch = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+      if (linkMatch) {
+        return { text: linkMatch[1], link: linkMatch[2] };
+      }
+      return { text: part };
     });
 }
 
@@ -116,7 +122,7 @@ export function Buddy() {
   const chatInputRef = useRef<HTMLInputElement>(null);
   const transcriptScrollRef = useRef<HTMLDivElement>(null);
   const bubbleRef = useRef<HTMLDivElement>(null);
-  const [bubbleOffset, setBubbleOffset] = useState({ shiftX: 0, tailShiftX: 0 });
+  const [bubbleOffset, setBubbleOffset] = useState({ shiftX: 0, tailShiftX: 0, tailLeft: 110 });
 
   // Motion & Animation state
   const curPos = useRef({ x: 0, y: 0 });
@@ -186,14 +192,14 @@ export function Buddy() {
     return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   }, []);
 
-  // Bubble positioning: clamp horizontally with 12px viewport margins, and flip left if overlapping content
+  // Bubble positioning: clamp horizontally with 16px viewport margins, and flip left if overlapping content
   const updateBubblePlacement = useCallback(() => {
     if (!walkerRef.current || !bubbleRef.current) return;
     const walkerRect = walkerRef.current.getBoundingClientRect();
     const walkerCenterX = walkerRect.left + walkerRect.width / 2;
-    const bubbleWidth = bubbleRef.current.offsetWidth || 220;
+    const bubbleWidth = bubbleRef.current.offsetWidth || 240;
     const bubbleHeight = bubbleRef.current.offsetHeight || 60;
-    const margin = 12;
+    const margin = 16;
 
     // Check if on Works page or near right edge / content
     const isWorks =
@@ -223,7 +229,7 @@ export function Buddy() {
             if (el && !walkerRef.current.contains(el)) {
               if (
                 el.closest(
-                  'main h1, main h2, main h3, main p, main a, main button, main input, [data-content], .project-card, .case-study, .score-box, .interactive-explorer'
+                  'main h1, main h2, main h3, main p, main a, main button, main input, [data-content], .project-card, .case-study, .score-box, .interactive-explorer, .hero-chip, .productivity-card, .productivity-chart'
                 )
               ) {
                 shouldFlipLeft = true;
@@ -250,8 +256,9 @@ export function Buddy() {
     const clampedCenter = Math.max(minCenter, Math.min(maxCenter, walkerCenterX));
     const shiftX = clampedCenter - walkerCenterX;
     const tailShiftX = shiftX;
+    const tailLeft = Math.max(14, Math.min(bubbleWidth - 14, bubbleWidth / 2 - shiftX));
 
-    setBubbleOffset({ shiftX, tailShiftX });
+    setBubbleOffset({ shiftX, tailShiftX, tailLeft });
   }, []);
 
   useEffect(() => {
@@ -313,18 +320,45 @@ export function Buddy() {
         }
       }
 
+      // If chat panel is open, head bubble is strictly disabled
+      if (chatOpen) {
+        setBubbleVisible(false);
+        setBubbleText(null);
+        setBubbleAction(null);
+        return;
+      }
+
       setBubbleAction(action || null);
-      setBubbleVisible(true);
       setBubbleText(text);
+      setBubbleVisible(true);
 
       const fadeTime = 6000;
       bubbleFadeTimeout.current = window.setTimeout(() => {
         setBubbleVisible(false);
         setBubbleAction(null);
+        setBubbleText(null);
       }, fadeTime);
     },
-    [isAsleep]
+    [chatOpen, isAsleep]
   );
+
+  // Dismiss speech bubble immediately on any page change
+  useEffect(() => {
+    const dismissBubble = () => {
+      setBubbleVisible(false);
+      setBubbleText(null);
+      setBubbleAction(null);
+      if (bubbleFadeTimeout.current) clearTimeout(bubbleFadeTimeout.current);
+    };
+    window.addEventListener("page-change", dismissBubble);
+    window.addEventListener("hashchange", dismissBubble);
+    window.addEventListener("popstate", dismissBubble);
+    return () => {
+      window.removeEventListener("page-change", dismissBubble);
+      window.removeEventListener("hashchange", dismissBubble);
+      window.removeEventListener("popstate", dismissBubble);
+    };
+  }, []);
 
   // Dance sequence (alternate laugh and wave poses with hops for 3 seconds)
   const performDance = useCallback(() => {
@@ -930,7 +964,10 @@ export function Buddy() {
     if (!chatOpen) {
       setChatOpen(true);
       wakeUp();
-      speakReaction("Hi! Ask me anything about Mishal's work.", "happy");
+      setBubbleVisible(false);
+      setBubbleText(null);
+      setBubbleAction(null);
+      if (bubbleFadeTimeout.current) clearTimeout(bubbleFadeTimeout.current);
       setTimeout(() => {
         if (window.innerWidth >= 640) chatInputRef.current?.focus();
       }, 100);
@@ -1038,11 +1075,22 @@ export function Buddy() {
     window.addEventListener("pointerup", onUp);
   };
 
+  const closeChat = useCallback(() => {
+    if (activeTypingRef.current) activeTypingRef.current.cancel();
+    if (talkInterval.current) clearInterval(talkInterval.current);
+    isTalking.current = false;
+    setChatOpen(false);
+    setBubbleVisible(false);
+    setBubbleText(null);
+    setBubbleAction(null);
+    if (bubbleFadeTimeout.current) clearTimeout(bubbleFadeTimeout.current);
+  }, []);
+
   // Keyboard accessibility
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" && chatOpen) {
-        setChatOpen(false);
+        closeChat();
       }
     };
     window.addEventListener("keydown", onKeyDown);
@@ -1059,17 +1107,24 @@ export function Buddy() {
       // Ensure chat is open
       if (!chatOpen) setChatOpen(true);
 
+      // Disable head bubble strictly while chat panel is open
+      setBubbleVisible(false);
+      setBubbleText(null);
+      setBubbleAction(null);
+      if (bubbleFadeTimeout.current) clearTimeout(bubbleFadeTimeout.current);
+
+      if (activeTypingRef.current) {
+        activeTypingRef.current.cancel();
+        activeTypingRef.current = null;
+      }
+      if (talkInterval.current) {
+        clearInterval(talkInterval.current);
+        talkInterval.current = null;
+      }
+      isTalking.current = false;
+
       const userMsgId = "user_" + Date.now();
-      const sproutMsgId = "sprout_" + Date.now();
-
-      // 1. Add user message
-      setTranscript((prev) => [
-        ...prev,
-        { id: userMsgId, sender: "user", text: cleanQ },
-        { id: sproutMsgId, sender: "sprout", text: "", isTyping: true },
-      ]);
-
-      setInputText("");
+      const sproutMsgId = "sprout_" + (Date.now() + 1);
 
       // Match intent
       const ans = matchBuddyIntent(cleanQ, gameStep);
@@ -1080,10 +1135,26 @@ export function Buddy() {
         setGameStep(ans.gameStep);
       }
 
-      // 2. Speak reaction in head speech bubble (short, max 6 words)
-      speakReaction(ans.reaction || "Got it!", ans.mood);
+      // Add user message & sprout message with typing indicator
+      setTranscript((prev) => [
+        ...prev,
+        { id: userMsgId, sender: "user", text: cleanQ },
+        { id: sproutMsgId, sender: "sprout", text: "", isTyping: true },
+      ]);
 
-      // 3. Typing indicator (~450ms) then typewriter
+      setInputText("");
+
+      // Visual pose reaction only (no speech bubble over head while panel is open!)
+      if (ans.mood) {
+        if (ans.mood === "excited") setPose("laugh");
+        else if (ans.mood === "happy") setPose("wave");
+        else if (ans.mood === "shy") setPose("idle");
+        else if (ans.mood === "laugh") setPose("laugh");
+        else if (ans.mood === "hug") setPose("laugh");
+        else if (ans.mood === "surprised") setPose("surprised");
+      }
+
+      // Brief typing indicator (~200ms) then live typewriter effect into the transcript bubble
       const timer = setTimeout(() => {
         if (prefersReduced()) {
           setTranscript((prev) =>
@@ -1098,13 +1169,20 @@ export function Buddy() {
           return;
         }
 
-        // Animated typewriter at 36ms/char with mouth flap
+        // Switch isTyping to false, start live typing into the bubble
+        setTranscript((prev) =>
+          prev.map((m) => (m.id === sproutMsgId ? { ...m, isTyping: false, text: "" } : m))
+        );
+
         isTalking.current = true;
         let charIdx = 0;
         const total = ans.text.length;
 
         const completeInstantly = () => {
-          if (talkInterval.current) clearInterval(talkInterval.current);
+          if (talkInterval.current) {
+            clearInterval(talkInterval.current);
+            talkInterval.current = null;
+          }
           isTalking.current = false;
           activeTypingRef.current = null;
           setTranscript((prev) =>
@@ -1121,7 +1199,7 @@ export function Buddy() {
         activeTypingRef.current = { cancel: completeInstantly, finish: completeInstantly };
 
         talkInterval.current = window.setInterval(() => {
-          charIdx += 2; // smooth 2 chars per tick or 1 char per 36ms
+          charIdx += 2;
           if (charIdx >= total) {
             completeInstantly();
             return;
@@ -1147,12 +1225,12 @@ export function Buddy() {
               ease: "power1.inOut",
             });
           }
-        }, 72);
-      }, 450);
+        }, 36);
+      }, 200);
 
       return () => clearTimeout(timer);
     },
-    [chatOpen, gameStep, performDance, prefersReduced, speakReaction]
+    [chatOpen, gameStep, performDance, prefersReduced]
   );
 
   const onChatSubmit = (e: FormEvent) => {
@@ -1162,24 +1240,40 @@ export function Buddy() {
 
   const clearTranscript = () => {
     if (activeTypingRef.current) activeTypingRef.current.cancel();
-    setTranscript(INITIAL_TRANSCRIPT);
+    if (talkInterval.current) clearInterval(talkInterval.current);
+    isTalking.current = false;
+    setTranscript([]);
     setFollowUps(DEFAULT_FOLLOW_UPS);
     setGameStep(0);
     askedIntents.current.clear();
   };
 
-  // Render formatted markdown bold text
+  // Render formatted markdown bold and links text
   const renderFormattedText = (raw: string) => {
     const tokens = parseTokens(raw);
-    return tokens.map((tok, i) =>
-      tok.bold ? (
-        <strong key={i} className="buddy-hl">
-          {tok.text}
-        </strong>
-      ) : (
-        <span key={i}>{tok.text}</span>
-      )
-    );
+    return tokens.map((tok, i) => {
+      if (tok.link) {
+        return (
+          <a
+            key={i}
+            href={tok.link}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {tok.text}
+          </a>
+        );
+      }
+      if (tok.bold) {
+        return (
+          <strong key={i} className="buddy-hl">
+            {tok.text}
+          </strong>
+        );
+      }
+      return <span key={i}>{tok.text}</span>;
+    });
   };
 
   // Head bubble content
@@ -1333,8 +1427,8 @@ export function Buddy() {
           className={`buddy-bubble-wrap ${flipLeft ? "is-flipped-left" : ""}`}
           style={{
             transform: flipLeft ? "none" : `translateX(calc(-50% + ${bubbleOffset.shiftX}px))`,
-            opacity: (bubbleVisible && bubbleText) || isAsleep ? 1 : 0,
-            pointerEvents: (bubbleVisible && bubbleText) || isAsleep ? "auto" : "none",
+            opacity: !chatOpen && ((bubbleVisible && bubbleText) || isAsleep) ? 1 : 0,
+            pointerEvents: !chatOpen && ((bubbleVisible && bubbleText) || isAsleep) ? "auto" : "none",
           }}
         >
           <div
@@ -1346,6 +1440,8 @@ export function Buddy() {
               if (!isAsleep) {
                 setBubbleVisible(false);
                 setBubbleAction(null);
+                setBubbleText(null);
+                if (bubbleFadeTimeout.current) clearTimeout(bubbleFadeTimeout.current);
               }
             }}
           >
@@ -1370,7 +1466,7 @@ export function Buddy() {
                 viewBox="0 0 14 8"
                 xmlns="http://www.w3.org/2000/svg"
                 style={{
-                  left: `calc(50% - ${bubbleOffset.tailShiftX}px)`,
+                  left: `${bubbleOffset.tailLeft}px`,
                 }}
               >
                 <polygon points="0,0 14,0 7,8" fill="#F3ECE0" />
@@ -1406,7 +1502,7 @@ export function Buddy() {
               <button
                 type="button"
                 className="buddy-chat-close"
-                onClick={() => setChatOpen(false)}
+                onClick={closeChat}
                 aria-label="Close chat"
               >
                 ×
@@ -1421,35 +1517,38 @@ export function Buddy() {
             data-lenis-prevent
             aria-live="polite"
           >
-            {transcript.map((msg) => {
-              if (msg.sender === "user") {
-                return (
+            {transcript.length === 0 ? (
+              <div className="buddy-transcript-empty">
+                <p>Ask me anything about Mishal's projects, technical skills, or availability!</p>
+              </div>
+            ) : (
+              transcript.map((msg) =>
+                msg.sender === "user" ? (
                   <div key={msg.id} className="buddy-msg-user">
                     {msg.text}
                   </div>
-                );
-              }
-              return (
-                <div
-                  key={msg.id}
-                  className="buddy-msg-sprout"
-                  onClick={() => {
-                    if (activeTypingRef.current) activeTypingRef.current.finish();
-                  }}
-                  title="Click to complete instantly"
-                >
-                  {msg.isTyping ? (
-                    <div className="buddy-typing-dots">
-                      <span className="buddy-typing-dot" />
-                      <span className="buddy-typing-dot" />
-                      <span className="buddy-typing-dot" />
-                    </div>
-                  ) : (
-                    renderFormattedText(msg.text)
-                  )}
-                </div>
-              );
-            })}
+                ) : (
+                  <div
+                    key={msg.id}
+                    className="buddy-msg-sprout"
+                    onClick={() => {
+                      if (activeTypingRef.current) activeTypingRef.current.finish();
+                    }}
+                    title={msg.isTyping || isTalking.current ? "Click to complete instantly" : undefined}
+                  >
+                    {msg.isTyping ? (
+                      <div className="buddy-typing-dots">
+                        <span className="buddy-typing-dot" />
+                        <span className="buddy-typing-dot" />
+                        <span className="buddy-typing-dot" />
+                      </div>
+                    ) : (
+                      renderFormattedText(msg.text)
+                    )}
+                  </div>
+                )
+              )
+            )}
           </div>
 
           {/* Follow-up Chips (always visible, outside transcript) */}
