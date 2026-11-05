@@ -45,10 +45,11 @@ export function subscribe(fn: (t: number) => void): () => void {
 /* Entrance: heading -> lines -> signature visual. Total reveal <= 0.9s. Transform/opacity only. */
 export function enterPage(root: HTMLElement) {
   gsap.registerPlugin(SplitText);
-  const chars = root.querySelectorAll<HTMLElement>("[data-char]");
-  const hls = root.querySelectorAll<HTMLElement>("[data-hl]");
-  const sig = root.querySelectorAll<HTMLElement>("[data-sig]");
-  const rest = root.querySelectorAll<HTMLElement>("[data-fade]");
+  const isVisible = (el: Element) => !el.closest("[aria-hidden='true']");
+  const chars = Array.from(root.querySelectorAll<HTMLElement>("[data-char]")).filter(isVisible);
+  const hls = Array.from(root.querySelectorAll<HTMLElement>("[data-hl]")).filter(isVisible);
+  const sig = Array.from(root.querySelectorAll<HTMLElement>("[data-sig]")).filter(isVisible);
+  const rest = Array.from(root.querySelectorAll<HTMLElement>("[data-fade]")).filter(isVisible);
   const tl = gsap.timeline();
   if (reduced()) {
     tl.fromTo([...chars, ...sig, ...rest], { opacity: 0 }, { opacity: 1, duration: 0.25 });

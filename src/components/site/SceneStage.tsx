@@ -375,8 +375,14 @@ export function SceneStage() {
           currentVid.pause();
           nextVid.pause();
           playing = false;
+          if (vfcHandle) {
+            currentVid.cancelVideoFrameCallback?.(vfcHandle);
+            vfcHandle = undefined;
+          }
         }
+        el.style.visibility = "hidden";
       } else {
+        el.style.visibility = "visible";
         if (!playing) {
           playing = true;
           void currentVid.play().catch(() => {});

@@ -28,6 +28,16 @@ export function PageAbout({ go, active = true }: { go: (id: string) => void; act
   }, [active]);
 
   useEffect(() => {
+    const onPageChange = (e: any) => {
+      if (e.detail?.page === 1) {
+        bendListRef.current?.reset();
+      }
+    };
+    window.addEventListener("page-change", onPageChange);
+    return () => window.removeEventListener("page-change", onPageChange);
+  }, []);
+
+  useEffect(() => {
     const root = section.current, a = up.current, b = front.current;
     if (!root || !a || !b) return;
 

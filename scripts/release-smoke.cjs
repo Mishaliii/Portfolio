@@ -248,6 +248,7 @@ async function runSmoke() {
 
     // Moving cursor over letter erases within 2px
     let eraseReacts = false;
+    let cvPixels = null;
     const heroEngPos = await evalJs(`
       (() => {
         const hlines = Array.from(document.querySelectorAll('.hero-title [data-hline]'));
@@ -260,7 +261,7 @@ async function runSmoke() {
     if (heroEngPos) {
       await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: heroEngPos.x, y: heroEngPos.y });
       await wait(300);
-      const cvPixels = await evalJs(`
+      cvPixels = await evalJs(`
         (() => {
           const cv = document.querySelector('.hero-top canvas');
           if (!cv) return null;

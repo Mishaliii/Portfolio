@@ -9,6 +9,8 @@ export function PageExpertise({ goProject, active = true }: { goProject: (id: st
   const box = useRef<HTMLDivElement>(null), cv = useRef<HTMLCanvasElement>(null);
   const category = useRef(-1), focus = useRef(-1), pinned = useRef(-1);
   const [selected, setSelected] = useState(-1), [activeCluster, setActiveCluster] = useState(-1);
+  const activeRef = useRef(active);
+  activeRef.current = active;
 
   useEffect(() => {
     const b = box.current, c = cv.current;
@@ -46,7 +48,7 @@ export function PageExpertise({ goProject, active = true }: { goProject: (id: st
     let lastCluster=-1;
     const unsub=subscribe((t)=>{
       const dt=Math.min(32,t-prev)/1000;prev=t;
-      if (!active || !onPage(b)) { wasActive = false; return; }
+      if (!activeRef.current || !onPage(b)) { wasActive = false; return; }
 
       if(!wasActive){entry=0;wasActive=true;} entry+=dt;elapsed+=dt;
       const idle=t-lastInput>4000;
@@ -94,7 +96,7 @@ export function PageExpertise({ goProject, active = true }: { goProject: (id: st
       for(let i=0;i<4;i++){const center=centers[i],r=Math.min(W,H)*.17;const name=expertise.clusters[i];const x=Math.max(8,center[0]*W-r),y=center[1]*H-r-10;ctx.fillStyle=paper;ctx.fillRect(x-4,y-12,ctx.measureText(name).width+8,18);ctx.fillStyle=gold;ctx.fillText(name,x,y);}
     });
     return()=>{unsub();ro.disconnect();b.removeEventListener("pointermove",move);b.removeEventListener("pointerleave",leave);b.removeEventListener("pointerup",click);window.removeEventListener("keydown",key);window.removeEventListener("wheel",input);window.removeEventListener("pointerdown",input);window.removeEventListener("pointermove",input);};
-  },[active]);
+  },[]);
 
   const skill = selected >= 0 ? expertise.skills[selected] : null;
   const projects = skill ? projectsForSkill(skill.name) : [];

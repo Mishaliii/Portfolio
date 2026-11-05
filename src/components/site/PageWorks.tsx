@@ -29,111 +29,32 @@ function MaskedParagraph({
   delay?: number;
 }) {
   const elRef = useRef<HTMLParagraphElement>(null);
-  const splitRef = useRef<any>(null);
-  const isSplitRef = useRef(false);
-
-  // Pre-split during idle so card transitions never trigger synchronous layout recalculation
-  useEffect(() => {
-    const el = elRef.current;
-    if (!el || reduced()) return;
-
-    let cancelled = false;
-
-    const doPreSplit = () => {
-      if (cancelled || !elRef.current || isSplitRef.current) return;
-      try {
-        const sp = SplitText.create(elRef.current, { type: "lines", mask: "lines" });
-        splitRef.current = sp;
-        isSplitRef.current = true;
-        if (!active) {
-          gsap.set(sp.lines, { yPercent: 100 });
-        }
-      } catch {
-        // Fallback
-      }
-    };
-
-    document.fonts.ready.then(() => {
-      if (cancelled) return;
-      if (typeof window !== "undefined" && "requestIdleCallback" in window) {
-        (window as any).requestIdleCallback(doPreSplit);
-      } else {
-        setTimeout(doPreSplit, 50);
-      }
-    });
-
-    return () => {
-      cancelled = true;
-      if (splitRef.current) {
-        splitRef.current.revert();
-        splitRef.current = null;
-        isSplitRef.current = false;
-      }
-    };
-  }, [text]);
 
   useEffect(() => {
     const el = elRef.current;
     if (!el) return;
 
     if (reduced()) {
-      if (splitRef.current) {
-        splitRef.current.revert();
-        splitRef.current = null;
-        isSplitRef.current = false;
-      }
       gsap.set(el, { opacity: 1, y: 0 });
       return;
     }
 
     if (!active) {
-      if (splitRef.current?.lines) {
-        gsap.set(splitRef.current.lines, { yPercent: 100 });
-      } else {
-        gsap.set(el, { opacity: 0 });
-      }
+      gsap.set(el, { opacity: 0, y: 12 });
       return;
     }
 
-    // When becoming active:
-    if (isSplitRef.current && splitRef.current?.lines) {
-      gsap.set(el, { opacity: 1 });
-      gsap.fromTo(
-        splitRef.current.lines,
-        { yPercent: 100 },
-        {
-          yPercent: 0,
-          duration: 0.7,
-          stagger: 0.08,
-          ease: "power3.out",
-          delay,
-        }
-      );
-    } else {
-      // If idle split hasn't fired yet, split now
-      document.fonts.ready.then(() => {
-        if (!elRef.current) return;
-        try {
-          gsap.set(elRef.current, { opacity: 1 });
-          const sp = splitRef.current || SplitText.create(elRef.current, { type: "lines", mask: "lines" });
-          splitRef.current = sp;
-          isSplitRef.current = true;
-          gsap.fromTo(
-            sp.lines,
-            { yPercent: 100 },
-            {
-              yPercent: 0,
-              duration: 0.7,
-              stagger: 0.08,
-              ease: "power3.out",
-              delay,
-            }
-          );
-        } catch {
-          gsap.fromTo(elRef.current, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.7, delay });
-        }
-      });
-    }
+    gsap.fromTo(
+      el,
+      { opacity: 0, y: 12 },
+      {
+        opacity: 1,
+        y: 0,
+        duration: 0.65,
+        delay,
+        ease: "power3.out",
+      }
+    );
   }, [active, delay]);
 
   return (
@@ -257,7 +178,7 @@ export function WorkCardShell({
       {/* Left text column */}
       <div className="min-w-0 flex flex-col justify-center max-[899px]:order-2">
         <div ref={titleWrapRef}>
-          <HeadlineDissolve bg="var(--cream)" ink="var(--ink)" className="works-title-dissolve">
+          <HeadlineDissolve active={active} bg="var(--cream)" ink="var(--ink)" className="works-title-dissolve">
             <h3
               className="display text-[#0B0B0B] tracking-tight"
               style={{ fontSize: "clamp(40px, 5.2vw, 76px)", lineHeight: 0.95 }}
@@ -581,14 +502,21 @@ function OdometerDigit({
   const targetDigit = isDigit ? parseInt(char, 10) : 0;
   const colRef = useRef<HTMLDivElement>(null);
 
+  const prevDigitRef = useRef<number | null>(null);
   useEffect(() => {
     const el = colRef.current;
     if (!el || !isDigit) return;
 
     if (reduced() || !active) {
       gsap.set(el, { yPercent: -targetDigit * 10 });
+      prevDigitRef.current = targetDigit;
       return;
     }
+
+    if (prevDigitRef.current === targetDigit) {
+      return;
+    }
+    prevDigitRef.current = targetDigit;
 
     gsap.to(el, {
       yPercent: -targetDigit * 10,
@@ -649,12 +577,12 @@ function ProductivityExplorer({
       const el = barRefs.current[idx];
       if (!el) return;
       const feat = ROLE_FEATURES[idx];
-      const pct = Math.min(100, Math.max(3, (v / feat.max) * 100));
+      const scale = Math.min(1, Math.max(0.03, v / feat.max));
       if (reduced()) {
-        gsap.set(el, { width: `${pct}%` });
+        gsap.set(el, { scaleX: scale });
       } else {
         gsap.to(el, {
-          width: `${pct}%`,
+          scaleX: scale,
           duration: 0.5,
           ease: "power3.out",
         });
@@ -959,10 +887,12 @@ function CareerLensPipeline({ active }: { active: boolean }) {
 
   const activeNode = hoveredIdx !== null ? CAREERLENS_NODES[hoveredIdx] : CAREERLENS_NODES[0];
 
+  const cachedLength = useRef<number | null>(null);
+
   useEffect(() => {
     const path = pathRef.current;
     if (!path) return;
-    const len = path.getTotalLength();
+    const len = cachedLength.current ?? (cachedLength.current = path.getTotalLength() || 600);
     path.style.strokeDasharray = `${len}`;
 
     const validNodes = nodeRefs.current.filter(Boolean);
@@ -982,7 +912,7 @@ function CareerLensPipeline({ active }: { active: boolean }) {
     path.style.strokeDashoffset = `${len}`;
     gsap.set(validNodes, { opacity: 0, y: 12 });
 
-    const tl = gsap.timeline();
+    const tl = gsap.timeline({ delay: 0.2 });
     // 1. Connector paths draw in on enter (1.4s, power2.out)
     tl.to(
       path,
@@ -1307,143 +1237,61 @@ export function PageWorks({
 
     if (from === to) return;
 
+    cards.forEach((c, i) => {
+      if (!c) return;
+      if (i <= Math.max(from, to) && i >= Math.min(from, to) - 1) {
+        c.style.visibility = "visible";
+      }
+      c.style.willChange = "transform";
+    });
+
     const tl = gsap.timeline({
-      onStart: () => {
-        cards.forEach((c) => {
-          if (c) c.style.willChange = "transform";
-        });
-      },
       onComplete: () => {
-        cards.forEach((c) => {
-          if (c) c.style.willChange = "auto";
+        cards.forEach((c, i) => {
+          if (!c) return;
+          c.style.willChange = "auto";
+          if (i > to || i < to - 1) {
+            c.style.visibility = "hidden";
+          } else {
+            c.style.visibility = "visible";
+          }
         });
       },
     });
 
     if (to > from) {
-      // Forward transition: next card slides up from bottom (yPercent 100 to 0, 0.9 s, expo.out) over current card,
-      // while current card scales to 0.94, moves up 4% and dims to 55% brightness.
+      // Forward transition: incoming card slides up over previous card (which stays static as snapshot)
       cards.forEach((c, i) => {
         if (!c) return;
-        const dim = dims[i];
-
         if (i === to) {
           tl.fromTo(
             c,
-            { yPercent: 100, scale: 1 },
-            { yPercent: 0, scale: 1, duration: 0.9, ease: "expo.out" },
+            { yPercent: 100 },
+            { yPercent: 0, duration: 0.75, ease: "expo.out" },
             0
           );
-          if (dim) tl.set(dim, { opacity: 0 }, 0);
         } else if (i < to) {
-          const depth = to - i;
-          const targetScale = Math.max(0.8, 1 - 0.06 * depth);
-          const targetYPercent = -4 * depth;
-          const targetDim = Math.min(0.8, 0.45 * depth);
-
-          tl.to(
-            c,
-            {
-              yPercent: targetYPercent,
-              scale: targetScale,
-              duration: 0.9,
-              ease: "expo.out",
-            },
-            0
-          );
-          if (dim) {
-            tl.to(
-              dim,
-              {
-                opacity: targetDim,
-                duration: 0.9,
-                ease: "expo.out",
-              },
-              0
-            );
-          }
+          tl.set(c, { yPercent: 0 }, 0);
         } else {
-          tl.set(c, { yPercent: 100, scale: 1 }, 0);
-          if (dim) tl.set(dim, { opacity: 0 }, 0);
+          tl.set(c, { yPercent: 100 }, 0);
         }
       });
     } else {
-      // Reverse transition: top card slides down and the card beneath scales back to 1
+      // Reverse transition: top card slides down revealing previous card underneath
       cards.forEach((c, i) => {
         if (!c) return;
-        const dim = dims[i];
-
         if (i > to) {
           tl.to(
             c,
             {
               yPercent: 100,
-              scale: 1,
-              duration: 0.9,
+              duration: 0.75,
               ease: "expo.out",
             },
             0
           );
-          if (dim) {
-            tl.to(
-              dim,
-              {
-                opacity: 0,
-                duration: 0.9,
-                ease: "expo.out",
-              },
-              0
-            );
-          }
-        } else if (i === to) {
-          tl.to(
-            c,
-            {
-              yPercent: 0,
-              scale: 1,
-              duration: 0.9,
-              ease: "expo.out",
-            },
-            0
-          );
-          if (dim) {
-            tl.to(
-              dim,
-              {
-                opacity: 0,
-                duration: 0.9,
-                ease: "expo.out",
-              },
-              0
-            );
-          }
         } else {
-          const depth = to - i;
-          const targetScale = Math.max(0.8, 1 - 0.06 * depth);
-          const targetYPercent = -4 * depth;
-          const targetDim = Math.min(0.8, 0.45 * depth);
-
-          tl.to(
-            c,
-            {
-              yPercent: targetYPercent,
-              scale: targetScale,
-              duration: 0.9,
-              ease: "expo.out",
-            },
-            0
-          );
-          if (dim) {
-            tl.to(
-              dim,
-              {
-                opacity: targetDim,
-                duration: 0.9,
-                ease: "expo.out",
-              },
-              0
-            );
-          }
+          tl.set(c, { yPercent: 0 }, 0);
         }
       });
     }
@@ -1489,6 +1337,7 @@ export function PageWorks({
               cardRefs.current[i] = el;
             }}
             data-card
+            data-active={i === sub ? "true" : undefined}
             className={
               paged
                 ? "absolute inset-0 origin-top overflow-hidden flex flex-col justify-center rounded-t-[24px]"
@@ -1498,8 +1347,10 @@ export function PageWorks({
               background: "var(--cream)",
               color: "var(--ink)",
               zIndex: paged ? (i + 1) * 10 : undefined,
-              boxShadow: paged ? "0 -8px 32px rgba(11, 11, 11, 0.12)" : undefined,
-              borderTop: paged ? "1px solid rgba(11, 11, 11, 0.08)" : undefined,
+              contain: paged ? "paint layout" : undefined,
+              borderTop: paged ? "1px solid rgba(11, 11, 11, 0.12)" : undefined,
+              boxShadow: paged ? "0 -2px 10px rgba(11, 11, 11, 0.05)" : undefined,
+              visibility: paged && i < sub - 1 ? "hidden" : "visible",
             }}
             aria-hidden={paged && i !== sub}
             inert={paged && i !== sub ? true : undefined}

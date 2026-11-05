@@ -45,6 +45,7 @@ export function HeadlineDissolve({
   auto = false,
   wait = false,
   erase = false,
+  active = true,
   className = "",
 }: {
   children: ReactNode;
@@ -53,11 +54,14 @@ export function HeadlineDissolve({
   auto?: boolean;
   wait?: boolean;
   erase?: boolean;
+  active?: boolean;
   className?: string;
 }) {
   const wrap = useRef<HTMLDivElement>(null);
   const cv = useRef<HTMLCanvasElement>(null);
   const instanceId = useRef<string>(Math.random().toString(36).slice(2));
+  const activeRef = useRef(active);
+  activeRef.current = active;
 
   useEffect(() => {
     const id = instanceId.current;
@@ -496,7 +500,7 @@ export function HeadlineDissolve({
 
     const refresh = () => {
       if (destroyed) return;
-      if (!onPage(w)) {
+      if (!activeRef.current || !onPage(w)) {
         if (!erase) {
           ctx.clearRect(0, 0, W, H);
           sleep();

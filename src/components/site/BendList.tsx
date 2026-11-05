@@ -193,6 +193,7 @@ export const BendList = forwardRef<BendListHandle, BendListProps>(function BendL
     targetPosRef.current = nearest;
     flickAccumulatedRef.current = 0;
     flickStartPosRef.current = nearest;
+    boundaryState.current = null;
 
     if (tweenRef.current) tweenRef.current.kill();
     tweenRef.current = gsap.to(stateRef.current, {
@@ -331,6 +332,7 @@ export const BendList = forwardRef<BendListHandle, BendListProps>(function BendL
               const elapsed = now - boundaryState.current.time;
               if (elapsed >= 250) {
                 // Next gesture after 250ms: do NOT consume wheel! Move to next/previous page!
+                boundaryState.current = null;
                 return false;
               }
               // Within 250ms, consume inertia tail
@@ -343,7 +345,7 @@ export const BendList = forwardRef<BendListHandle, BendListProps>(function BendL
           // In middle of list: can consume
           return true;
         },
-        consume: (dir: 1 | -1) => {
+        consume: (dir: 1 | -1, deltaY?: number) => {
           dismissHint();
           const atTop = focusedIndexRef.current === 0 && dir === -1;
           const atBottom = focusedIndexRef.current === items.length - 1 && dir === 1;
@@ -354,12 +356,11 @@ export const BendList = forwardRef<BendListHandle, BendListProps>(function BendL
               triggerBoundaryPush(dir);
             }
           } else {
-            const now = Date.now();
-            if (now - lastWheelTimeRef.current >= 50) {
-              lastWheelTimeRef.current = now;
-              const nextTarget = Math.max(0, Math.min(items.length - 1, focusedIndexRef.current + dir));
-              goTo(nextTarget);
-            }
+            const dy = deltaY || (dir * 110);
+            const deltaItems = Math.abs(dy) >= 200 ? Math.round(dy / 110) : dir;
+            const cappedDelta = Math.max(-3, Math.min(3, deltaItems));
+            const nextTarget = Math.max(0, Math.min(items.length - 1, focusedIndexRef.current + cappedDelta));
+            goTo(nextTarget);
           }
         },
       }

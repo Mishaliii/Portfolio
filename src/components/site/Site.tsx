@@ -153,11 +153,32 @@ export function Site() {
   // the panel's resting offset lives in GSAP's yPercent (not the inline translate), so tweens never stack
   useLayoutEffect(() => { if (wipe.current) gsap.set(wipe.current, { yPercent: 100, visibility: "visible" }); }, []);
 
+  // cache nav pill dimensions to avoid forced layout during transitions
+  const pillBounds = useRef<{ x: number; w: number }[]>([]);
+  useEffect(() => {
+    const measure = () => {
+      const nav = navRef.current; if (!nav) return;
+      pillBounds.current = Array.from(nav.querySelectorAll<HTMLElement>("[data-pill]")).map((b) => ({
+        x: b.offsetLeft,
+        w: b.offsetWidth,
+      }));
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [booted]);
+
   // move nav indicator
   useEffect(() => {
-    const nav = navRef.current; if (!nav || !ind.current) return;
-    const b = nav.querySelectorAll<HTMLElement>("[data-pill]")[cur]; if (!b) return;
-    gsap.to(ind.current, { x: b.offsetLeft, width: b.offsetWidth, duration: reduced() ? 0 : 0.6, ease: EASE.tr });
+    if (!ind.current) return;
+    const bounds = pillBounds.current[cur];
+    if (bounds) {
+      gsap.to(ind.current, { x: bounds.x, width: bounds.w, duration: reduced() ? 0 : 0.6, ease: EASE.tr });
+    } else {
+      const nav = navRef.current; if (!nav) return;
+      const b = nav.querySelectorAll<HTMLElement>("[data-pill]")[cur]; if (!b) return;
+      gsap.to(ind.current, { x: b.offsetLeft, width: b.offsetWidth, duration: reduced() ? 0 : 0.6, ease: EASE.tr });
+    }
   }, [cur, paged, booted]);
 
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(""), 1600); };
@@ -221,14 +242,34 @@ export function Site() {
     if (!bar) { done(); return; }
     const tl = gsap.timeline({ onComplete: done, delay: 1 / 60 });
     w.style.willChange = "transform";
-    tl.add(exitPage(oldEl), 0);
-    if (from === 0) tl.to(stage, { dim: 0.35, duration: 0.6, ease: EASE.tr }, 0.1);
-    if (target === 0) { stage.heroOn = true; stage.covered = false; tl.set(stage, { dim: 0.35 }, 0); tl.to(stage, { dim: 0, duration: 0.7, ease: EASE.tr }, 0.66); }
+    // Keep oldEl solid until wipe panel reaches 0% (t = 0.66s) to prevent premature disappearance / blank frame
+    if (from === 0) {
+      stage.covered = true;
+      stage.heroOn = false;
+      window.dispatchEvent(new Event("stage-hero-on"));
+      tl.to(stage, { dim: 0.35, duration: 0.6, ease: EASE.tr }, 0.1);
+    }
+    if (target === 0) {
+      stage.heroOn = true;
+      stage.covered = false;
+      window.dispatchEvent(new Event("stage-hero-on"));
+      tl.set(stage, { dim: 0.35 }, 0);
+      tl.to(stage, { dim: 0, duration: 0.7, ease: EASE.tr }, 0.66);
+    }
     tl.fromTo(bar, { scaleX: 0 }, { scaleX: 1, duration: 1.15, ease: "none" }, 0.05);
     // transform-only panel: composited on the GPU, no full-screen repaint per frame
     tl.fromTo(w, { yPercent: down ? 100 : -100 }, { yPercent: 0, duration: 0.55, ease: EASE.tr }, 0.1);
     tl.fromTo(label, { yPercent: down ? 40 : -40, opacity: 0 }, { yPercent: 0, opacity: 1, duration: 0.45, ease: EASE.in }, 0.35);
-    tl.add(() => { stage.covered = target !== 0; newEl.classList.remove("is-prepared"); setCur(target); curRef.current = target; if (target !== 0) stage.heroOn = false; oldEl.classList.remove("is-active"); newEl.classList.add("is-active"); gsap.set(oldEl.querySelectorAll("[data-char],[data-fade],[data-lines],[data-sig]"), { clearProps: "x,clipPath" }); }, 0.66);
+    tl.add(() => {
+      stage.covered = target !== 0;
+      if (target !== 0) stage.heroOn = false;
+      window.dispatchEvent(new Event("stage-hero-on"));
+      newEl.classList.remove("is-prepared");
+      setCur(target);
+      curRef.current = target;
+      oldEl.classList.remove("is-active");
+      newEl.classList.add("is-active");
+    }, 0.66);
     tl.to(label, { opacity: 0, yPercent: down ? -30 : 30, duration: 0.25, ease: "power3.in" }, 0.75);
     tl.to(w, { yPercent: down ? -100 : 100, duration: 0.55, ease: EASE.tr }, 0.8);
     // Reveal during last 40% of page wipe (wipe exit is 0.8s to 1.35s)
@@ -236,7 +277,7 @@ export function Site() {
   }, [paged]);
   const goRef = useRef(go); goRef.current = go;
 
-  const step = useCallback((dir: 1 | -1) => {
+  const step = useCallback((dir: 1 | -1, deltaY = 0) => {
     if (busy.current) return;
     if (paged) {
       const activePageId = pages[curRef.current]?.id;
@@ -245,7 +286,7 @@ export function Site() {
         if (capture) {
           const isOver = capture.isPointerOver ? capture.isPointerOver() : true;
           if (isOver && capture.canConsume(dir)) {
-            capture.consume(dir);
+            capture.consume(dir, deltaY);
             return;
           }
         }
@@ -333,13 +374,13 @@ export function Site() {
     // thresholded callbacks) so a trackpad's inertia tail is recognised as the same gesture.
     // A gesture is "armed" after a quiet gap, or when the wheel speed jumps up sharply
     // (a new flick during a decaying tail); each armed gesture can fire exactly once.
-    let lastEvt = 0, lastFire = 0, prevA = 0, armed = true;
+    let lastEvt = 0, lastFire = 0, prevA = 0, armed = true, lastDy = 0;
     const onWheel = (e: WheelEvent) => {
       if (document.querySelector('[role="dialog"]') || document.documentElement.hasAttribute("data-modal-open")) return;
       const t = performance.now(), a = Math.abs(e.deltaY);
       if (t - lastEvt > 250) armed = true;
       else if (a > prevA * 1.8 && a > 25 && t - lastFire > 450) armed = true;
-      prevA = a; lastEvt = t;
+      prevA = a; lastEvt = t; lastDy = e.deltaY;
     };
     window.addEventListener("wheel", onWheel, { passive: true, capture: true });
     const obs = Observer.create({
@@ -352,7 +393,7 @@ export function Site() {
     });
     function fire(d: 1 | -1) {
       if (pal || busy.current || !armed || document.querySelector('[role="dialog"]') || document.documentElement.hasAttribute("data-modal-open")) return;
-      armed = false; lastFire = performance.now(); step(d);
+      armed = false; lastFire = performance.now(); step(d, lastDy);
     }
     return () => { obs.kill(); window.removeEventListener("wheel", onWheel, { capture: true }); };
   }, [paged, booted, step, pal]);
