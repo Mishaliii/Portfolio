@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, lazy, Suspense } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { SplitText } from "gsap/SplitText";
 import {
@@ -10,9 +10,8 @@ import {
 import { SplitReveal } from "./Split";
 import { HeadlineDissolve } from "./HeadlineDissolve";
 import { EASE, reduced } from "@/lib/motion";
-const CaseStudy = lazy(() => import("./CaseStudy").then((m) => ({ default: m.CaseStudy })));
-import { ddssImages, ddssThumbs, preloadScreenshots } from "./ScreenshotGallery";
-import { Odometer } from "@/components/Odometer";
+import { CaseStudy } from "./CaseStudy";
+import { ddssImages, preloadScreenshots } from "./ScreenshotGallery";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(SplitText);
@@ -31,6 +30,47 @@ function MaskedParagraph({
 }) {
   const elRef = useRef<HTMLParagraphElement>(null);
   const splitRef = useRef<any>(null);
+  const isSplitRef = useRef(false);
+
+  // Pre-split during idle so card transitions never trigger synchronous layout recalculation
+  useEffect(() => {
+    const el = elRef.current;
+    if (!el || reduced()) return;
+
+    let cancelled = false;
+
+    const doPreSplit = () => {
+      if (cancelled || !elRef.current || isSplitRef.current) return;
+      try {
+        const sp = SplitText.create(elRef.current, { type: "lines", mask: "lines" });
+        splitRef.current = sp;
+        isSplitRef.current = true;
+        if (!active) {
+          gsap.set(sp.lines, { yPercent: 100 });
+        }
+      } catch {
+        // Fallback
+      }
+    };
+
+    document.fonts.ready.then(() => {
+      if (cancelled) return;
+      if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+        (window as any).requestIdleCallback(doPreSplit);
+      } else {
+        setTimeout(doPreSplit, 50);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      if (splitRef.current) {
+        splitRef.current.revert();
+        splitRef.current = null;
+        isSplitRef.current = false;
+      }
+    };
+  }, [text]);
 
   useEffect(() => {
     const el = elRef.current;
@@ -40,54 +80,61 @@ function MaskedParagraph({
       if (splitRef.current) {
         splitRef.current.revert();
         splitRef.current = null;
+        isSplitRef.current = false;
       }
       gsap.set(el, { opacity: 1, y: 0 });
       return;
     }
 
     if (!active) {
-      if (splitRef.current) {
-        splitRef.current.revert();
-        splitRef.current = null;
+      if (splitRef.current?.lines) {
+        gsap.set(splitRef.current.lines, { yPercent: 100 });
+      } else {
+        gsap.set(el, { opacity: 0 });
       }
-      gsap.set(el, { opacity: 0 });
       return;
     }
 
-    let isCancelled = false;
-    document.fonts.ready.then(() => {
-      if (isCancelled || !elRef.current) return;
-      if (splitRef.current) {
-        splitRef.current.revert();
-      }
-      try {
-        gsap.set(elRef.current, { opacity: 1 });
-        const sp = SplitText.create(elRef.current, { type: "lines", mask: "lines" });
-        splitRef.current = sp;
-        gsap.fromTo(
-          sp.lines,
-          { yPercent: 100 },
-          {
-            yPercent: 0,
-            duration: 0.7,
-            stagger: 0.08,
-            ease: "power3.out",
-            delay,
-          }
-        );
-      } catch {
-        gsap.fromTo(elRef.current, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.7, delay });
-      }
-    });
-
-    return () => {
-      isCancelled = true;
-      if (splitRef.current) {
-        splitRef.current.revert();
-        splitRef.current = null;
-      }
-    };
-  }, [active, text, delay]);
+    // When becoming active:
+    if (isSplitRef.current && splitRef.current?.lines) {
+      gsap.set(el, { opacity: 1 });
+      gsap.fromTo(
+        splitRef.current.lines,
+        { yPercent: 100 },
+        {
+          yPercent: 0,
+          duration: 0.7,
+          stagger: 0.08,
+          ease: "power3.out",
+          delay,
+        }
+      );
+    } else {
+      // If idle split hasn't fired yet, split now
+      document.fonts.ready.then(() => {
+        if (!elRef.current) return;
+        try {
+          gsap.set(elRef.current, { opacity: 1 });
+          const sp = splitRef.current || SplitText.create(elRef.current, { type: "lines", mask: "lines" });
+          splitRef.current = sp;
+          isSplitRef.current = true;
+          gsap.fromTo(
+            sp.lines,
+            { yPercent: 100 },
+            {
+              yPercent: 0,
+              duration: 0.7,
+              stagger: 0.08,
+              ease: "power3.out",
+              delay,
+            }
+          );
+        } catch {
+          gsap.fromTo(elRef.current, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.7, delay });
+        }
+      });
+    }
+  }, [active, delay]);
 
   return (
     <p ref={elRef} className={className}>
@@ -197,7 +244,7 @@ export function WorkCardShell({
       gsap.fromTo(
         chars,
         { yPercent: 120, scale: 1.04 },
-        { yPercent: 0, scale: 1, duration: 0.48, ease: EASE.in, stagger: 0.008, overwrite: "auto" }
+        { yPercent: 0, scale: 1, duration: 1.0, ease: EASE.in, stagger: 0.015, overwrite: "auto" }
       );
     }
   }, [active]);
@@ -262,18 +309,6 @@ export function WorkCardShell({
   );
 }
 
-const DDSS_STAGE_KEYS = [
-  "ddss",
-  "ddss-2",
-  "ddss-4",
-  "ddss-5",
-  "ddss-6",
-  "ddss-7",
-  "ddss-8",
-  "ddss-9",
-  "ddss-10",
-];
-
 function DDSSCard({ p, active }: { p: Project; active: boolean }) {
   const [cs, setCs] = useState(false);
   const closeCs = useCallback(() => setCs(false), []);
@@ -282,68 +317,32 @@ function DDSSCard({ p, active }: { p: Project; active: boolean }) {
   const [videoFailed, setVideoFailed] = useState(false);
   const [selectedShot, setSelectedShot] = useState<string | null>(null);
   const [isZoomed, setIsZoomed] = useState(false);
-  const [inView, setInView] = useState(false);
 
   const shots = works.caseStudy.shots;
   const activeShotKey = selectedShot ?? shots[0]?.k ?? "ddss";
   const posterSrc = ddssImages["ddss"] ?? ddssImages["ddss-screen"];
 
-  // Pre-decode all stage images on idle so hovering/clicking never blocks the main thread
-  useEffect(() => {
-    if (!active) return;
-    const decodeAll = () => {
-      DDSS_STAGE_KEYS.forEach((key) => {
-        const src = ddssImages[key] ?? posterSrc;
-        if (!src) return;
-        const img = new Image();
-        img.src = src;
-        img.decode().catch(() => {});
-      });
-    };
-    if (typeof window !== "undefined") {
-      if ("requestIdleCallback" in window) {
-        const h = (window as any).requestIdleCallback(decodeAll);
-        return () => (window as any).cancelIdleCallback(h);
-      } else {
-        const t = setTimeout(decodeAll, 150);
-        return () => clearTimeout(t);
-      }
-    }
-    return undefined;
-  }, [active, posterSrc]);
-
-  // Video playback management: pause when inactive, drawer open (cs), hidden, or showing stills
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
-    const obs = new IntersectionObserver(([entry]) => {
-      setInView(entry?.isIntersecting ?? false);
-    }, { threshold: 0.1 });
-    obs.observe(v);
-    return () => obs.disconnect();
-  }, []);
-
-  useEffect(() => {
-    const v = videoRef.current;
-    if (!v) return;
-    const shouldPlay = active && inView && showVideo && !videoFailed && !document.hidden && !cs;
+    const shouldPlay = active && showVideo && !videoFailed && !document.hidden;
     if (shouldPlay) {
       v.play().catch(() => {});
     } else {
       v.pause();
     }
-  }, [active, inView, showVideo, videoFailed, cs]);
+  }, [active, showVideo, videoFailed]);
 
   useEffect(() => {
     const onVisChange = () => {
       const v = videoRef.current;
       if (!v) return;
-      if (document.hidden || cs) v.pause();
-      else if (active && inView && showVideo && !videoFailed) v.play().catch(() => {});
+      if (document.hidden) v.pause();
+      else if (active && showVideo && !videoFailed) v.play().catch(() => {});
     };
     document.addEventListener("visibilitychange", onVisChange);
     return () => document.removeEventListener("visibilitychange", onVisChange);
-  }, [active, inView, showVideo, videoFailed, cs]);
+  }, [active, showVideo, videoFailed]);
 
   const filmstrip = p.filmstrip ?? [
     { k: "ddss-2", t: "Dashboard" },
@@ -432,49 +431,34 @@ function DDSSCard({ p, active }: { p: Project; active: boolean }) {
   const visualNode = (
     <>
       <div
-        className="relative aspect-[16/10] w-full overflow-hidden rounded-[12px] border border-[#0B0B0B]/20 bg-[#E8DED0] shadow-[0_8px_30px_rgb(0,0,0,0.06)]"
+        className="relative aspect-[16/10] w-full overflow-hidden rounded-[12px] border border-[#0B0B0B]/20 bg-[#0B0B0B] shadow-[0_8px_30px_rgb(0,0,0,0.06)]"
         data-sig
       >
-        {/* Looping video layer: paused when drawer is open or stills active */}
-        <video
-          ref={videoRef}
-          src="/media/ddss-demo.mp4"
-          muted
-          loop
-          playsInline
-          preload="auto"
-          poster={posterSrc}
-          onError={() => setVideoFailed(true)}
-          className="absolute inset-0 h-full w-full object-cover transition-opacity duration-300 pointer-events-none"
-          style={{
-            objectFit: "cover",
-            opacity: showVideo && !videoFailed ? 1 : 0,
-            zIndex: 1,
-          }}
-        />
-
-        {/* Stacked stage images: opacity/transform only, pre-decoded on idle */}
-        {DDSS_STAGE_KEYS.map((key) => {
-          const isSelected = !showVideo && activeShotKey === key;
-          const isZoom = isSelected && isZoomed;
-          return (
-            <img
-              key={key}
-              src={ddssImages[key] ?? posterSrc}
-              alt={shots.find((s) => s.k === key)?.t ?? "DDSS product capture"}
-              decoding="async"
-              className="absolute inset-0 h-full w-full object-cover transition-[opacity,transform] duration-300 ease-out pointer-events-none"
-              style={{
-                objectFit: "cover",
-                opacity: isSelected ? 1 : 0,
-                transform: isZoom ? "scale(1.45) translate(-12%, -6%)" : "scale(1) translate(0, 0)",
-                transformOrigin: "top right",
-                zIndex: isSelected ? 2 : 0,
-                willChange: isSelected ? "transform, opacity" : "auto",
-              }}
-            />
-          );
-        })}
+        {showVideo && !videoFailed ? (
+          <video
+            ref={videoRef}
+            src="/media/ddss-demo.mp4"
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            poster={posterSrc}
+            onError={() => setVideoFailed(true)}
+            className="h-full w-full object-cover"
+            style={{ objectFit: "cover" }}
+          />
+        ) : (
+          <img
+            src={ddssImages[activeShotKey] ?? posterSrc}
+            alt={shots.find((s) => s.k === activeShotKey)?.t ?? "DDSS product capture"}
+            className="h-full w-full object-cover transition-transform duration-500 ease-out"
+            style={{
+              objectFit: "cover",
+              transform: isZoomed ? "scale(1.45) translate(-12%, -6%)" : "none",
+              transformOrigin: "top right",
+            }}
+          />
+        )}
       </div>
 
       {/* Filmstrip: 8 small thumbnails 16:10 in one row, equal width, 8px gap */}
@@ -500,7 +484,7 @@ function DDSSCard({ p, active }: { p: Project; active: boolean }) {
                   title={s.t}
                   aria-label={s.t}
                 >
-                  <img src={ddssThumbs[s.k] || ddssImages[s.k]} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" />
+                  <img src={ddssImages[s.k]} alt="" className="h-full w-full object-cover" loading="lazy" />
                 </button>
               );
             })}
@@ -532,12 +516,17 @@ function DDSSCard({ p, active }: { p: Project; active: boolean }) {
         line={p.line}
         statusLine={p.statusLine ?? p.mutedLine}
         buttonLabel={p.buttonLabel ?? "Deep Dive"}
-        onOpenDetails={() => setCs(true)}
+        onOpenDetails={() => {
+          setSelectedShot(null);
+          setIsZoomed(false);
+          setShowVideo(true);
+          setCs(true);
+        }}
         pipeline={pipelineNode}
         visual={visualNode}
         active={active}
       />
-      <Suspense fallback={null}><CaseStudy open={cs} onClose={closeCs} /></Suspense>
+      <CaseStudy open={cs} onClose={closeCs} />
     </>
   );
 }
@@ -579,13 +568,61 @@ const SUBJECT_ROWS: Record<
   },
 };
 
-function OdometerScore({ value, active }: { value: number; active: boolean }) {
+function OdometerDigit({
+  char,
+  delay = 0,
+  active,
+}: {
+  char: string;
+  delay?: number;
+  active: boolean;
+}) {
+  const isDigit = /^[0-9]$/.test(char);
+  const targetDigit = isDigit ? parseInt(char, 10) : 0;
+  const colRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = colRef.current;
+    if (!el || !isDigit) return;
+
+    if (reduced() || !active) {
+      gsap.set(el, { yPercent: -targetDigit * 10 });
+      return;
+    }
+
+    gsap.to(el, {
+      yPercent: -targetDigit * 10,
+      duration: 0.65,
+      delay,
+      ease: "power2.out",
+    });
+  }, [targetDigit, isDigit, delay, active]);
+
+  if (!isDigit) {
+    return <span className="inline-block px-[1px]">{char}</span>;
+  }
+
   return (
-    <Odometer
-      value={value.toFixed(2)}
-      active={active}
-      className="font-mono text-[22px] sm:text-[28px] font-bold text-[#0B0B0B] leading-none"
-    />
+    <span className="inline-block overflow-hidden h-[1.15em] leading-none align-baseline">
+      <span ref={colRef} className="flex flex-col select-none will-change-transform">
+        {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
+          <span key={n} className="h-[1.15em] leading-none flex items-center justify-center">
+            {n}
+          </span>
+        ))}
+      </span>
+    </span>
+  );
+}
+
+function OdometerScore({ value, active }: { value: number; active: boolean }) {
+  const str = value.toFixed(2);
+  return (
+    <span className="font-mono text-[22px] sm:text-[28px] font-bold text-[#0B0B0B] leading-none inline-flex items-center">
+      {str.split("").map((c, i) => (
+        <OdometerDigit key={i} char={c} delay={i * 0.04} active={active} />
+      ))}
+    </span>
   );
 }
 
@@ -614,13 +651,12 @@ function ProductivityExplorer({
       const feat = ROLE_FEATURES[idx];
       const pct = Math.min(100, Math.max(3, (v / feat.max) * 100));
       if (reduced()) {
-        gsap.set(el, { scaleX: pct / 100, transformOrigin: "left center" });
+        gsap.set(el, { width: `${pct}%` });
       } else {
         gsap.to(el, {
-          scaleX: pct / 100,
+          width: `${pct}%`,
           duration: 0.5,
           ease: "power3.out",
-          transformOrigin: "left center",
         });
       }
     });
@@ -717,11 +753,11 @@ function ProductivityExplorer({
                     barRefs.current[idx] = el;
                   }}
                   className="h-full bg-[#1F5A3A] rounded-full"
-                  style={{ width: "100%", transform: `scaleX(${initialPct / 100})`, transformOrigin: "left center" }}
+                  style={{ width: `${initialPct}%` }}
                 />
               </div>
-              <span className="w-[42px] sm:w-[48px] text-right font-semibold text-[#0B0B0B] inline-flex justify-end">
-                <Odometer value={val} active={active} />
+              <span className="w-[42px] sm:w-[48px] text-right font-semibold text-[#0B0B0B]">
+                {val}
               </span>
             </div>
           );
@@ -839,12 +875,15 @@ function RoleCard({ p, active }: { p: Project; active: boolean }) {
         line={p.line}
         statusLine={p.statusLine ?? p.mutedLine}
         buttonLabel={p.buttonLabel ?? "Details"}
-        onOpenDetails={() => setCs(true)}
+        onOpenDetails={() => {
+          setPulseTarget(null);
+          setCs(true);
+        }}
         pipeline={pipelineNode}
         visual={<ProductivityExplorer active={active} pulseTarget={pulseTarget} />}
         active={active}
       />
-      <Suspense fallback={null}><CaseStudy open={cs} onClose={closeCs} data={roleCaseStudy} /></Suspense>
+      <CaseStudy open={cs} onClose={closeCs} data={roleCaseStudy} />
     </>
   );
 }
@@ -1007,7 +1046,7 @@ function CareerLensPipeline({ active }: { active: boolean }) {
           Architecture Flow
         </span>
         <span className="mono text-[10px] sm:text-[11px] text-[#1F5A3A] font-semibold uppercase tracking-wider">
-          <><Odometer value="8" active={active} /> Pipeline Stages</>
+          8 Pipeline Stages
         </span>
       </div>
 
@@ -1209,7 +1248,7 @@ function CareerLensCard({ p, active }: { p: Project; active: boolean }) {
         visual={<CareerLensPipeline active={active} />}
         active={active}
       />
-      <Suspense fallback={null}><CaseStudy open={cs} onClose={closeCs} data={careerlensCaseStudy} /></Suspense>
+      <CaseStudy open={cs} onClose={closeCs} data={careerlensCaseStudy} />
     </>
   );
 }
@@ -1232,8 +1271,8 @@ export function PageWorks({
   const initialRender = useRef(true);
 
   useEffect(() => {
-    if (active) preloadScreenshots();
-  }, [active]);
+    preloadScreenshots();
+  }, []);
 
   useEffect(() => {
     if (!paged) return;
@@ -1268,6 +1307,19 @@ export function PageWorks({
 
     if (from === to) return;
 
+    const tl = gsap.timeline({
+      onStart: () => {
+        cards.forEach((c) => {
+          if (c) c.style.willChange = "transform";
+        });
+      },
+      onComplete: () => {
+        cards.forEach((c) => {
+          if (c) c.style.willChange = "auto";
+        });
+      },
+    });
+
     if (to > from) {
       // Forward transition: next card slides up from bottom (yPercent 100 to 0, 0.9 s, expo.out) over current card,
       // while current card scales to 0.94, moves up 4% and dims to 55% brightness.
@@ -1276,34 +1328,43 @@ export function PageWorks({
         const dim = dims[i];
 
         if (i === to) {
-          gsap.fromTo(
+          tl.fromTo(
             c,
             { yPercent: 100, scale: 1 },
-            { yPercent: 0, scale: 1, duration: 0.9, ease: "expo.out" }
+            { yPercent: 0, scale: 1, duration: 0.9, ease: "expo.out" },
+            0
           );
-          if (dim) gsap.set(dim, { opacity: 0 });
+          if (dim) tl.set(dim, { opacity: 0 }, 0);
         } else if (i < to) {
           const depth = to - i;
           const targetScale = Math.max(0.8, 1 - 0.06 * depth);
           const targetYPercent = -4 * depth;
           const targetDim = Math.min(0.8, 0.45 * depth);
 
-          gsap.to(c, {
-            yPercent: targetYPercent,
-            scale: targetScale,
-            duration: 0.9,
-            ease: "expo.out",
-          });
-          if (dim) {
-            gsap.to(dim, {
-              opacity: targetDim,
+          tl.to(
+            c,
+            {
+              yPercent: targetYPercent,
+              scale: targetScale,
               duration: 0.9,
               ease: "expo.out",
-            });
+            },
+            0
+          );
+          if (dim) {
+            tl.to(
+              dim,
+              {
+                opacity: targetDim,
+                duration: 0.9,
+                ease: "expo.out",
+              },
+              0
+            );
           }
         } else {
-          gsap.set(c, { yPercent: 100, scale: 1 });
-          if (dim) gsap.set(dim, { opacity: 0 });
+          tl.set(c, { yPercent: 100, scale: 1 }, 0);
+          if (dim) tl.set(dim, { opacity: 0 }, 0);
         }
       });
     } else {
@@ -1313,32 +1374,48 @@ export function PageWorks({
         const dim = dims[i];
 
         if (i > to) {
-          gsap.to(c, {
-            yPercent: 100,
-            scale: 1,
-            duration: 0.9,
-            ease: "expo.out",
-          });
-          if (dim) {
-            gsap.to(dim, {
-              opacity: 0,
+          tl.to(
+            c,
+            {
+              yPercent: 100,
+              scale: 1,
               duration: 0.9,
               ease: "expo.out",
-            });
+            },
+            0
+          );
+          if (dim) {
+            tl.to(
+              dim,
+              {
+                opacity: 0,
+                duration: 0.9,
+                ease: "expo.out",
+              },
+              0
+            );
           }
         } else if (i === to) {
-          gsap.to(c, {
-            yPercent: 0,
-            scale: 1,
-            duration: 0.9,
-            ease: "expo.out",
-          });
-          if (dim) {
-            gsap.to(dim, {
-              opacity: 0,
+          tl.to(
+            c,
+            {
+              yPercent: 0,
+              scale: 1,
               duration: 0.9,
               ease: "expo.out",
-            });
+            },
+            0
+          );
+          if (dim) {
+            tl.to(
+              dim,
+              {
+                opacity: 0,
+                duration: 0.9,
+                ease: "expo.out",
+              },
+              0
+            );
           }
         } else {
           const depth = to - i;
@@ -1346,18 +1423,26 @@ export function PageWorks({
           const targetYPercent = -4 * depth;
           const targetDim = Math.min(0.8, 0.45 * depth);
 
-          gsap.to(c, {
-            yPercent: targetYPercent,
-            scale: targetScale,
-            duration: 0.9,
-            ease: "expo.out",
-          });
-          if (dim) {
-            gsap.to(dim, {
-              opacity: targetDim,
+          tl.to(
+            c,
+            {
+              yPercent: targetYPercent,
+              scale: targetScale,
               duration: 0.9,
               ease: "expo.out",
-            });
+            },
+            0
+          );
+          if (dim) {
+            tl.to(
+              dim,
+              {
+                opacity: targetDim,
+                duration: 0.9,
+                ease: "expo.out",
+              },
+              0
+            );
           }
         }
       });
