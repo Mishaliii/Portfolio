@@ -35,7 +35,6 @@ export function CaseStudy({
     offset: 24,
     enabled: open,
   });
-
   const activeSectionRef = useRef(activeSection);
   activeSectionRef.current = activeSection;
 
@@ -103,6 +102,7 @@ export function CaseStudy({
       );
 
       if (scrollTween.current) scrollTween.current.kill();
+      setActiveSection(id);
       const proxy = { y: container.scrollTop };
       scrollTween.current = gsap.to(proxy, {
         y: targetScroll,
@@ -153,18 +153,7 @@ export function CaseStudy({
         closeTl.current = null;
         onClose();
         // Return focus to the trigger Details button
-        if (
-          triggerBtnRef.current &&
-          typeof triggerBtnRef.current.focus === "function" &&
-          document.body.contains(triggerBtnRef.current)
-        ) {
-          triggerBtnRef.current.focus({ preventScroll: true });
-        } else {
-          const activeBtn =
-            document.querySelector<HTMLElement>('[data-card][data-active="true"] button') ||
-            document.querySelector<HTMLElement>('[data-card] button');
-          activeBtn?.focus({ preventScroll: true });
-        }
+        triggerBtnRef.current?.focus({ preventScroll: true });
       },
     });
     closeTl.current = tl;
@@ -213,17 +202,7 @@ export function CaseStudy({
     if (!el || !bd) return;
 
     // Save trigger element for focus restoration
-    if (
-      document.activeElement &&
-      document.activeElement !== document.body &&
-      document.activeElement !== document.documentElement
-    ) {
-      triggerBtnRef.current = document.activeElement as HTMLElement | null;
-    } else {
-      triggerBtnRef.current =
-        document.querySelector<HTMLElement>('[data-card][data-active="true"] button') ||
-        document.querySelector<HTMLElement>('[data-card] button');
-    }
+    triggerBtnRef.current = document.activeElement as HTMLElement | null;
 
     // Reset before opening animation starts (while hidden)
     if (scrollArea.current) {
@@ -456,7 +435,9 @@ export function CaseStudy({
             )}
           </div>
           <button
-            ref={closeBtn} type="button" onClick={close} aria-label="Close case study"
+            ref={closeBtn}
+            type="button"
+            onClick={close}
             className="min-h-[44px] min-w-[44px] px-3.5 py-2 flex items-center justify-center rounded-full border border-[#0B0B0B]/20 font-mono text-[13px] uppercase tracking-wider text-[#0B0B0B] hover:text-[#1F5A3A] hover:border-[#1F5A3A] transition-colors cursor-pointer"
           >
             {c.close}
@@ -477,8 +458,8 @@ export function CaseStudy({
                   <button
                     key={item.id}
                     type="button"
+                    aria-current={isActive ? "true" : undefined}
                     onClick={() => scrollToSection(item.id)}
-                    aria-current={isActive ? 'true' : undefined}
                     className={`block text-left transition-colors cursor-pointer ${
                       isActive
                         ? "text-[#1F5A3A] font-semibold underline underline-offset-8 decoration-[#1F5A3A] decoration-2"

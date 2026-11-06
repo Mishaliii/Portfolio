@@ -49,14 +49,11 @@ export function SceneStage() {
     // Dual video management
     let currentVid = vA;
     let nextVid = vB;
-    let crossfading = false;
     let vfcHandle: number | undefined;
     let lastWrapTime = performance.now();
     let playing = false;
 
-    const VIDEO_LEN_SEC = 7.041667;
-    const QUEUE_SEC = VIDEO_LEN_SEC - 0.08;
-    const HANDOFF_SEC = VIDEO_LEN_SEC - 0.04;
+    const VIDEO_LEN_SEC = 12.5;
     let nextQueued = false;
 
     // Reuse the loader's download: no competing range fetch and no source swap at a loop boundary.
@@ -73,13 +70,33 @@ export function SceneStage() {
       syncPlayback();
     });
 
+    const swapVideo = (now: number) => {
+      currentVid.pause();
+      currentVid.currentTime = 0;
+      currentVid.style.opacity = "0";
+      nextVid.style.opacity = "1";
+
+      const loopGap = Math.round((now - lastWrapTime) * 10) / 10;
+      lastWrapTime = now;
+      window.dispatchEvent(new CustomEvent("hero-loop-gap", { detail: { gapMs: loopGap } }));
+
+      const temp = currentVid;
+      currentVid = nextVid;
+      nextVid = temp;
+      nextQueued = false;
+
+      if (currentVid.requestVideoFrameCallback) {
+        vfcHandle = currentVid.requestVideoFrameCallback(pingPongFrame);
+      }
+    };
+
     const pingPongFrame: VideoFrameRequestCallback = (now, meta) => {
       if (dead || !native) return;
       const t = meta.mediaTime;
       const len = currentVid.duration && isFinite(currentVid.duration) && currentVid.duration > 0
         ? currentVid.duration
         : VIDEO_LEN_SEC;
-      const queueTime = len - 0.08;
+      const queueTime = len - 0.20;
       const handoffTime = len - 0.04;
 
       if (!nextQueued && t >= queueTime) {
@@ -89,31 +106,27 @@ export function SceneStage() {
       }
 
       if (t >= handoffTime || (nextQueued && t < 0.2 && meta.presentedFrames > 5)) {
-        // Plain seamless handover without double-crossfade dip
-        currentVid.pause();
-        currentVid.currentTime = 0;
-        currentVid.style.opacity = "0";
-        nextVid.style.opacity = "1";
-
-        const loopGap = Math.round((now - lastWrapTime) * 10) / 10;
-        lastWrapTime = now;
-        window.dispatchEvent(new CustomEvent("hero-loop-gap", { detail: { gapMs: loopGap } }));
-
-        const temp = currentVid;
-        currentVid = nextVid;
-        nextVid = temp;
-        nextQueued = false;
-
-        if (currentVid.requestVideoFrameCallback) {
-          vfcHandle = currentVid.requestVideoFrameCallback(pingPongFrame);
-          return;
-        }
+        swapVideo(now);
+        return;
       }
 
       if (currentVid.requestVideoFrameCallback) {
         vfcHandle = currentVid.requestVideoFrameCallback(pingPongFrame);
       }
     };
+
+    const handleEnded = (e: Event) => {
+      if (dead || !native) return;
+      if (e.target === currentVid) {
+        swapVideo(performance.now());
+      }
+    };
+    vA.addEventListener("ended", handleEnded);
+    vB.addEventListener("ended", handleEnded);
+    cleanups.push(() => {
+      vA.removeEventListener("ended", handleEnded);
+      vB.removeEventListener("ended", handleEnded);
+    });
 
     const startDualVideo = () => {
       currentVid = vA;
@@ -163,7 +176,7 @@ export function SceneStage() {
 
     let sceneData: SceneData = {
       video: { w: 1920, h: 1080 },
-      focus: { x: 0.66, y: 0.5 },
+      focus: { x: 0.7, y: 0.35 },
       figure: { x: 0.7, y: 0.52 },
       glow: { x: 0.633, y: 0.64 },
       pin: { x: 0.713, y: 0.4 },
@@ -383,12 +396,26 @@ export function SceneStage() {
         el.style.visibility = "hidden";
       } else {
         el.style.visibility = "visible";
-        if (!playing) {
-          playing = true;
+        const len = currentVid.duration && isFinite(currentVid.duration) && currentVid.duration > 0
+          ? currentVid.duration
+          : VIDEO_LEN_SEC;
+
+        if (currentVid.ended || currentVid.currentTime >= len - 0.1) {
+          currentVid.currentTime = 0;
+          currentVid.style.opacity = "1";
+          nextVid.style.opacity = "0";
+          nextVid.pause();
+          nextVid.currentTime = 0;
+          nextQueued = false;
+        }
+
+        if (currentVid.paused) {
           void currentVid.play().catch(() => {});
-          if (native && currentVid.requestVideoFrameCallback && !vfcHandle) {
-            vfcHandle = currentVid.requestVideoFrameCallback(pingPongFrame);
-          }
+        }
+        playing = true;
+
+        if (native && currentVid.requestVideoFrameCallback && !vfcHandle) {
+          vfcHandle = currentVid.requestVideoFrameCallback(pingPongFrame);
         }
       }
     };

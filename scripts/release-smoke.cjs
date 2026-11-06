@@ -552,6 +552,128 @@ async function runSmoke() {
     // Console errors check on hero
     logCheck('HERO', 'no_console_errors_hero', consoleErrors.length === 0, consoleErrors.length ? consoleErrors.join('; ') : 'clean');
 
+    // Step 7: Hero video quality, freeze, zoom & framing checks
+    const videoScaleCheck = await evalJs(`
+      (() => {
+        const v = document.querySelector('.scene-video');
+        const mv = document.querySelector('.scene-move');
+        if (!v || !mv) return { ok: false, reason: 'elements missing' };
+        const vStyle = window.getComputedStyle(v);
+        const mvStyle = window.getComputedStyle(mv);
+        const parseScale = (tr) => {
+          if (!tr || tr === 'none') return { x: 1, y: 1 };
+          const m = tr.match(/matrix\\(([^)]+)\\)/);
+          if (m) {
+            const parts = m[1].split(',').map(s => parseFloat(s.trim()));
+            return { x: Math.hypot(parts[0], parts[1]), y: Math.hypot(parts[2], parts[3]) };
+          }
+          const m3d = tr.match(/matrix3d\\(([^)]+)\\)/);
+          if (m3d) {
+            const parts = m3d[1].split(',').map(s => parseFloat(s.trim()));
+            return { x: Math.hypot(parts[0], parts[1], parts[2]), y: Math.hypot(parts[4], parts[5], parts[6]) };
+          }
+          return { x: 1, y: 1 };
+        };
+        const sV = parseScale(vStyle.transform);
+        const sMv = parseScale(mvStyle.transform);
+        const vScaled = Math.abs(sV.x - 1) > 0.01 || Math.abs(sV.y - 1) > 0.01;
+        const mvScaled = Math.abs(sMv.x - 1) > 0.01 || Math.abs(sMv.y - 1) > 0.01;
+        return { ok: !vScaled && !mvScaled, sV, sMv };
+      })()
+    `);
+    logCheck('HERO', 'video_not_scaled', Boolean(videoScaleCheck?.ok), `videoScale=${JSON.stringify(videoScaleCheck?.sV)}, moverScale=${JSON.stringify(videoScaleCheck?.sMv)}`);
+
+    const charViewportCheck = await evalJs(`
+      (() => {
+        const w = window.innerWidth, h = window.innerHeight;
+        const as = w / h, va = 16 / 9;
+        let vHeadY = 0, vLaptopY = 0;
+        if (as > va) {
+          const renderedH = w / va;
+          const excessH = renderedH - h;
+          const topOffset = -excessH * 0.35;
+          vHeadY = 390 * (w / 1920) + topOffset;
+          vLaptopY = 860 * (w / 1920) + topOffset;
+        } else {
+          vHeadY = 390 * (h / 1080);
+          vLaptopY = 860 * (h / 1080);
+        }
+        const headVisible = vHeadY > 20 && vHeadY < h - 100;
+        const laptopVisible = vLaptopY > 100 && vLaptopY < h;
+        return { ok: headVisible && laptopVisible, vHeadY: Math.round(vHeadY), vLaptopY: Math.round(vLaptopY), h };
+      })()
+    `);
+    logCheck('HERO', 'character_fully_in_viewport', Boolean(charViewportCheck?.ok), `headY=${charViewportCheck?.vHeadY}, laptopY=${charViewportCheck?.vLaptopY}`);
+
+    const doubleImageCheck = await evalJs(`
+      return (async () => {
+        const v = document.querySelector('.scene-video');
+        if (!v) return { ok: false, reason: 'no video' };
+        const cv = document.createElement('canvas');
+        cv.width = 160; cv.height = 90;
+        const ctx = cv.getContext('2d');
+        const testTimes = [0.05, 6.2, 6.25, 12.45];
+        const frames = [];
+        const wasPaused = v.paused;
+        const origTime = v.currentTime;
+        v.pause();
+        for (const t of testTimes) {
+          v.currentTime = t;
+          await new Promise(r => {
+            const onSeek = () => { v.removeEventListener('seeked', onSeek); r(); };
+            v.addEventListener('seeked', onSeek);
+            setTimeout(r, 200);
+          });
+          ctx.drawImage(v, 0, 0, cv.width, cv.height);
+          frames.push(ctx.getImageData(0, 0, cv.width, cv.height).data);
+        }
+        v.currentTime = origTime;
+        if (!wasPaused) v.play().catch(() => {});
+
+        const mad = (d1, d2) => {
+          let sum = 0;
+          for (let i = 0; i < d1.length; i += 4) {
+            sum += Math.abs(d1[i] - d2[i]) + Math.abs(d1[i+1] - d2[i+1]) + Math.abs(d1[i+2] - d2[i+2]);
+          }
+          return sum / (cv.width * cv.height * 3);
+        };
+        const normalDiff = mad(frames[1], frames[2]);
+        const seamDiff = mad(frames[3], frames[0]);
+        const ok = normalDiff < 30 && seamDiff <= Math.max(normalDiff * 1.5, 10);
+        return { ok, normalDiff: Math.round(normalDiff * 10) / 10, seamDiff: Math.round(seamDiff * 10) / 10 };
+      })();
+    `);
+    logCheck('HERO', 'no_double_image', Boolean(doubleImageCheck?.ok), `seamDiff=${doubleImageCheck?.seamDiff}, normalDiff=${doubleImageCheck?.normalDiff}`);
+
+    // Freeze resilience: Hero -> Works -> Hero, test currentTime advancement
+    await evalJs(`
+      const a = Array.from(document.querySelectorAll('a[data-pill]')).find(x => x.getAttribute('href') === '#works');
+      a?.click();
+    `);
+    await wait(1200);
+    await evalJs(`
+      const a = Array.from(document.querySelectorAll('a[data-pill]')).find(x => x.getAttribute('href') === '#overview');
+      a?.click();
+    `);
+    await wait(1200);
+
+    const resumeCheck = await evalJs(`
+      return new Promise(resolve => {
+        const vA = document.querySelector('.scene-video-a');
+        const vB = document.querySelector('.scene-video-b');
+        const activeVid = (vA && parseFloat(vA.style.opacity || '1') > 0.5) ? vA : vB;
+        if (!activeVid) return resolve({ ok: false, reason: 'no video' });
+        const t0 = activeVid.currentTime;
+        setTimeout(() => {
+          const t1 = activeVid.currentTime;
+          const diff = t1 - t0;
+          const advancing = diff > 0.6 || (t1 < t0 && t0 > 11);
+          resolve({ ok: advancing && !activeVid.paused, t0, t1, diff, paused: activeVid.paused });
+        }, 1200);
+      });
+    `);
+    logCheck('HERO', 'hero_playback_resume_no_freeze', Boolean(resumeCheck?.ok), `advancing=${resumeCheck?.ok}, diff=${Math.round((resumeCheck?.diff || 0)*100)/100}s`);
+
     // =========================================================================
     // CHECK 2: CHAT (SPROUT)
     // =========================================================================

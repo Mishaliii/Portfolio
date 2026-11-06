@@ -31,7 +31,6 @@ export function coverFit(w: number, h: number, focus: { x: number; y: number }, 
   const as = w / h;
   let cx = 1, cy = 1;
   if (as > va) cy = va / as; else cx = as / va;
-  cx /= 1.04; cy /= 1.04;
   const clamp = (v: number, a: number) => Math.min(1 - a / 2, Math.max(a / 2, v));
   return { cover: [cx, cy] as [number, number], center: [clamp(focus.x, cx), clamp(1 - focus.y, cy)] as [number, number] };
 }
