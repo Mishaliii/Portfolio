@@ -13,35 +13,87 @@ export type BuddyPose =
   | "sit_a"
   | "sit_b";
 
-interface TextToken {
-  text: string;
-  bold?: boolean;
-  link?: string;
-}
-
-function parseTokens(str: string): TextToken[] {
-  const regex = /(\[[^\]]+\]\([^)]+\)|\*\*[^*]+\*\*)/g;
-  const parts = str.split(regex);
-  return parts
-    .filter((p) => p && p.length > 0)
-    .map((part) => {
-      if (part.startsWith("**") && part.endsWith("**")) {
-        return { text: part.slice(2, -2), bold: true };
-      }
-      const linkMatch = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
-      if (linkMatch) {
-        return { text: linkMatch[1], link: linkMatch[2] };
-      }
-      return { text: part };
-    });
-}
-
 interface ChatMessage {
   id: string;
   sender: "user" | "sprout";
   text: string;
   isTyping?: boolean;
   typedLength?: number;
+}
+
+function renderFormattedText(raw: string): React.ReactNode {
+  if (!raw) return null;
+
+  // Split by line breaks first
+  const lines = raw.split(/\r?\n/);
+
+  return (
+    <>
+      {lines.map((line, lineIdx) => {
+        // Regex matches markdown links [text](url), complete bold **text**, or unclosed **text at end
+        const tokenRegex = /(\[[^\]]+\]\([^)]+\)|\*\*[^*]+\*\*|\*\*[^*]+$)/g;
+        const parts = line.split(tokenRegex);
+
+        const nodes: React.ReactNode[] = [];
+        parts.forEach((part, pIdx) => {
+          if (!part) return;
+
+          // Markdown link
+          const linkMatch = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+          if (linkMatch) {
+            nodes.push(
+              <a
+                key={`l-${lineIdx}-${pIdx}`}
+                href={linkMatch[2]}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="underline hover:text-white"
+              >
+                {linkMatch[1]}
+              </a>
+            );
+            return;
+          }
+
+          // Complete bold **text**
+          if (part.startsWith("**") && part.endsWith("**") && part.length >= 4) {
+            nodes.push(
+              <strong key={`b-${lineIdx}-${pIdx}`} className="buddy-hl font-bold text-white">
+                {part.slice(2, -2)}
+              </strong>
+            );
+            return;
+          }
+
+          // Incomplete bold (e.g. during typewriter typing "**Dermatology")
+          if (part.startsWith("**")) {
+            const clean = part.slice(2);
+            if (clean.length > 0) {
+              nodes.push(
+                <strong key={`pb-${lineIdx}-${pIdx}`} className="buddy-hl font-bold text-white">
+                  {clean}
+                </strong>
+              );
+            }
+            return;
+          }
+
+          // Strip any stray ** in normal text
+          const sanitized = part.replace(/\*\*/g, "");
+          if (sanitized) {
+            nodes.push(<span key={`s-${lineIdx}-${pIdx}`}>{sanitized}</span>);
+          }
+        });
+
+        return (
+          <div key={`line-${lineIdx}`} className={lineIdx > 0 ? "mt-1.5" : ""}>
+            {nodes.length > 0 ? nodes : <br />}
+          </div>
+        );
+      })}
+    </>
+  );
 }
 
 interface IdleBubbleItem {
@@ -112,6 +164,19 @@ export function Buddy() {
   const [gameStep, setGameStep] = useState<number>(0);
   const askedIntents = useRef<Set<string>>(new Set());
   const hasChatted = useRef(false);
+
+  // Visitor identity & conversation memory (session React state)
+  const [visitorName, setVisitorName] = useState<string | null>(() => {
+    try {
+      return sessionStorage.getItem("sprout_visitor_name");
+    } catch {
+      return null;
+    }
+  });
+  const awaitingName = useRef<boolean>(false);
+  const greetedWithName = useRef<boolean>(false);
+  const lastIntent = useRef<string | null>(null);
+  const lastResponseText = useRef<string | null>(null);
 
   // DOM Refs
   const walkerRef = useRef<HTMLDivElement>(null);
@@ -1114,9 +1179,40 @@ export function Buddy() {
       const userMsgId = "user_" + Date.now();
       const sproutMsgId = "sprout_" + (Date.now() + 1);
 
-      // Match intent
-      const ans = matchBuddyIntent(cleanQ, gameStep);
+      // Match intent with session identity & repetition context
+      const ans = matchBuddyIntent(cleanQ, {
+        gameStep,
+        visitorName: visitorName || undefined,
+        awaitingName: awaitingName.current,
+        greetedWithName: greetedWithName.current,
+        lastIntent: lastIntent.current || undefined,
+        lastResponseText: lastResponseText.current || undefined,
+      });
       if (!ans) return;
+
+      if (ans.newVisitorName) {
+        setVisitorName(ans.newVisitorName);
+        try {
+          sessionStorage.setItem("sprout_visitor_name", ans.newVisitorName);
+        } catch {}
+        awaitingName.current = false;
+      }
+      if (ans.awaitingName !== undefined) {
+        awaitingName.current = ans.awaitingName;
+      }
+      if (ans.greetedWithName) {
+        greetedWithName.current = true;
+      }
+
+      // Anti-repetition: if user triggers the same intent consecutively, append follow-up
+      let responseText = ans.text;
+      let responseFollowUps = [...ans.followUps];
+      if (lastIntent.current === ans.intent && lastResponseText.current) {
+        responseText = `As mentioned: ${ans.text}\n\nWould you like to explore another topic?`;
+        responseFollowUps = ["Tell me about DDSS", "Tech stack?", "Download CV"];
+      }
+      lastIntent.current = ans.intent;
+      lastResponseText.current = ans.text;
 
       askedIntents.current.add(ans.intent);
       if (typeof ans.gameStep === "number") {
@@ -1146,12 +1242,12 @@ export function Buddy() {
       const timer = setTimeout(() => {
         if (prefersReduced()) {
           setTranscript((prev) =>
-            prev.map((m) => (m.id === sproutMsgId ? { ...m, isTyping: false, text: ans.text } : m))
+            prev.map((m) => (m.id === sproutMsgId ? { ...m, isTyping: false, text: responseText } : m))
           );
           if (transcriptScrollRef.current) {
             transcriptScrollRef.current.scrollTop = transcriptScrollRef.current.scrollHeight;
           }
-          setFollowUps(ans.followUps);
+          setFollowUps(responseFollowUps);
           if (ans.dance) performDance();
           if (window.innerWidth >= 640) chatInputRef.current?.focus();
           return;
@@ -1163,9 +1259,6 @@ export function Buddy() {
         );
 
         isTalking.current = true;
-        let charIdx = 0;
-        const total = ans.text.length;
-
         const completeInstantly = () => {
           if (talkInterval.current) {
             clearInterval(talkInterval.current);
@@ -1174,28 +1267,39 @@ export function Buddy() {
           isTalking.current = false;
           activeTypingRef.current = null;
           setTranscript((prev) =>
-            prev.map((m) => (m.id === sproutMsgId ? { ...m, isTyping: false, text: ans.text } : m))
+            prev.map((m) => (m.id === sproutMsgId ? { ...m, isTyping: false, text: responseText } : m))
           );
           if (transcriptScrollRef.current) {
             transcriptScrollRef.current.scrollTop = transcriptScrollRef.current.scrollHeight;
           }
-          setFollowUps(ans.followUps);
+          setFollowUps(responseFollowUps);
           if (ans.dance) performDance();
           if (window.innerWidth >= 640) chatInputRef.current?.focus();
         };
 
         activeTypingRef.current = { cancel: completeInstantly, finish: completeInstantly };
 
+        // Chunk by words and whitespace so nothing is ever truncated mid-word
+        const chunks = responseText.match(/\S+|\s+/g) || [responseText];
+        let chunkIdx = 0;
+        let accumulated = "";
+
         talkInterval.current = window.setInterval(() => {
-          charIdx += 2;
-          if (charIdx >= total) {
+          if (chunkIdx >= chunks.length) {
             completeInstantly();
             return;
           }
 
-          const partial = ans.text.slice(0, charIdx);
+          accumulated += chunks[chunkIdx];
+          chunkIdx++;
+          // If the next token is whitespace, append it immediately with the word
+          if (chunkIdx < chunks.length && /^\s+$/.test(chunks[chunkIdx])) {
+            accumulated += chunks[chunkIdx];
+            chunkIdx++;
+          }
+
           setTranscript((prev) =>
-            prev.map((m) => (m.id === sproutMsgId ? { ...m, isTyping: false, text: partial } : m))
+            prev.map((m) => (m.id === sproutMsgId ? { ...m, isTyping: false, text: accumulated } : m))
           );
           if (transcriptScrollRef.current) {
             transcriptScrollRef.current.scrollTop = transcriptScrollRef.current.scrollHeight;
@@ -1218,7 +1322,7 @@ export function Buddy() {
 
       return () => clearTimeout(timer);
     },
-    [chatOpen, gameStep, performDance, prefersReduced]
+    [chatOpen, gameStep, performDance, prefersReduced, visitorName]
   );
 
   const onChatSubmit = (e: FormEvent) => {
@@ -1234,34 +1338,8 @@ export function Buddy() {
     setFollowUps(DEFAULT_FOLLOW_UPS);
     setGameStep(0);
     askedIntents.current.clear();
-  };
-
-  // Render formatted markdown bold and links text
-  const renderFormattedText = (raw: string) => {
-    const tokens = parseTokens(raw);
-    return tokens.map((tok, i) => {
-      if (tok.link) {
-        return (
-          <a
-            key={i}
-            href={tok.link}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {tok.text}
-          </a>
-        );
-      }
-      if (tok.bold) {
-        return (
-          <strong key={i} className="buddy-hl">
-            {tok.text}
-          </strong>
-        );
-      }
-      return <span key={i}>{tok.text}</span>;
-    });
+    lastIntent.current = null;
+    lastResponseText.current = null;
   };
 
   // Head bubble content

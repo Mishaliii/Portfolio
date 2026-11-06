@@ -748,6 +748,52 @@ async function runSmoke() {
     logCheck('CHAT', 'transcript_inside_panel_no_head_bubble', Boolean(transcriptOk),
       chatTranscriptCheck ? `user=${chatTranscriptCheck.userBubbles}, bot=${chatTranscriptCheck.botBubbles}, headVisible=${chatTranscriptCheck.headVisible}` : 'chat check failed');
 
+    // Step 11: Ask "whats my name" and verify response + bubble markup
+    await evalJs(`
+      (() => {
+        const input = document.querySelector('.buddy-chat-input, .buddy-chat-form input, input[placeholder*="Ask" i]');
+        const form = document.querySelector('.buddy-chat-form, form');
+        if (input) {
+          const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+          if (setter) {
+            setter.call(input, "whats my name");
+          } else {
+            input.value = "whats my name";
+          }
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+          if (form) {
+            form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+          }
+        }
+      })()
+    `);
+    await wait(800);
+
+    const nameQueryCheck = await evalJs(`
+      (() => {
+        const panel = document.querySelector('.buddy-chat-panel');
+        if (!panel) return null;
+        const botBubbles = Array.from(panel.querySelectorAll('.buddy-msg-sprout'));
+        const latest = botBubbles[botBubbles.length - 1];
+        latest?.click();
+        const text = latest ? latest.textContent.trim() : '';
+        const allBubbles = Array.from(panel.querySelectorAll('.buddy-msg-sprout, .buddy-msg-user'));
+        const hasRawAsterisks = allBubbles.some(b => b.textContent.includes('**'));
+        const notSprout = !text.startsWith("I'm Sprout") && !text.includes("I'm Sprout, a tiny") && text.includes("I don't know your name yet");
+        return {
+          latestText: text,
+          notSprout,
+          hasRawAsterisks
+        };
+      })()
+    `);
+
+    logCheck('CHAT', 'sprout_my_name_does_not_return_sprout', Boolean(nameQueryCheck?.notSprout),
+      nameQueryCheck ? `response="${nameQueryCheck.latestText}"` : 'name query failed');
+    logCheck('CHAT', 'sprout_no_raw_asterisks_in_bubbles', Boolean(nameQueryCheck && !nameQueryCheck.hasRawAsterisks),
+      nameQueryCheck?.hasRawAsterisks ? 'raw asterisks detected in bubbles' : 'clean markup, no literal **');
+
     // Close chat
     await evalJs(`
       (() => {
