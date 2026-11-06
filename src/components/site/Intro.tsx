@@ -93,11 +93,19 @@ export function Intro({
 
     stage.controls = false;
     Object.assign(stage, { zoom: 1, light: 1, radius: 0.22 });
+    if (typeof window !== "undefined") {
+      (window as any).__loaderStartTime = t0;
+      (window as any).__loaderFrameDeltas = [];
+    }
 
     const finish = () => {
       if (completed) return;
       completed = true;
       alive = false;
+      if (typeof window !== "undefined") {
+        (window as any).__loaderDoneTime = performance.now();
+        (window as any).__loaderTotalMs = performance.now() - t0;
+      }
       stage.controls = true;
       try {
         sessionStorage.setItem(INTRO_KEY, "1");
@@ -146,12 +154,12 @@ export function Intro({
       }
     }
 
-    // Skip button appears after 0.8s on full mode
+    // Skip button appears after 1.2s on full mode
     if (mode === "full" && skipBtnRef.current) {
       gsap.fromTo(
         skipBtnRef.current,
         { opacity: 0, y: 10 },
-        { opacity: 1, y: 0, duration: 0.35, ease: "power2.out", delay: 0.8 }
+        { opacity: 1, y: 0, duration: 0.35, ease: "power2.out", delay: 1.2 }
       );
     }
 
@@ -241,6 +249,10 @@ export function Intro({
     const triggerFlightAndReveal = () => {
       if (flightStarted || !alive) return;
       flightStarted = true;
+      if (typeof window !== "undefined") {
+        (window as any).__loaderRevealTime = performance.now();
+        (window as any).__loaderDurationMs = performance.now() - t0;
+      }
 
       if (overlayRef.current) {
         overlayRef.current.style.pointerEvents = "none";
@@ -259,7 +271,7 @@ export function Intro({
       window.dispatchEvent(new CustomEvent("intro-end"));
       window.dispatchEvent(new CustomEvent("hero-assemble"));
 
-      const flightDuration = mode === "short" ? 0.7 : 1.0;
+      const flightDuration = mode === "short" ? 0.45 : 1.25;
 
       // A. Wordmark FLIP flight to top-left nav logo
       const targetNavBrand = document.querySelector('[data-brand="wordmark"], header a[href="#overview"] .display') as HTMLElement | null;
@@ -300,11 +312,11 @@ export function Intro({
         gsap.fromTo(
           maskCircleRef.current,
           { attr: { r: 0 } },
-          { attr: { r: maxR }, duration: 1.0, ease: "power2.inOut" }
+          { attr: { r: maxR }, duration: mode === "short" ? 0.45 : 1.25, ease: "power2.inOut" }
         );
       }
 
-      // C. Hero scale settle 1.08 -> 1.0 (1.4s power3.out) - skipped on mobile or reduced motion for low GPU load
+      // C. Hero scale settle 1.08 -> 1.0 (1.7s power3.out) - skipped on mobile or reduced motion for low GPU load
       const sceneStageEl = document.querySelector(".scene-stage") as HTMLElement | null;
       const heroSectionEl = document.querySelector("section#overview") as HTMLElement | null;
       const heroTargets = [sceneStageEl, heroSectionEl].filter(Boolean) as HTMLElement[];
@@ -314,11 +326,11 @@ export function Intro({
         gsap.fromTo(
           heroTargets,
           { scale: 1.08, transformOrigin: "center center" },
-          { scale: 1.0, duration: 1.4, ease: "power3.out", clearProps: "transform,willChange" }
+          { scale: 1.0, duration: 1.7, ease: "power3.out", clearProps: "transform,willChange" }
         );
       }
 
-      // D. Headline lines slide up once circle is half open (~0.5s into reveal)
+      // D. Headline lines slide up once circle is half open (~0.6s into reveal)
       gsap.fromTo(
         ".hero-title [data-hline]",
         { yPercent: 100 },
@@ -327,7 +339,7 @@ export function Intro({
           duration: 0.9,
           stagger: 0.1,
           ease: "power3.out",
-          delay: 0.5,
+          delay: 0.62,
           clearProps: "transform",
         }
       );
@@ -360,7 +372,7 @@ export function Intro({
       } else if (mode === "short") {
         targetProgress = Math.min(100, (elapsed / 450) * 100);
       } else {
-        // Enforce 1.6s minimum total time pacing ceiling
+        // Enforce 2.3s minimum total time pacing ceiling
         const timeCappedTarget = Math.min(100, (elapsed / MIN_HOLD_MS) * 100);
         targetProgress = Math.min(rawProgress, timeCappedTarget);
 
@@ -376,11 +388,17 @@ export function Intro({
         }
       }
 
-      // Smooth progress: monotonic increase
+      // Smooth progress: monotonic increase with maximum 8% jump per frame
       if (displayProgress < targetProgress) {
-        const smoothRate = isSkipped || mode === "short" ? 18 : 7;
-        displayProgress += (targetProgress - displayProgress) * Math.min(1, dt * smoothRate);
-        if (targetProgress >= 100 && 100 - displayProgress < 0.3) {
+        const smoothRate = isSkipped ? 25 : mode === "short" ? 20 : 12.0;
+        let step = (targetProgress - displayProgress) * Math.min(1, dt * smoothRate);
+        step = Math.min(step, 8.0);
+        if (typeof window !== "undefined") {
+          const win = window as any;
+          if (step > (win.__loaderMaxStep || 0)) win.__loaderMaxStep = step;
+        }
+        displayProgress += step;
+        if (targetProgress >= 100 && 100 - displayProgress < 0.25 && (elapsed >= MIN_HOLD_MS || mode === "short" || isSkipped)) {
           displayProgress = 100;
         }
       }
@@ -434,12 +452,15 @@ export function Intro({
         }
       }
 
-      // Check for 100% reached -> 0.25s hold
+      // Check for 100% reached -> hold before flight (0.45s full mode, 0.2s short mode)
       if (displayProgress >= 100 && !flightStarted) {
         if (holdStartTime === 0) {
           holdStartTime = now;
-        } else if (now - holdStartTime >= 250) {
-          triggerFlightAndReveal();
+        } else {
+          const holdTarget = mode === "short" ? 180 : 450;
+          if (now - holdStartTime >= holdTarget) {
+            triggerFlightAndReveal();
+          }
         }
       }
 

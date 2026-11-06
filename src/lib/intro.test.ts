@@ -12,29 +12,29 @@ import {
 } from "./intro";
 
 describe("liquid loader screen rules", () => {
-  it("holds for at least 1.6s before finishing even when assets are ready", () => {
+  it("holds for at least 2.3s before finishing even when assets are ready", () => {
     expect(readyToSwitchOn(true, 0)).toBe(false);
     expect(readyToSwitchOn(true, 1000)).toBe(false);
-    expect(readyToSwitchOn(true, 1599)).toBe(false);
+    expect(readyToSwitchOn(true, 2299)).toBe(false);
     expect(readyToSwitchOn(true, MIN_HOLD_MS)).toBe(true);
-    expect(readyToSwitchOn(true, 2000)).toBe(true);
+    expect(readyToSwitchOn(true, 2500)).toBe(true);
   });
 
-  it("does not finish at 1.6s if assets are not ready", () => {
+  it("does not finish at 2.3s if assets are not ready", () => {
     expect(readyToSwitchOn(false, 1000)).toBe(false);
-    expect(readyToSwitchOn(false, 1600)).toBe(false);
-    expect(readyToSwitchOn(false, 2399)).toBe(false);
+    expect(readyToSwitchOn(false, 2300)).toBe(false);
+    expect(readyToSwitchOn(false, 3199)).toBe(false);
   });
 
-  it("switches on at hard ceiling 2.4s even when assets are not ready", () => {
+  it("switches on at hard ceiling 3.2s even when assets are not ready", () => {
     expect(readyToSwitchOn(false, HARD_LIMIT_MS)).toBe(true);
-    expect(readyToSwitchOn(false, 3000)).toBe(true);
+    expect(readyToSwitchOn(false, 3500)).toBe(true);
   });
 
-  it("enforces hard total time limit of 2.4s", () => {
-    expect(isHardTimeout(2399)).toBe(false);
+  it("enforces hard total time limit of 3.2s", () => {
+    expect(isHardTimeout(3199)).toBe(false);
     expect(isHardTimeout(HARD_LIMIT_MS)).toBe(true);
-    expect(isHardTimeout(3000)).toBe(true);
+    expect(isHardTimeout(3500)).toBe(true);
   });
 
   it("weights sum up to exactly 100%", () => {

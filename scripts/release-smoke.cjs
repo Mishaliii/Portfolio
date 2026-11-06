@@ -461,6 +461,21 @@ async function runSmoke() {
     } else {
 
     // =========================================================================
+    // CHECK 0: LOADER PACE (Step 8)
+    // =========================================================================
+    console.log('\n--- Checking LOADER PACE ---');
+    const loaderPace = await evalJs(`
+      (() => {
+        return {
+          durationMs: Math.round(window.__loaderDurationMs || 0),
+          totalMs: Math.round(window.__loaderTotalMs || 0)
+        };
+      })()
+    `);
+    const loaderPaceValid = Boolean(loaderPace && loaderPace.durationMs >= 2300 && loaderPace.durationMs <= 3400);
+    logCheck('LOADER', 'loader_pacing_between_2_3s_and_3_4s', loaderPaceValid, `duration=${loaderPace?.durationMs}ms (2300-3400ms), totalFlight=${loaderPace?.totalMs}ms`);
+
+    // =========================================================================
     // CHECK 1: HERO
     // =========================================================================
     console.log('\n--- Checking HERO ---');

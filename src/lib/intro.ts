@@ -13,10 +13,10 @@
  */
 
 export const INTRO_KEY = "mishal_loader_seen";
-export const MIN_HOLD_MS = 1600;
-export const HARD_LIMIT_MS = 2400;
+export const MIN_HOLD_MS = 2300;
+export const HARD_LIMIT_MS = 3200;
 export const REDUCED_FADE_MS = 300;
-export const ASSET_TIMEOUT_MS = 1600;
+export const ASSET_TIMEOUT_MS = 2300;
 export const INTRO_TIMEOUT_MS = HARD_LIMIT_MS;
 
 export const LOADER_WEIGHTS = {
