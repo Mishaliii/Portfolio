@@ -100,6 +100,7 @@ export function Site() {
   const [revealing, setRevealing] = useState(false);
   const introPlayed = useRef(false);
   const [pal, setPal] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [toast, setToast] = useState("");
   const pageEls = useRef<(HTMLElement | null)[]>([]);
   const wipe = useRef<HTMLDivElement>(null);
@@ -413,6 +414,60 @@ export function Site() {
     return () => { window.removeEventListener("perf-layer-change", toggleLenis); gsap.ticker.remove(raf); l?.destroy(); lenis.current = null; ScrollTrigger.getAll().forEach((s) => s.kill()); void st; };
   }, [paged, booted]);
 
+  useEffect(() => {
+    if (menuOpen) document.documentElement.setAttribute("data-modal-open", "");
+    else document.documentElement.removeAttribute("data-modal-open");
+    return () => document.documentElement.removeAttribute("data-modal-open");
+  }, [menuOpen]);
+
+  // Touch swipe listener for touch devices (phones/tablets) and BendList page-step handover
+  useEffect(() => {
+    if (!booted) return;
+    let touchStartY = 0;
+    let touchStartX = 0;
+    let touchStartTime = 0;
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return;
+      touchStartY = e.touches[0].clientY;
+      touchStartX = e.touches[0].clientX;
+      touchStartTime = performance.now();
+    };
+
+    const onTouchEnd = (e: TouchEvent) => {
+      if (e.changedTouches.length !== 1) return;
+      if (pal || menuOpen || busy.current) return;
+      if (document.querySelector('[role="dialog"]') || document.documentElement.hasAttribute("data-modal-open")) return;
+      const target = e.target as HTMLElement;
+      if (target?.closest?.('.buddy-chat-panel, [role="dialog"], .case-study-drawer, .bend-list-wrapper, button, input, textarea, a')) return;
+
+      const dy = touchStartY - e.changedTouches[0].clientY;
+      const dx = touchStartX - e.changedTouches[0].clientX;
+      const dt = performance.now() - touchStartTime;
+
+      const isSwipe = (Math.abs(dy) >= 60 || (Math.abs(dy) >= 30 && dt > 0 && Math.abs(dy) / dt > 0.4)) &&
+                      Math.abs(dy) > Math.abs(dx) * 1.2;
+      if (isSwipe) {
+        step(dy > 0 ? 1 : -1, dy);
+      }
+    };
+
+    const onPageStep = (e: any) => {
+      if (typeof e.detail?.dir === "number") {
+        step(e.detail.dir);
+      }
+    };
+
+    window.addEventListener("touchstart", onTouchStart, { passive: true });
+    window.addEventListener("touchend", onTouchEnd, { passive: true });
+    window.addEventListener("page-step", onPageStep);
+    return () => {
+      window.removeEventListener("touchstart", onTouchStart);
+      window.removeEventListener("touchend", onTouchEnd);
+      window.removeEventListener("page-step", onPageStep);
+    };
+  }, [booted, step, pal, menuOpen]);
+
   // keyboard + history
   useEffect(() => {
     const k = (e: KeyboardEvent) => {
@@ -423,7 +478,7 @@ export function Site() {
       if (/^[1-6]$/.test(e.key)) go(+e.key - 1);
       else if (paged && (e.key === "ArrowDown" || e.key === "PageDown" || e.key === "j" || (e.key === " " && (e.target as HTMLElement)?.tagName !== "BUTTON"))) { e.preventDefault(); step(1); }
       else if (paged && (e.key === "ArrowUp" || e.key === "PageUp" || e.key === "k")) { e.preventDefault(); step(-1); }
-      else if (e.key === "Escape") setPal(false);
+      else if (e.key === "Escape") { setPal(false); setMenuOpen(false); }
     };
     const pop = () => go(idx(location.hash.slice(1) || "overview"), false);
     window.addEventListener("keydown", k); window.addEventListener("popstate", pop); window.addEventListener("hashchange", pop);
@@ -550,10 +605,95 @@ export function Site() {
           </div>
         </nav>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            aria-label={menuOpen ? "Close menu" : "Open menu"}
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((o) => !o)}
+            className="lg:hidden flex items-center justify-center min-h-[44px] min-w-[44px] px-3.5 py-2 rounded-full border mono text-[11px] tracking-wider uppercase transition-colors"
+            style={{
+              borderColor: inv ? "var(--line-inv)" : "var(--line)",
+              color: inv ? "var(--cream)" : "var(--ink)",
+              background: "transparent",
+            }}
+          >
+            {menuOpen ? "Close" : "Menu"}
+          </button>
           <a className="btn max-sm:!hidden" href={site.cv} download onMouseEnter={(e) => wobble(e.currentTarget)}><WobbleText text={ui.downloadCv} /></a>
-          <button className="btn btn-solid" onClick={() => go(5)} onMouseEnter={(e) => wobble(e.currentTarget)}><WobbleText text={ui.sayHello} /></button>
+          <button className="btn btn-solid" onClick={() => { setMenuOpen(false); go(5); }} onMouseEnter={(e) => wobble(e.currentTarget)}><WobbleText text={ui.sayHello} /></button>
         </div>
       </header>
+
+      {menuOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Navigation Menu"
+          className="fixed inset-0 z-[80] flex flex-col justify-between p-6 sm:p-10 lg:hidden"
+          style={{ background: "rgba(11, 11, 11, 0.97)", backdropFilter: "blur(14px)", color: "var(--cream)" }}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-baseline gap-2">
+              <span data-brand="wordmark" className="display text-[24px] tracking-tight text-[#E8DED0]">{site.wordmark}</span>
+              <span className="mono goldt whitespace-nowrap">{site.tag}</span>
+            </div>
+            <button
+              type="button"
+              aria-label="Close menu"
+              onClick={() => setMenuOpen(false)}
+              className="flex items-center justify-center min-h-[44px] min-w-[44px] px-4 py-2 rounded-full border mono text-[12px] uppercase tracking-wider text-[#E8DED0] border-[#E8DED0]/30 hover:border-[#E8DED0]"
+            >
+              Close
+            </button>
+          </div>
+
+          <nav aria-label="Mobile pages navigation" className="flex flex-col gap-3 py-6">
+            {pages.map((p, i) => (
+              <a
+                key={p.id}
+                href={`#${p.id}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  setMenuOpen(false);
+                  go(i);
+                }}
+                className="flex items-center justify-between min-h-[44px] py-2 border-b border-[#E8DED0]/10 text-left transition-colors"
+                style={{
+                  color: cur === i ? "var(--cream)" : "rgba(232, 222, 208, 0.55)",
+                }}
+              >
+                <span className="display text-[clamp(28px,7vw,44px)] tracking-tight">
+                  {p.label}
+                </span>
+                <span className="mono text-[12px] tracking-widest text-[#C5A15B]">
+                  {p.num}
+                </span>
+              </a>
+            ))}
+          </nav>
+
+          <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-[#E8DED0]/15">
+            <a
+              href={site.cv}
+              download
+              onClick={() => setMenuOpen(false)}
+              className="flex items-center justify-center min-h-[44px] px-6 py-3 rounded-full border border-[#E8DED0]/30 mono text-[12px] uppercase tracking-wider text-[#E8DED0] hover:bg-[#E8DED0] hover:text-[#0B0B0B] transition-colors"
+            >
+              {ui.downloadCv}
+            </a>
+            <button
+              type="button"
+              onClick={() => {
+                setMenuOpen(false);
+                go(5);
+              }}
+              className="flex items-center justify-center min-h-[44px] px-6 py-3 rounded-full bg-[#E8DED0] text-[#0B0B0B] mono text-[12px] uppercase tracking-wider font-semibold hover:opacity-90 transition-opacity"
+            >
+              {ui.sayHello}
+            </button>
+          </div>
+        </div>
+      )}
 
       <main inert={!booted}>
         {pages.map((p, i) => (

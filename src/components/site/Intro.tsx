@@ -304,12 +304,13 @@ export function Intro({
         );
       }
 
-      // C. Hero scale settle 1.08 -> 1.0 (1.4s power3.out)
+      // C. Hero scale settle 1.08 -> 1.0 (1.4s power3.out) - skipped on mobile or reduced motion for low GPU load
       const sceneStageEl = document.querySelector(".scene-stage") as HTMLElement | null;
       const heroSectionEl = document.querySelector("section#overview") as HTMLElement | null;
       const heroTargets = [sceneStageEl, heroSectionEl].filter(Boolean) as HTMLElement[];
+      const isMobileOrSlow = (typeof window !== "undefined" && window.innerWidth <= 900) || reduced();
 
-      if (heroTargets.length > 0) {
+      if (heroTargets.length > 0 && !isMobileOrSlow) {
         gsap.fromTo(
           heroTargets,
           { scale: 1.08, transformOrigin: "center center" },

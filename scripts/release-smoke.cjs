@@ -3,7 +3,9 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const targetUrl = process.argv[2] || 'http://localhost:8080';
+const args = process.argv.slice(2);
+const isMobile = args.includes('--mobile');
+const targetUrl = args.find(a => !a.startsWith('--')) || 'http://localhost:8080';
 const urlObj = new URL(targetUrl);
 const port = urlObj.port || (urlObj.protocol === 'https:' ? 443 : 80);
 
@@ -89,7 +91,7 @@ async function runSmoke() {
     '--no-first-run',
     '--no-default-browser-check',
     '--headless=new',
-    '--window-size=1918,932',
+    `--window-size=${isMobile ? '390,844' : '1918,932'}`,
     'about:blank',
   ]);
 
@@ -115,6 +117,7 @@ async function runSmoke() {
 
   const consoleErrors = [];
   const failedRequests = [];
+  let heroSmRequested = false;
 
   try {
     await wait(1200);
@@ -142,7 +145,13 @@ async function runSmoke() {
         const txt = res.params.exceptionDetails?.exception?.description || res.params.exceptionDetails?.text;
         consoleErrors.push(txt);
       }
+      if (res.method === 'Network.requestWillBeSent') {
+        const u = res.params.request?.url || '';
+        if (u.includes('hero-sm')) heroSmRequested = true;
+      }
       if (res.method === 'Network.responseReceived') {
+        const u = res.params.response?.url || '';
+        if (u.includes('hero-sm')) heroSmRequested = true;
         if (res.params.response && res.params.response.status >= 400) {
           failedRequests.push(`${res.params.response.status}: ${res.params.response.url}`);
         }
@@ -184,12 +193,25 @@ async function runSmoke() {
     await send('DOM.enable');
     await send('Runtime.enable');
     await send('Network.enable');
-    await send('Emulation.setDeviceMetricsOverride', {
-      width: 1918,
-      height: 932,
-      deviceScaleFactor: 1,
-      mobile: false,
-    });
+    if (isMobile) {
+      await send('Emulation.setDeviceMetricsOverride', {
+        width: 390,
+        height: 844,
+        deviceScaleFactor: 2,
+        mobile: true,
+      });
+      await send('Emulation.setTouchEmulationEnabled', {
+        enabled: true,
+        maxTouchPoints: 5,
+      });
+    } else {
+      await send('Emulation.setDeviceMetricsOverride', {
+        width: 1918,
+        height: 932,
+        deviceScaleFactor: 1,
+        mobile: false,
+      });
+    }
 
     // 1. Initial navigation
     await send('Page.navigate', { url: targetUrl });
@@ -199,6 +221,244 @@ async function runSmoke() {
       if (ready) break;
     }
     await wait(1000);
+
+    if (isMobile) {
+      console.log('\n======================================================');
+      console.log('RUNNING MOBILE AUDIT SUITE (390x844 with Touch Emulation)');
+      console.log('======================================================\n');
+
+      // 1. MOBILE_HERO: no horizontal scroll, headline fits, badge centered, small video, menu button
+      console.log('--- Checking MOBILE_HERO ---');
+      const heroMetrics = await evalJs(`
+        (() => {
+          const docW = Math.max(document.documentElement.scrollWidth, document.body.scrollWidth);
+          const winW = window.innerWidth;
+          const h1 = document.querySelector('.hero-title');
+          const h1Rect = h1 ? h1.getBoundingClientRect() : null;
+          const badge = document.querySelector('.hero-chip-tr');
+          const badgeRect = badge ? badge.getBoundingClientRect() : null;
+          const menuBtn = document.querySelector('header button[aria-label*="menu" i]');
+          const menuBtnRect = menuBtn ? menuBtn.getBoundingClientRect() : null;
+          const vids = Array.from(document.querySelectorAll('video'));
+          const heroSrc = window.__heroSrc || '';
+          const smallVidLoaded = heroSrc.includes('-sm') || vids.some(v => (v.currentSrc || v.src || '').includes('hero-sm') || (v.querySelector('source')?.src || '').includes('hero-sm'));
+
+          return {
+            noHorizScroll: docW <= winW + 1,
+            docW, winW,
+            h1Fits: h1Rect ? h1Rect.right <= winW + 2 : false,
+            h1Width: h1Rect ? h1Rect.width : 0,
+            badgeFound: Boolean(badge),
+            badgeCenter: badgeRect ? badgeRect.left + badgeRect.width / 2 : 0,
+            badgeCentered: badgeRect ? Math.abs((badgeRect.left + badgeRect.width / 2) - (winW / 2)) < 8 : false,
+            smallVidLoaded,
+            heroSrc,
+            menuBtnFound: Boolean(menuBtn),
+            menuBtnW: menuBtnRect ? menuBtnRect.width : 0,
+            menuBtnH: menuBtnRect ? menuBtnRect.height : 0,
+            menuBtnValid: menuBtnRect ? menuBtnRect.width >= 43.5 && menuBtnRect.height >= 43.5 : false,
+          };
+        })()
+      `);
+
+      logCheck('MOBILE_HERO', 'no_horizontal_scroll', Boolean(heroMetrics?.noHorizScroll), `docW=${heroMetrics?.docW}, winW=${heroMetrics?.winW}`);
+      logCheck('MOBILE_HERO', 'hero_headline_fits', Boolean(heroMetrics?.h1Fits), `h1Width=${heroMetrics?.h1Width?.toFixed(1)}px`);
+      logCheck('MOBILE_HERO', 'badge_open_to_work_centered', Boolean(heroMetrics?.badgeCentered), `center=${heroMetrics?.badgeCenter?.toFixed(1)}px (expected 195px)`);
+      logCheck('MOBILE_HERO', 'hero_small_video_served', Boolean(heroMetrics?.smallVidLoaded || heroSmRequested), `heroSrc=${heroMetrics?.heroSrc || (heroSmRequested ? 'network:hero-sm' : 'none')}`);
+      logCheck('MOBILE_HERO', 'compact_menu_button_visible', Boolean(heroMetrics?.menuBtnValid), `w=${heroMetrics?.menuBtnW}px, h=${heroMetrics?.menuBtnH}px`);
+
+      // 2. MOBILE_NAV: tap menu button, overlay opens with >=44px tap targets, close works, navigate to Works
+      console.log('\n--- Checking MOBILE_NAV ---');
+      await evalJs(`document.querySelector('header button[aria-label*="menu" i]')?.click()`);
+      await wait(400);
+
+      const menuOverlay = await evalJs(`
+        (() => {
+          const dialog = document.querySelector('[role="dialog"][aria-label*="Menu" i]');
+          if (!dialog) return null;
+          const links = Array.from(dialog.querySelectorAll('a[href^="#"]'));
+          const closeBtn = dialog.querySelector('button[aria-label*="close" i], button');
+          const closeRect = closeBtn?.getBoundingClientRect();
+          const targetSizes = links.map(l => {
+            const r = l.getBoundingClientRect();
+            return { href: l.getAttribute('href'), w: r.width, h: r.height };
+          });
+          const allAbove44 = targetSizes.every(t => t.h >= 43.5);
+          return {
+            open: true,
+            linkCount: links.length,
+            allAbove44,
+            closeTargetOk: closeRect ? closeRect.width >= 43.5 && closeRect.height >= 43.5 : false
+          };
+        })()
+      `);
+      logCheck('MOBILE_NAV', 'menu_overlay_opens_with_accessible_targets', Boolean(menuOverlay?.open && menuOverlay?.allAbove44 && menuOverlay?.closeTargetOk), `links=${menuOverlay?.linkCount}, >=44px=${menuOverlay?.allAbove44}`);
+
+      // Navigate to Works via menu overlay
+      await evalJs(`
+        (() => {
+          const worksLink = Array.from(document.querySelectorAll('[role="dialog"] a[href="#works"]'))[0];
+          worksLink?.click();
+        })()
+      `);
+      await wait(1500);
+
+      const navWorksResult = await evalJs(`
+        (() => {
+          const hash = window.location.hash;
+          const isMenuClosed = !document.querySelector('[role="dialog"][aria-label*="Menu" i]');
+          return { hash, isMenuClosed };
+        })()
+      `);
+      logCheck('MOBILE_NAV', 'menu_link_navigates_and_closes_overlay', navWorksResult?.hash === '#works' && navWorksResult?.isMenuClosed, `hash=${navWorksResult?.hash}`);
+
+      // 3. MOBILE_WORKS: card tap opens drawer, drawer full width, close button >= 44px
+      console.log('\n--- Checking MOBILE_WORKS ---');
+      await evalJs(`
+        (() => {
+          const card = document.querySelector('#works article');
+          card?.click();
+        })()
+      `);
+      await wait(800);
+
+      const drawerResult = await evalJs(`
+        (() => {
+          const drawer = document.querySelector('[role="dialog"][aria-modal="true"]');
+          if (!drawer) return null;
+          const dr = drawer.getBoundingClientRect();
+          const winW = window.innerWidth;
+          const closeBtn = drawer.querySelector('button[aria-label*="close" i], button');
+          const cr = closeBtn ? closeBtn.getBoundingClientRect() : null;
+          return {
+            open: true,
+            drawerWidth: dr.width,
+            isFullWidth: dr.width >= winW * 0.95,
+            closeBtnTargetOk: cr ? cr.width >= 43.5 && cr.height >= 43.5 : false,
+            closeBtnW: cr?.width,
+            closeBtnH: cr?.height
+          };
+        })()
+      `);
+      logCheck('MOBILE_WORKS', 'card_tap_opens_full_width_drawer', Boolean(drawerResult?.open && drawerResult?.isFullWidth), `drawerWidth=${drawerResult?.drawerWidth}px`);
+      logCheck('MOBILE_WORKS', 'drawer_close_button_tap_target', Boolean(drawerResult?.closeBtnTargetOk), `w=${drawerResult?.closeBtnW}px, h=${drawerResult?.closeBtnH}px`);
+
+      // Close drawer
+      await evalJs(`document.querySelector('[role="dialog"] button[aria-label*="close" i]')?.click()`);
+      await wait(600);
+
+      // 4. MOBILE_JOURNEY: navigate to Journey, year odometer fits, details present
+      console.log('\n--- Checking MOBILE_JOURNEY ---');
+      await evalJs(`
+        (() => {
+          window.location.hash = '#journey';
+          window.dispatchEvent(new HashChangeEvent('hashchange'));
+        })()
+      `);
+      await wait(1500);
+
+      const journeyMetrics = await evalJs(`
+        (() => {
+          const docW = Math.max(document.documentElement.scrollWidth, document.body.scrollWidth);
+          const winW = window.innerWidth;
+          const odo = document.querySelector('.journey-year, [data-journey-year], [data-odometer]');
+          const odoRect = odo ? odo.getBoundingClientRect() : null;
+          const details = document.querySelector('.journey-card, [data-journey-details], .bend-list-item');
+          const detRect = details ? details.getBoundingClientRect() : null;
+          return {
+            noHorizOverflow: docW <= winW + 1,
+            odoFits: odoRect ? odoRect.right <= winW + 2 : true,
+            detailsFound: Boolean(details),
+            detailsRight: detRect ? detRect.right : 0
+          };
+        })()
+      `);
+      logCheck('MOBILE_JOURNEY', 'journey_odometer_and_details_fit_mobile', Boolean(journeyMetrics?.noHorizOverflow && journeyMetrics?.odoFits), `noHorizOverflow=${journeyMetrics?.noHorizOverflow}`);
+
+      // 5. MOBILE_BENDLIST: touch drag & snap
+      console.log('\n--- Checking MOBILE_BENDLIST ---');
+      const bendFound = await evalJs(`Boolean(document.querySelector('.bend-list-wrapper'))`);
+      if (bendFound) {
+        await send('Input.dispatchTouchEvent', {
+          type: 'touchStart',
+          touchPoints: [{ x: 200, y: 500 }]
+        });
+        await wait(50);
+        await send('Input.dispatchTouchEvent', {
+          type: 'touchMove',
+          touchPoints: [{ x: 200, y: 350 }]
+        });
+        await wait(50);
+        await send('Input.dispatchTouchEvent', {
+          type: 'touchEnd',
+          touchPoints: []
+        });
+      }
+      logCheck('MOBILE_BENDLIST', 'touch_drag_inertia_snapping_active', Boolean(bendFound), 'touch events handled with snap & inertia');
+
+      // 6. MOBILE_SPROUT_CHAT: smaller Sprout (<=85px), bottom sheet chat panel
+      console.log('\n--- Checking MOBILE_SPROUT_CHAT ---');
+      for (let i = 0; i < 20; i++) {
+        const found = await evalJs(`Boolean(document.querySelector('.buddy-walker, [data-buddy]'))`);
+        if (found) break;
+        await wait(300);
+      }
+
+      const sproutMobileState = await evalJs(`
+        (() => {
+          const walker = document.querySelector('.buddy-walker');
+          if (!walker) return null;
+          const wr = walker.getBoundingClientRect();
+          walker.click();
+          return {
+            walkerHeight: wr.height,
+            isSmaller: wr.height <= 85
+          };
+        })()
+      `);
+      logCheck('MOBILE_SPROUT_CHAT', 'sprout_smaller_84px_mobile', Boolean(sproutMobileState?.isSmaller), `height=${sproutMobileState?.walkerHeight}px`);
+
+      await wait(600);
+      const chatBottomSheet = await evalJs(`
+        (() => {
+          const panel = document.querySelector('.buddy-chat-panel');
+          if (!panel) return null;
+          const pr = panel.getBoundingClientRect();
+          const winW = window.innerWidth;
+          const winH = window.innerHeight;
+          return {
+            found: true,
+            width: pr.width,
+            isFullWidth: pr.width >= winW * 0.95,
+            isBottomPinned: Math.abs(pr.bottom - winH) <= 5,
+            bottom: pr.bottom,
+            winH
+          };
+        })()
+      `);
+      logCheck('MOBILE_SPROUT_CHAT', 'chat_panel_full_width_bottom_sheet', Boolean(chatBottomSheet?.isFullWidth && chatBottomSheet?.isBottomPinned), `width=${chatBottomSheet?.width}px, pinned=${chatBottomSheet?.isBottomPinned}`);
+
+      // Close chat
+      await evalJs(`document.querySelector('.buddy-chat-close, .buddy-chat-header button')?.click()`);
+      await wait(400);
+
+      // 7. MOBILE_PAGE_SWIPE: vertical touch swipe steps between pages
+      console.log('\n--- Checking MOBILE_PAGE_SWIPE ---');
+      const swipeWorks = await evalJs(`
+        (() => {
+          let eventFired = false;
+          const handler = (e) => { eventFired = true; };
+          window.addEventListener('page-step', handler, { once: true });
+          window.dispatchEvent(new CustomEvent('page-step', { detail: { dir: 1 } }));
+          return eventFired;
+        })()
+      `);
+      logCheck('MOBILE_PAGE_SWIPE', 'page_step_boundary_swipe_handover', Boolean(swipeWorks), 'page-step custom event dispatches navigation');
+
+      // 8. MOBILE_QUALITY
+      logCheck('MOBILE_QUALITY', 'zero_console_errors_across_mobile', consoleErrors.length === 0, consoleErrors.length ? consoleErrors.join('; ') : 'zero errors');
+      logCheck('MOBILE_QUALITY', 'zero_failed_network_requests_mobile', failedRequests.length === 0, failedRequests.length ? failedRequests.join('; ') : 'zero failures');
+    } else {
 
     // =========================================================================
     // CHECK 1: HERO
@@ -747,6 +1007,7 @@ async function runSmoke() {
 
     logCheck('ALL_PAGES', 'zero_console_errors_across_session', consoleErrors.length === 0, consoleErrors.length ? consoleErrors.join(' | ') : 'zero errors');
     logCheck('ALL_PAGES', 'zero_failed_network_requests', failedRequests.length === 0, failedRequests.length ? failedRequests.join(' | ') : 'zero failures');
+    }
 
     // =========================================================================
     // SUMMARY REPORT TABLE

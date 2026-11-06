@@ -465,52 +465,107 @@ export const BendList = forwardRef<BendListHandle, BendListProps>(function BendL
     };
   }, [handleWheel]);
 
-  // Touch / pointer drag: 40px per item
+  // Touch / pointer drag with inertia, snapping and page handover
   const pointerState = useRef<{
     isDragging: boolean;
     startY: number;
     startProgress: number;
     pointerId: number;
+    lastY: number;
+    lastTime: number;
+    velocity: number;
   }>({
     isDragging: false,
     startY: 0,
     startProgress: 0,
     pointerId: -1,
+    lastY: 0,
+    lastTime: 0,
+    velocity: 0,
   });
 
   const handlePointerDown = (e: ReactPointerEvent) => {
-    if (reduced() || e.button !== 0) return;
+    if (reduced() || (e.pointerType === "mouse" && e.button !== 0)) return;
     dismissHint();
     pointerState.current = {
       isDragging: true,
       startY: e.clientY,
       startProgress: stateRef.current.p,
       pointerId: e.pointerId,
+      lastY: e.clientY,
+      lastTime: performance.now(),
+      velocity: 0,
     };
-    containerRef.current?.setPointerCapture(e.pointerId);
+    if (tweenRef.current) tweenRef.current.kill();
+    try {
+      containerRef.current?.setPointerCapture(e.pointerId);
+    } catch {}
   };
 
   const handlePointerMove = (e: ReactPointerEvent) => {
     if (!pointerState.current.isDragging) return;
     if (e.pointerId !== pointerState.current.pointerId) return;
 
-    const dy = e.clientY - pointerState.current.startY;
-    const progressDiff = -dy / 40;
-    const nextP = Math.max(
-      0,
-      Math.min(items.length - 1, pointerState.current.startProgress + progressDiff)
-    );
+    const now = performance.now();
+    const dt = now - pointerState.current.lastTime;
+    if (dt > 8) {
+      pointerState.current.velocity = (pointerState.current.lastY - e.clientY) / dt;
+      pointerState.current.lastY = e.clientY;
+      pointerState.current.lastTime = now;
+    }
+
+    const dy = pointerState.current.startY - e.clientY;
+    const progressDiff = dy / 110;
+    let nextP = pointerState.current.startProgress + progressDiff;
+
+    // Resistance beyond boundaries
+    if (nextP < 0) {
+      nextP = nextP * 0.35;
+    } else if (nextP > items.length - 1) {
+      const max = items.length - 1;
+      nextP = max + (nextP - max) * 0.35;
+    }
+
     stateRef.current.p = nextP;
     renderTransforms(nextP);
+
+    const cur = Math.max(0, Math.min(items.length - 1, Math.round(nextP)));
+    if (cur !== focusedIndexRef.current) {
+      focusedIndexRef.current = cur;
+      setActiveIndex(cur);
+      onActive?.(cur);
+    }
   };
 
   const handlePointerUp = (e: ReactPointerEvent) => {
     if (!pointerState.current.isDragging) return;
     if (e.pointerId !== pointerState.current.pointerId) return;
     pointerState.current.isDragging = false;
-    containerRef.current?.releasePointerCapture(e.pointerId);
+    try {
+      containerRef.current?.releasePointerCapture(e.pointerId);
+    } catch {}
 
-    const targetIdx = Math.round(stateRef.current.p);
+    const dy = pointerState.current.startY - e.clientY;
+    const vel = pointerState.current.velocity;
+
+    // Handover to page navigation at boundary swipes (> 60px or flick)
+    if (pointerState.current.startProgress <= 0.2 && (dy < -60 || vel < -0.4)) {
+      window.dispatchEvent(new CustomEvent("page-step", { detail: { dir: -1 } }));
+      goTo(0);
+      return;
+    }
+    if (pointerState.current.startProgress >= items.length - 1.2 && (dy > 60 || vel > 0.4)) {
+      window.dispatchEvent(new CustomEvent("page-step", { detail: { dir: 1 } }));
+      goTo(items.length - 1);
+      return;
+    }
+
+    // Inertia from release velocity
+    let target = stateRef.current.p;
+    if (Math.abs(vel) > 0.15) {
+      target += (vel * 120) / 110;
+    }
+    const targetIdx = Math.max(0, Math.min(items.length - 1, Math.round(target)));
     goTo(targetIdx);
   };
 

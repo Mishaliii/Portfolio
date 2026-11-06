@@ -119,7 +119,7 @@ export function YearOdometer({ year, active }: { year: string; active: boolean }
     <div
       className="journey-year-odometer display font-bold text-[#0B0B0B] tracking-tight inline-flex items-center justify-center select-none"
       style={{
-        fontSize: "clamp(88px, 22vw, 320px)",
+        fontSize: "clamp(52px, min(17vw, 15vh), 280px)",
         lineHeight: 1,
         maskImage:
           "linear-gradient(to bottom, transparent 0%, black 14%, black 86%, transparent 100%)",
@@ -309,7 +309,7 @@ export function PageJourney({
         </div>
 
         {/* Right Half: BendList of Stops */}
-        <div className="w-full h-[min(480px,65vh)] flex items-center justify-center min-[900px]:justify-start min-[900px]:pl-6 lg:min-[900px]:pl-10">
+        <div className="w-full h-[min(360px,50vh)] min-[900px]:h-[min(480px,65vh)] flex items-center justify-center min-[900px]:justify-start min-[900px]:pl-6 lg:min-[900px]:pl-10">
           <BendList
             ref={bendListRef}
             pageId="journey"

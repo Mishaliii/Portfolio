@@ -457,7 +457,7 @@ export function CaseStudy({
           </div>
           <button
             ref={closeBtn} type="button" onClick={close} aria-label="Close case study"
-            className="font-mono text-[13px] uppercase tracking-wider text-[#0B0B0B] hover:text-[#1F5A3A] transition-colors cursor-pointer"
+            className="min-h-[44px] min-w-[44px] px-3.5 py-2 flex items-center justify-center rounded-full border border-[#0B0B0B]/20 font-mono text-[13px] uppercase tracking-wider text-[#0B0B0B] hover:text-[#1F5A3A] hover:border-[#1F5A3A] transition-colors cursor-pointer"
           >
             {c.close}
           </button>

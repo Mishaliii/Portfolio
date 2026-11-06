@@ -13,4 +13,4 @@ export function sceneResolution(width: number, height: number, pixelRatio: numbe
   const scale = Math.min(pixelRatio || 1, 1, 1600 / width);
   return { width: Math.round(width * scale), height: Math.round(height * scale) };
 }
-export const useSmallVideo = (width: number) => width <= 1366;
+export const useSmallVideo = (width: number) => width <= 900;

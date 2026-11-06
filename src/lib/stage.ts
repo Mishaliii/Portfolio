@@ -43,10 +43,11 @@ export function toScreen(p: { x: number; y: number }, w: number, h: number) {
 
 export const videoSrc = () => {
   const v = document.createElement("video");
+  const small = useSmallVideo(window.innerWidth);
   // H.264 is hardware decoded on a wider range of laptops than VP9.
-  if (v.canPlayType('video/mp4; codecs="avc1.64001f"')) return useSmallVideo(window.innerWidth) ? "/hero/hero-sm.mp4" : "/hero/hero.mp4";
-  if (v.canPlayType('video/webm; codecs="vp9"') || v.canPlayType("video/webm; codecs=vp9")) return useSmallVideo(window.innerWidth) ? "/hero/hero-sm.webm" : "/hero/hero.webm";
-  return "/hero/hero.mp4";
+  if (v.canPlayType('video/mp4; codecs="avc1.64001f"')) return small ? "/hero/hero-sm.mp4" : "/hero/hero.mp4";
+  if (v.canPlayType('video/webm; codecs="vp9"') || v.canPlayType("video/webm; codecs=vp9")) return small ? "/hero/hero-sm.webm" : "/hero/hero.webm";
+  return small ? "/hero/hero-sm.mp4" : "/hero/hero.mp4";
 };
 
 /* ---------- boot: weighted real progress ---------- */

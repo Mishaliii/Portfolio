@@ -35,11 +35,22 @@ export function PageExpertise({ goProject, active = true }: { goProject: (id: st
     size(); const ro = new ResizeObserver(size); ro.observe(b);
 
     const input = () => { lastInput = performance.now(); touched = true; };
-    const nearest = () => { let best = -1, distance = 24; for(let i=0;i<N;i++){ const d=Math.hypot(px[i]-qx,py[i]-qy); if(d<distance){best=i;distance=d;} } return best; };
+    const nearest = (maxDist = 24) => { let best = -1, distance = maxDist; for(let i=0;i<N;i++){ const d=Math.hypot(px[i]-qx,py[i]-qy); if(d<distance){best=i;distance=d;} } return best; };
     const update = (i: number) => { if(focus.current!==i){focus.current=i;setSelected(i);} };
-    const move = (e: PointerEvent) => { if(!onPage(b))return; const r=b.getBoundingClientRect(); qx=e.clientX-r.left; qy=e.clientY-r.top; input(); if(pinned.current<0)update(nearest()); };
+    const move = (e: PointerEvent) => { if(!onPage(b))return; const r=b.getBoundingClientRect(); qx=e.clientX-r.left; qy=e.clientY-r.top; input(); if(pinned.current<0 && e.pointerType !== "touch")update(nearest(24)); };
     const leave = () => { qx=qy=-1000; if(pinned.current<0)update(-1); };
-    const click = (e: PointerEvent) => { move(e); const i=nearest(); pinned.current=pinned.current===i?-1:i; update(pinned.current); };
+    const click = (e: PointerEvent) => {
+      const r=b.getBoundingClientRect(); qx=e.clientX-r.left; qy=e.clientY-r.top; input();
+      const hitRadius = e.pointerType === "touch" ? 44 : 26;
+      const i=nearest(hitRadius);
+      if (i >= 0) {
+        pinned.current = pinned.current === i ? -1 : i;
+        update(pinned.current);
+      } else {
+        pinned.current = -1;
+        update(-1);
+      }
+    };
     const key = (e: KeyboardEvent) => { input(); if(e.key==="Escape"){pinned.current=-1;update(-1);} };
 
     b.addEventListener("pointermove",move);b.addEventListener("pointerleave",leave);b.addEventListener("pointerup",click);
@@ -173,6 +184,10 @@ export function PageExpertise({ goProject, active = true }: { goProject: (id: st
                 data-dim={activeCluster >= 0 && activeCluster !== i ? "" : undefined}
                 onPointerEnter={() => { category.current = i; }}
                 onPointerLeave={() => { category.current = -1; }}
+                onClick={() => {
+                  category.current = category.current === i ? -1 : i;
+                  setActiveCluster(category.current);
+                }}
               >
                 <div className="flex items-baseline justify-between gap-2">
                   <span className="mono flex items-center gap-2">

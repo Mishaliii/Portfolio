@@ -172,8 +172,13 @@ export function WorkCardShell({
 
   return (
     <article
-      className="flex flex-col max-[899px]:gap-6 min-[900px]:grid min-[900px]:grid-cols-[5fr_7fr] min-[900px]:gap-[56px] items-center px-4 sm:px-8 lg:px-[64px] w-full max-w-[1440px] mx-auto min-h-0"
+      className="flex flex-col max-[899px]:gap-6 min-[900px]:grid min-[900px]:grid-cols-[5fr_7fr] min-[900px]:gap-[56px] items-center px-4 sm:px-8 lg:px-[64px] w-full max-w-[1440px] mx-auto min-h-0 max-[899px]:cursor-pointer"
       aria-label={ariaLabel}
+      onClick={(e) => {
+        const target = e.target as HTMLElement;
+        if (target?.closest?.('button, a, input, select, textarea, video, [role="button"]')) return;
+        onOpenDetails();
+      }}
     >
       {/* Left text column */}
       <div className="min-w-0 flex flex-col justify-center max-[899px]:order-2">
