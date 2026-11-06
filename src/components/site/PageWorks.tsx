@@ -234,7 +234,7 @@ function DDSSCard({ p, active }: { p: Project; active: boolean }) {
   const [cs, setCs] = useState(false);
   const closeCs = useCallback(() => setCs(false), []);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [showVideo, setShowVideo] = useState(true);
+  const [showVideo, setShowVideo] = useState(false);
   const [videoFailed, setVideoFailed] = useState(false);
   const [selectedShot, setSelectedShot] = useState<string | null>(null);
   const [isZoomed, setIsZoomed] = useState(false);
@@ -355,14 +355,14 @@ function DDSSCard({ p, active }: { p: Project; active: boolean }) {
         className="relative aspect-[16/10] w-full overflow-hidden rounded-[12px] border border-[#0B0B0B]/20 bg-[#0B0B0B] shadow-[0_8px_30px_rgb(0,0,0,0.06)]"
         data-sig
       >
-        {showVideo && !videoFailed ? (
+        {active && showVideo && !videoFailed ? (
           <video
             ref={videoRef}
             src="/media/ddss-demo.mp4"
             muted
             loop
             playsInline
-            preload="metadata"
+            preload="none"
             poster={posterSrc}
             onError={() => setVideoFailed(true)}
             className="h-full w-full object-cover"

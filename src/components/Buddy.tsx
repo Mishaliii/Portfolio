@@ -1412,6 +1412,7 @@ export function Buddy() {
 
         {/* Head Speech Bubble */}
         <div
+          aria-hidden="true"
           className={`buddy-bubble-wrap ${flipLeft ? "is-flipped-left" : ""}`}
           style={{
             transform: flipLeft ? "none" : `translateX(calc(-50% + ${bubbleOffset.shiftX}px))`,

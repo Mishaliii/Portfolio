@@ -112,6 +112,7 @@ export function Greeting({ lines }: { lines: GreetingItem[] }) {
   const cur = lines[i % lines.length];
   return (
     <span
+      role="status"
       className="greeting-container mono inline-flex items-center overflow-hidden"
       aria-label={lines.map((l) => l.text).join(" / ")}
     >
