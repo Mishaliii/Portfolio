@@ -308,13 +308,13 @@ export function Site() {
     setRevealing(true);
     const first = pageEls.current[0];
     if (first) first.classList.add("is-active");
+    window.dispatchEvent(new CustomEvent("intro-end"));
+    window.dispatchEvent(new CustomEvent("hero-assemble"));
   }, []);
   const finishIntro = useCallback(() => {
     (window as any).__siteBooted = true;
     setBooted(true); setShowIntro(false);
     window.dispatchEvent(new CustomEvent("site-loader-done"));
-    window.dispatchEvent(new CustomEvent("intro-end"));
-    window.dispatchEvent(new CustomEvent("hero-assemble"));
     const first = pageEls.current[curRef.current];
     first?.focus({ preventScroll: true });
 
@@ -533,7 +533,7 @@ export function Site() {
 
       <header inert={!booted} className={`fixed inset-x-0 top-0 z-50 flex items-center justify-between gap-4 px-[var(--pad)] py-3 transition-colors duration-500 ${inv ? "inv" : ""}`} style={{ background: heroTheme ? "rgba(11,11,11,.72)" : inv ? "var(--ink)" : "var(--cream)" }}>
         <a href="#overview" onClick={(e) => { e.preventDefault(); go(0); }} className="flex items-baseline gap-2">
-          <span className="display text-[24px] tracking-tight">{site.wordmark}</span>
+          <span data-brand="wordmark" className="display text-[24px] tracking-tight">{site.wordmark}</span>
           <span className="mono goldt whitespace-nowrap">{site.tag}</span>
         </a>
         <nav aria-label="Pages" className="hidden lg:block">

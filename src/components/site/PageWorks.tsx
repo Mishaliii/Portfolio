@@ -1350,7 +1350,7 @@ export function PageWorks({
               contain: paged ? "paint layout" : undefined,
               borderTop: paged ? "1px solid rgba(11, 11, 11, 0.12)" : undefined,
               boxShadow: paged ? "0 -2px 10px rgba(11, 11, 11, 0.05)" : undefined,
-              visibility: paged && i < sub - 1 ? "hidden" : "visible",
+              visibility: !active ? "hidden" : (paged && i < sub - 1 ? "hidden" : undefined),
             }}
             aria-hidden={paged && i !== sub}
             inert={paged && i !== sub ? true : undefined}
