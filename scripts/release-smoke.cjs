@@ -1299,6 +1299,77 @@ async function runSmoke() {
     logCheck('WORKS', 'drawer_images_contained_no_overflow', drawerResults.noImageOverflow, `noImageOverflow=${drawerResults.noImageOverflow}`);
     logCheck('WORKS', 'drawer_no_empty_sections', drawerResults.noEmptySections, `noEmptySections=${drawerResults.noEmptySections}`);
 
+    // Check Step 12: Works backward entry resets to card 0 with stack
+    console.log('\n--- Checking WORKS BACKWARD ENTRY (Step 12) ---');
+    await evalJs(`
+      (() => {
+        const a = Array.from(document.querySelectorAll('a[data-pill]')).find(x => x.getAttribute('href') === '#connect');
+        a?.click();
+      })()
+    `);
+    await wait(1800);
+
+    await evalJs(`
+      (() => {
+        const a = Array.from(document.querySelectorAll('a[data-pill]')).find(x => x.getAttribute('href') === '#works');
+        a?.click();
+      })()
+    `);
+    await wait(1800);
+
+    const bwdFromConnect = await evalJs(`
+      (() => {
+        const cards = Array.from(document.querySelectorAll('#works [data-card]'));
+        const activeIdx = cards.findIndex(c => c.getAttribute('data-active') === 'true');
+        const activeTitle = cards[activeIdx]?.querySelector('h3')?.textContent?.trim() || '';
+        const dots = Array.from(document.querySelectorAll('#works .page-inner button[aria-label*="Go to"]')).map(b => b.offsetWidth);
+        return {
+          activeIdx,
+          isCard0: activeIdx === 0,
+          isDermatology: activeTitle.includes('Dermatology'),
+          dot0Active: dots[0] > (dots[1] || 0)
+        };
+      })()
+    `);
+    const bwdConnectOk = Boolean(bwdFromConnect && bwdFromConnect.isCard0 && bwdFromConnect.isDermatology && bwdFromConnect.dot0Active);
+    logCheck('WORKS', 'works_backward_from_connect_resets_card_0_with_stack', bwdConnectOk,
+      `activeIdx=${bwdFromConnect?.activeIdx}, isDermatology=${bwdFromConnect?.isDermatology}, dot0Active=${bwdFromConnect?.dot0Active}`);
+
+    // Check backward wheel from Journey into Works
+    await evalJs(`
+      (() => {
+        const a = Array.from(document.querySelectorAll('a[data-pill]')).find(x => x.getAttribute('href') === '#journey');
+        a?.click();
+      })()
+    `);
+    await wait(1800);
+
+    // Navigate backward from Journey into Works via PageUp (2nd gesture after boundary cooldown triggers page step)
+    await send('Input.dispatchKeyEvent', { type: 'rawKeyDown', key: 'PageUp', code: 'PageUp' });
+    await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'PageUp', code: 'PageUp' });
+    await wait(350);
+    await send('Input.dispatchKeyEvent', { type: 'rawKeyDown', key: 'PageUp', code: 'PageUp' });
+    await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'PageUp', code: 'PageUp' });
+    await wait(1800);
+
+    const bwdFromJourney = await evalJs(`
+      (() => {
+        const isWorks = location.hash === '#works';
+        const cards = Array.from(document.querySelectorAll('#works [data-card]'));
+        const activeIdx = cards.findIndex(c => c.getAttribute('data-active') === 'true');
+        const activeTitle = cards[activeIdx]?.querySelector('h3')?.textContent?.trim() || '';
+        return {
+          isWorks,
+          activeIdx,
+          isCard0: activeIdx === 0,
+          isDermatology: activeTitle.includes('Dermatology')
+        };
+      })()
+    `);
+    const bwdJourneyOk = Boolean(bwdFromJourney && bwdFromJourney.isWorks && bwdFromJourney.isCard0);
+    logCheck('WORKS', 'works_backward_nav_from_journey_resets_card_0', bwdJourneyOk,
+      `isWorks=${bwdFromJourney?.isWorks}, activeIdx=${bwdFromJourney?.activeIdx}`);
+
     // =========================================================================
     // CHECK 7: CONNECT
     // =========================================================================
@@ -1324,10 +1395,71 @@ async function runSmoke() {
     `);
     logCheck('CONNECT', 'headline_dissolve_canvas_active', Boolean(connectHeadlineState && connectHeadlineState.cvFound), `canvas width=${connectHeadlineState?.cvWidth}`);
 
+    // Check Step 12: Connect single badge and zero overlaps at 1918x932 and 1366x768
+    const connectBadgeCheck1918 = await evalJs(`
+      (() => {
+        const chip = document.querySelector('.hero-chip-tr');
+        const chipStyle = chip ? window.getComputedStyle(chip) : null;
+        const chipVisible = chipStyle ? chipStyle.opacity !== '0' && chipStyle.visibility !== 'hidden' && chipStyle.display !== 'none' : false;
+        const topBar = document.querySelector('#connect .page-inner > div.mono.flex');
+        const availBadge = topBar?.querySelector('span[style*="gold"]');
+        const chipRect = chip ? chip.getBoundingClientRect() : null;
+        const topBarRect = topBar ? topBar.getBoundingClientRect() : null;
+
+        const isOverlap = (r1, r2) => {
+          if (!r1 || !r2) return false;
+          return !(r1.right < r2.left || r1.left > r2.right || r1.bottom < r2.top || r1.top > r2.bottom);
+        };
+
+        return {
+          chipHidden: !chipVisible,
+          availBadgeVisible: Boolean(availBadge && availBadge.textContent.includes('Open to roles')),
+          zeroOverlap: !(chipVisible && isOverlap(chipRect, topBarRect))
+        };
+      })()
+    `);
+    const badge1918Ok = Boolean(connectBadgeCheck1918 && connectBadgeCheck1918.chipHidden && connectBadgeCheck1918.availBadgeVisible && connectBadgeCheck1918.zeroOverlap);
+    logCheck('CONNECT', 'connect_single_badge_no_overlap_1918x932', badge1918Ok,
+      `chipHidden=${connectBadgeCheck1918?.chipHidden}, singleBadge=${connectBadgeCheck1918?.availBadgeVisible}, zeroOverlap=${connectBadgeCheck1918?.zeroOverlap}`);
+
+    // Check at 1366x768
+    await send('Emulation.setDeviceMetricsOverride', { width: 1366, height: 768, deviceScaleFactor: 1, mobile: false });
+    await wait(600);
+
+    const connectBadgeCheck1366 = await evalJs(`
+      (() => {
+        const chip = document.querySelector('.hero-chip-tr');
+        const chipStyle = chip ? window.getComputedStyle(chip) : null;
+        const chipVisible = chipStyle ? chipStyle.opacity !== '0' && chipStyle.visibility !== 'hidden' && chipStyle.display !== 'none' : false;
+        const topBar = document.querySelector('#connect .page-inner > div.mono.flex');
+        const availBadge = topBar?.querySelector('span[style*="gold"]');
+        const chipRect = chip ? chip.getBoundingClientRect() : null;
+        const topBarRect = topBar ? topBar.getBoundingClientRect() : null;
+
+        const isOverlap = (r1, r2) => {
+          if (!r1 || !r2) return false;
+          return !(r1.right < r2.left || r1.left > r2.right || r1.bottom < r2.top || r1.top > r2.bottom);
+        };
+
+        return {
+          chipHidden: !chipVisible,
+          availBadgeVisible: Boolean(availBadge && availBadge.textContent.includes('Open to roles')),
+          zeroOverlap: !(chipVisible && isOverlap(chipRect, topBarRect))
+        };
+      })()
+    `);
+    const badge1366Ok = Boolean(connectBadgeCheck1366 && connectBadgeCheck1366.chipHidden && connectBadgeCheck1366.availBadgeVisible && connectBadgeCheck1366.zeroOverlap);
+    logCheck('CONNECT', 'connect_single_badge_no_overlap_1366x768', badge1366Ok,
+      `chipHidden=${connectBadgeCheck1366?.chipHidden}, singleBadge=${connectBadgeCheck1366?.availBadgeVisible}, zeroOverlap=${connectBadgeCheck1366?.zeroOverlap}`);
+
+    // Restore desktop metrics
+    await send('Emulation.setDeviceMetricsOverride', { width: 1918, height: 932, deviceScaleFactor: 1, mobile: false });
+    await wait(600);
+
     // =========================================================================
-    // CHECK 8: ALL PAGES REACHABILITY & ZERO NETWORK / CONSOLE ERRORS
+    // CHECK 8: ALL PAGES REACHABILITY, PAIRWISE SYMMETRIC TRANSITIONS & ZERO ERRORS
     // =========================================================================
-    console.log('\n--- Checking ALL PAGES Reachability & Console / Network ---');
+    console.log('\n--- Checking ALL PAGES Reachability, Transitions & Console / Network ---');
     const pageIds = ['overview', 'about', 'expertise', 'works', 'journey', 'connect'];
     let allReachable = true;
     for (const pid of pageIds) {
@@ -1345,6 +1477,66 @@ async function runSmoke() {
       }
     }
     logCheck('ALL_PAGES', 'all_pages_reachable_by_nav', allReachable, `visited ${pageIds.length} pages`);
+
+    // Check pairwise symmetric transitions: every pair in both directions leaves no leftover inline opacity 0
+    console.log('\n--- Checking PAIRWISE SYMMETRIC PAGE TRANSITIONS (Step 12) ---');
+    const transitionPairs = [
+      ['overview', 'about'],
+      ['about', 'expertise'],
+      ['expertise', 'works'],
+      ['works', 'journey'],
+      ['journey', 'connect'],
+      ['connect', 'journey'],
+      ['journey', 'works'],
+      ['works', 'expertise'],
+      ['expertise', 'about'],
+      ['about', 'overview'],
+      ['connect', 'works'], // Direct backward skip
+      ['works', 'connect'], // Direct forward skip
+    ];
+
+    let allTransitionsClean = true;
+    const transitionDetails = [];
+
+    for (const [fromPage, toPage] of transitionPairs) {
+      await evalJs(`
+        (() => {
+          const a = Array.from(document.querySelectorAll('a[data-pill]')).find(x => x.getAttribute('href') === '#${toPage}');
+          a?.click();
+        })()
+      `);
+      await wait(1800);
+
+      const targetCheck = await evalJs(`
+        (() => {
+          const activeSec = document.querySelector('#${toPage}');
+          if (!activeSec) return { valid: false, reason: 'section not found' };
+          // Check for any leftover inline opacity: 0 on content elements that are not deliberately hidden
+          const elementsWithInlineZero = Array.from(activeSec.querySelectorAll('[data-fade], [data-sig], [data-lines]')).filter(el => {
+            const inline = el.style.opacity;
+            const computed = getComputedStyle(el).opacity;
+            // Hero h1 in erase mode is canvas-driven, ignore if erase mode
+            if (el.closest('.hero-title') || el.closest('[data-erase]')) return false;
+            return inline === '0' || parseFloat(computed) < 0.05;
+          });
+
+          return {
+            valid: elementsWithInlineZero.length === 0,
+            zeroCount: elementsWithInlineZero.length
+          };
+        })()
+      `);
+
+      if (!targetCheck || !targetCheck.valid) {
+        allTransitionsClean = false;
+        transitionDetails.push(`${fromPage}->${toPage}: fail (${targetCheck?.zeroCount || 'err'} leftover zeroes)`);
+      } else {
+        transitionDetails.push(`${fromPage}->${toPage}: pass`);
+      }
+    }
+
+    logCheck('ALL_PAGES', 'pairwise_symmetric_page_transitions_no_leftover_opacity_zero',
+      allTransitionsClean, `${transitionPairs.length} pairs tested; all clean=${allTransitionsClean}`);
 
     logCheck('ALL_PAGES', 'zero_console_errors_across_session', consoleErrors.length === 0, consoleErrors.length ? consoleErrors.join(' | ') : 'zero errors');
     logCheck('ALL_PAGES', 'zero_failed_network_requests', failedRequests.length === 0, failedRequests.length ? failedRequests.join(' | ') : 'zero failures');

@@ -291,7 +291,12 @@ html:not(.paged) .hero { height: 100svh; height: 100dvh; }
   border: 1px solid rgba(232, 222, 208, 0.25);
   color: var(--cream);
   pointer-events: auto;
-  transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+  transition: background-color 0.3s, color 0.3s, border-color 0.3s, opacity 0.3s, visibility 0.3s;
+}
+body:has(#connect.is-active) .hero-chip-tr {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 @media (max-width: 1023px) {
   .hero-chip-tr {

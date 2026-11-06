@@ -222,7 +222,7 @@ export function Site() {
     // Pages are already mounted; explicitly prepare hidden layout before any animation.
     newEl.classList.add("is-prepared");
     presplit(newEl);
-    if (target === 3) { setSub(requestedProject.current ?? (down ? 0 : works.projects.length - 1)); requestedProject.current = null; }
+    if (target === 3) { setSub(requestedProject.current ?? 0); requestedProject.current = null; }
     if (target === 4) { setJStop(0); }
     const label = wipeLabel.current;
     if (!label) { done(); return; }
@@ -712,7 +712,7 @@ export function Site() {
 
       {booted && (
         <span
-          className={`hero-chip hero-chip-tr mono ${!inv ? "hero-chip-light" : ""}`}
+          className={`hero-chip hero-chip-tr mono ${!inv ? "hero-chip-light" : ""} ${cur === 5 ? "pointer-events-none opacity-0 invisible" : ""}`}
           aria-label="Open to work"
         >
           <span className="live-dot" aria-hidden />

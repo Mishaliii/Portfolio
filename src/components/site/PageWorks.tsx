@@ -1209,6 +1209,29 @@ export function PageWorks({
     preloadScreenshots();
   }, []);
 
+  // Ensure cards rest in exact positions whenever Works enters/becomes active
+  useEffect(() => {
+    if (!paged || !active) return;
+    const cards = cardRefs.current;
+    const dims = dimRefs.current;
+    cards.forEach((c, i) => {
+      if (!c) return;
+      const dim = dims[i];
+      if (i > sub) {
+        gsap.set(c, { yPercent: 100, scale: 1 });
+        if (dim) gsap.set(dim, { opacity: 0 });
+      } else if (i === sub) {
+        gsap.set(c, { yPercent: 0, scale: 1 });
+        if (dim) gsap.set(dim, { opacity: 0 });
+      } else {
+        const depth = sub - i;
+        gsap.set(c, { yPercent: -4 * depth, scale: Math.max(0.8, 1 - 0.06 * depth) });
+        if (dim) gsap.set(dim, { opacity: Math.min(0.8, 0.45 * depth) });
+      }
+    });
+    prevSub.current = sub;
+  }, [active, paged, sub]);
+
   useEffect(() => {
     if (!paged) return;
 
