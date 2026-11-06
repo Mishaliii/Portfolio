@@ -18,7 +18,7 @@ export interface ScrollSpyOptions {
 export function useScrollSpy({
   containerRef,
   sectionIds,
-  offset = 24,
+  offset = 40,
   enabled = true,
 }: ScrollSpyOptions) {
   const [activeSection, setActiveSection] = useState<string>(sectionIds[0] ?? "");
@@ -46,9 +46,21 @@ export function useScrollSpy({
       return;
     }
 
-    // 2. When scrollTop + clientHeight >= scrollHeight - 4 the last section is active
-    if (scrollTop + clientHeight >= scrollHeight - 4) {
-      setActiveSection(sectionIds[sectionIds.length - 1]);
+    // 2. When near bottom of scroll container, highlight the section that is primarily in view
+    if (scrollTop + clientHeight >= scrollHeight - 32) {
+      const containerRect = container.getBoundingClientRect();
+      let candidate = sectionIds[sectionIds.length - 1];
+      for (let i = sectionIds.length - 1; i >= 0; i--) {
+        const id = sectionIds[i];
+        const el = document.getElementById(id);
+        if (!el) continue;
+        const elRect = el.getBoundingClientRect();
+        if (elRect.top < containerRect.bottom - 40 && elRect.bottom > containerRect.top + 60) {
+          candidate = id;
+          break;
+        }
+      }
+      setActiveSection(candidate);
       return;
     }
 

@@ -177,7 +177,7 @@ async function runSmoke() {
 
     const evalJs = async (expr) => {
       let script = expr.trim();
-      if (script.startsWith('(() =>') || script.startsWith('(()=>') || script.startsWith('function')) {
+      if (script.startsWith('(() =>') || script.startsWith('(()=>') || script.startsWith('(async () =>') || script.startsWith('(async()=>') || script.startsWith('function') || script.startsWith('async function')) {
         // Already wrapped
       } else if (script.includes('\n') || script.includes(';') || script.includes('const ') || script.includes('let ') || script.includes('var ') || script.includes('try ') || script.includes('if ')) {
         script = `(() => {\n${script}\n})()`;
@@ -270,7 +270,7 @@ async function runSmoke() {
       // 2. MOBILE_NAV: tap menu button, overlay opens with >=44px tap targets, close works, navigate to Works
       console.log('\n--- Checking MOBILE_NAV ---');
       await evalJs(`document.querySelector('header button[aria-label*="menu" i]')?.click()`);
-      await wait(400);
+      await wait(600);
 
       const menuOverlay = await evalJs(`
         (() => {
@@ -1127,6 +1127,131 @@ async function runSmoke() {
       })()
     `);
     await wait(700);
+
+    // =========================================================================
+    // CHECK 6B: ALL THREE CASE STUDY DRAWERS (DDSS, Productivity, CareerLens)
+    console.log('\n--- Checking ALL THREE CASE STUDY DRAWERS ---');
+    const drawerResults = {
+      openedCount: 0,
+      navScrollsOk: true,
+      noOverlappingHeadings: true,
+      noImageOverflow: true,
+      noEmptySections: true
+    };
+
+    for (let pIdx = 0; pIdx < 3; pIdx++) {
+      // Switch to project card
+      await evalJs(`
+        (() => {
+          const dots = document.querySelectorAll('#works button[aria-label^="Go to"]');
+          dots[${pIdx}]?.click();
+        })()
+      `);
+      await wait(800);
+
+      // Open drawer
+      await evalJs(`
+        (() => {
+          const cards = document.querySelectorAll('#works [data-card]');
+          const btn = cards[${pIdx}]?.querySelector('button[aria-haspopup="dialog"]');
+          btn?.click();
+        })()
+      `);
+      await wait(800);
+
+      const audit = await evalJs(`
+        (() => {
+          const dialog = document.querySelector('[role="dialog"]');
+          if (!dialog) return null;
+
+          const sections = Array.from(dialog.querySelectorAll('section'));
+          const headings = Array.from(dialog.querySelectorAll('section h3'));
+          const imgs = Array.from(dialog.querySelectorAll('img'));
+          const navBtns = Array.from(dialog.querySelectorAll('nav button'));
+
+          let noEmpty = true;
+          for (const s of sections) {
+            const hasP = Boolean(s.querySelector('p')?.textContent.trim());
+            const hasLi = s.querySelectorAll('li').length > 0;
+            const hasImg = s.querySelectorAll('img').length > 0;
+            const hasMethods = s.querySelectorAll('.mono').length > 0;
+            if (!hasP && !hasLi && !hasImg && !hasMethods) {
+              noEmpty = false;
+            }
+          }
+
+          let noOverlap = true;
+          for (let a = 0; a < headings.length; a++) {
+            for (let b = a + 1; b < headings.length; b++) {
+              const rA = headings[a].getBoundingClientRect();
+              const rB = headings[b].getBoundingClientRect();
+              if (!(rA.right < rB.left || rA.left > rB.right || rA.bottom < rB.top || rA.top > rB.bottom)) {
+                noOverlap = false;
+              }
+            }
+          }
+
+          let noOverflow = true;
+          for (const img of imgs) {
+            const r = img.getBoundingClientRect();
+            const pR = img.parentElement ? img.parentElement.getBoundingClientRect() : null;
+            if (pR && (r.width > pR.width + 2 || r.height > pR.height + 2)) {
+              noOverflow = false;
+            }
+          }
+
+          return {
+            open: true,
+            sectionCount: sections.length,
+            navCount: navBtns.length,
+            noEmpty,
+            noOverlap,
+            noOverflow
+          };
+        })()
+      `);
+
+      if (audit && audit.open) {
+        drawerResults.openedCount++;
+        if (!audit.noEmpty) drawerResults.noEmptySections = false;
+        if (!audit.noOverlap) drawerResults.noOverlappingHeadings = false;
+        if (!audit.noOverflow) drawerResults.noImageOverflow = false;
+
+        // Click nav items to verify section scroll & highlight
+        for (let nIdx = 0; nIdx < audit.navCount; nIdx++) {
+          await evalJs(`
+            (() => {
+              const btn = document.querySelectorAll('[role="dialog"] nav button')[${nIdx}];
+              btn?.click();
+            })()
+          `);
+          await wait(400);
+          const activeMatches = await evalJs(`
+            (() => {
+              const active = document.querySelector('[role="dialog"] nav button[aria-current="true"]');
+              const target = document.querySelectorAll('[role="dialog"] nav button')[${nIdx}];
+              return active === target;
+            })()
+          `);
+          if (!activeMatches) drawerResults.navScrollsOk = false;
+        }
+
+        // Close drawer
+        await evalJs(`
+          (() => {
+            const closeBtn = document.querySelector('[role="dialog"] button');
+            closeBtn?.click();
+          })()
+        `);
+        await wait(600);
+      }
+    }
+
+    logCheck('WORKS', 'drawers_open_for_all_three_projects', drawerResults.openedCount === 3, `opened=${drawerResults.openedCount}/3`);
+    logCheck('WORKS', 'drawer_nav_items_scroll_to_sections', drawerResults.navScrollsOk, `navScrollsOk=${drawerResults.navScrollsOk}`);
+    logCheck('WORKS', 'drawer_no_overlapping_headings', drawerResults.noOverlappingHeadings, `noOverlappingHeadings=${drawerResults.noOverlappingHeadings}`);
+    logCheck('WORKS', 'drawer_images_contained_no_overflow', drawerResults.noImageOverflow, `noImageOverflow=${drawerResults.noImageOverflow}`);
+    logCheck('WORKS', 'drawer_no_empty_sections', drawerResults.noEmptySections, `noEmptySections=${drawerResults.noEmptySections}`);
 
     // =========================================================================
     // CHECK 7: CONNECT

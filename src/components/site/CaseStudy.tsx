@@ -28,7 +28,25 @@ export function CaseStudy({
   const snapTimer = useRef<number | null>(null);
   const [drawerOpened, setDrawerOpened] = useState(false);
 
-  const sectionIds = useMemo(() => c.sections.map((s) => s.id), [c.sections]);
+  const validSections = useMemo(() => {
+    return c.sections.filter((sec) => {
+      const hasText = Boolean(sec.text && sec.text.trim());
+      const hasPoints = Boolean(sec.points && sec.points.length > 0);
+      const hasMethods = Boolean(sec.methods && sec.methods.length > 0);
+      const hasScreens = Boolean(sec.screens && sec.screens.length > 0);
+      const hasShots = Boolean(
+        (sec.shot && ddssImages[sec.shot]) || (sec.shots && sec.shots.length > 0)
+      );
+      return hasText || hasPoints || hasMethods || hasScreens || hasShots;
+    });
+  }, [c.sections]);
+
+  const validNav = useMemo(() => {
+    const validIds = new Set(validSections.map((s) => s.id));
+    return c.nav.filter((item) => validIds.has(item.id));
+  }, [c.nav, validSections]);
+
+  const sectionIds = useMemo(() => validSections.map((s) => s.id), [validSections]);
   const { activeSection, setActiveSection, updateSpy } = useScrollSpy({
     containerRef: scrollArea,
     sectionIds,
@@ -49,7 +67,7 @@ export function CaseStudy({
     let nearestOffset = 0;
     let minDistance = Infinity;
 
-    for (const sec of c.sections) {
+    for (const sec of validSections) {
       const el = document.getElementById(sec.id);
       if (!el) continue;
       const elRect = el.getBoundingClientRect();
@@ -78,7 +96,7 @@ export function CaseStudy({
         },
       });
     }
-  }, [c.sections, updateSpy]);
+  }, [validSections, updateSpy]);
 
   // Smooth scroll to target section (0.7s power3.inOut, continuous scroll-spy highlight)
   const scrollToSection = useCallback(
@@ -96,9 +114,10 @@ export function CaseStudy({
       const maxScroll = Math.max(0, container.scrollHeight - containerH);
       const containerRect = container.getBoundingClientRect();
       const targetRect = targetEl.getBoundingClientRect();
+      const scrollOffset = 20;
       const targetScroll = Math.max(
         0,
-        Math.min(maxScroll, container.scrollTop + (targetRect.top - containerRect.top))
+        Math.min(maxScroll, container.scrollTop + (targetRect.top - containerRect.top) - scrollOffset)
       );
 
       if (scrollTween.current) scrollTween.current.kill();
@@ -106,12 +125,12 @@ export function CaseStudy({
       const proxy = { y: container.scrollTop };
       scrollTween.current = gsap.to(proxy, {
         y: targetScroll,
-        duration: 0.7,
+        duration: 0.45,
         ease: "power3.inOut",
         overwrite: "auto",
         onUpdate: () => {
           container.scrollTop = proxy.y;
-          updateSpy();
+          setActiveSection(id);
         },
         onComplete: () => {
           container.scrollTop = targetScroll;
@@ -208,7 +227,7 @@ export function CaseStudy({
     if (scrollArea.current) {
       scrollArea.current.scrollTop = 0;
     }
-    setActiveSection(c.sections[0]?.id ?? "what-it-does");
+    setActiveSection(validSections[0]?.id ?? "what-it-does");
 
     // Collapse any open details or expanded accordions across all projects
     el.querySelectorAll("details[open]").forEach((d) => d.removeAttribute("open"));
@@ -329,20 +348,20 @@ export function CaseStudy({
 
       if (e.key === "PageDown" || e.key === "j" || e.key === "J") {
         e.preventDefault();
-        const currIdx = c.sections.findIndex((s) => s.id === activeSectionRef.current);
+        const currIdx = validSections.findIndex((s) => s.id === activeSectionRef.current);
         const nextIdx = Math.min(
-          c.sections.length - 1,
+          validSections.length - 1,
           (currIdx >= 0 ? currIdx : 0) + 1
         );
-        scrollToSection(c.sections[nextIdx].id);
+        scrollToSection(validSections[nextIdx].id);
         return;
       }
 
       if (e.key === "PageUp" || e.key === "k" || e.key === "K") {
         e.preventDefault();
-        const currIdx = c.sections.findIndex((s) => s.id === activeSectionRef.current);
+        const currIdx = validSections.findIndex((s) => s.id === activeSectionRef.current);
         const prevIdx = Math.max(0, (currIdx >= 0 ? currIdx : 0) - 1);
-        scrollToSection(c.sections[prevIdx].id);
+        scrollToSection(validSections[prevIdx].id);
         return;
       }
 
@@ -452,7 +471,7 @@ export function CaseStudy({
               className="sticky top-2 space-y-4 text-[13px] font-mono tracking-wider"
               aria-label="Sections"
             >
-              {c.nav.map((item) => {
+              {validNav.map((item) => {
                 const isActive = activeSection === item.id;
                 return (
                   <button
@@ -481,12 +500,12 @@ export function CaseStudy({
             className="overflow-y-auto min-h-0 h-full pr-3 sm:pr-6 space-y-16 pb-24"
             style={{ scrollbarWidth: "thin" }}
           >
-            {c.sections.map((sec) => (
+            {validSections.map((sec) => (
               <section
                 key={sec.id}
                 id={sec.id}
                 data-drawer-content
-                className="scroll-mt-4"
+                className="scroll-mt-6 pb-12 border-b border-[#0B0B0B]/10 last:border-b-0"
               >
                 <div className="border-t border-[#0B0B0B]/15 pt-4 mb-3">
                   <h3 className="display text-[26px] sm:text-[32px] tracking-tight text-[#0B0B0B] flex items-baseline gap-2">
@@ -521,12 +540,14 @@ export function CaseStudy({
                       )}
                     </div>
                     <figure className="rounded-[10px] border border-[#0B0B0B]/15 overflow-hidden bg-[#0B0B0B] p-2 shadow-sm">
-                      <img
-                        src={ddssImages[sec.shot]}
-                        alt={sec.shotCaption ?? sec.title}
-                        className="w-full h-auto object-contain rounded"
-                        loading="lazy"
-                      />
+                      <div className="relative aspect-[16/10] w-full overflow-hidden rounded bg-[#161616] flex items-center justify-center">
+                        <img
+                          src={ddssImages[sec.shot]}
+                          alt={sec.shotCaption ?? sec.title}
+                          className="w-full h-full object-contain"
+                          loading="lazy"
+                        />
+                      </div>
                       {sec.shotCaption && (
                         <figcaption className="mono text-[10px] text-[#E8DED0]/80 p-1.5">
                           {sec.shotCaption}
@@ -552,16 +573,16 @@ export function CaseStudy({
                         key={item.shot}
                         className="rounded-[10px] border border-[#0B0B0B]/15 overflow-hidden bg-[#0B0B0B] p-2.5 shadow-sm flex flex-col justify-between"
                       >
-                        <div className="overflow-hidden rounded bg-[#161616] flex items-center justify-center">
+                        <div className="relative aspect-[16/10] w-full overflow-hidden rounded bg-[#161616] flex items-center justify-center">
                           {ddssImages[item.shot] ? (
                             <img
                               src={ddssImages[item.shot]}
                               alt={`${item.label}: ${item.desc}`}
-                              className="w-full h-auto object-contain max-h-[200px]"
+                              className="w-full h-full object-contain"
                               loading="lazy"
                             />
                           ) : (
-                            <div className="h-[140px] flex items-center justify-center text-xs text-white/50 mono">
+                            <div className="h-full flex items-center justify-center text-xs text-white/50 mono">
                               {item.label}
                             </div>
                           )}
@@ -587,16 +608,18 @@ export function CaseStudy({
                         key={shotKey}
                         className="rounded-[10px] border border-[#0B0B0B]/15 overflow-hidden bg-[#0B0B0B] p-2 shadow-sm"
                       >
-                        <img
-                          src={ddssImages[shotKey]}
-                          alt={
-                            shotKey === "ddss-10"
-                              ? "Treatment plan screenshot"
-                              : "Dashboard screenshot"
-                          }
-                          className="w-full h-auto object-contain rounded"
-                          loading="lazy"
-                        />
+                        <div className="relative aspect-[16/10] w-full overflow-hidden rounded bg-[#161616] flex items-center justify-center">
+                          <img
+                            src={ddssImages[shotKey]}
+                            alt={
+                              shotKey === "ddss-10"
+                                ? "Treatment plan screenshot"
+                                : "Dashboard screenshot"
+                            }
+                            className="w-full h-full object-contain"
+                            loading="lazy"
+                          />
+                        </div>
                         <figcaption className="mono text-[10px] text-[#E8DED0]/80 p-1.5">
                           {shotKey === "ddss-10"
                             ? "Treatment plan and prescription saving"
