@@ -1,6 +1,8 @@
 export const PORTRAIT_EASE_MS = 150;
 export const PORTRAIT_CYCLE_MS = 6000;
 export const PORTRAIT_DISSOLVE_MS = 250;
+export const ABOUT_IMAGE_INTERVAL_MS = 2500;
+export const ABOUT_IMAGE_FADE_MS = 700;
 
 export function portraitMix(x: number) {
   const t = Math.max(0, Math.min(1, (x - 0.44) / (0.56 - 0.44)));

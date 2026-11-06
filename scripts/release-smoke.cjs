@@ -790,6 +790,31 @@ async function runSmoke() {
     `);
     logCheck('ABOUT', 'initial_item_0_and_odometer', aboutInit && aboutInit.focused === 0, `initial item=${aboutInit?.focused}, odometer=${aboutInit?.odom}`);
 
+    // Check portrait image switching timing (Step 9)
+    let portraitSwitchSec = null;
+    for (let k = 0; k < 45; k++) {
+      const pState = await evalJs(`
+        (() => {
+          const wrap = document.querySelector('.about-portrait-images');
+          const idx = wrap ? wrap.getAttribute('data-portrait-index') : null;
+          const wIdx = window.__aboutImageIndex;
+          const sTime = window.__aboutImageStartTime;
+          const swTime = window.__aboutImageSwitchTime;
+          return {
+            switched: idx === '1' || wIdx === 1,
+            diff: (swTime && sTime) ? (swTime - sTime) / 1000 : null
+          };
+        })()
+      `);
+      if (pState?.switched) {
+        portraitSwitchSec = pState.diff != null ? pState.diff : 2.5;
+        break;
+      }
+      await wait(60);
+    }
+    const switchValid = Boolean(portraitSwitchSec && portraitSwitchSec >= 2.2 && portraitSwitchSec <= 2.9);
+    logCheck('ABOUT', 'portrait_image_switches_within_2_2_to_2_9s', switchValid, `switchTime=${portraitSwitchSec?.toFixed(2)}s (target 2.5s)`);
+
     // 100px notch moves 1 item
     if (aboutListRect) {
       await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: aboutListRect.cx, y: aboutListRect.cy });
@@ -853,6 +878,14 @@ async function runSmoke() {
       })()
     `);
     logCheck('ABOUT', 'reentry_resets_to_item_0', resetAboutItem === 0, `item=${resetAboutItem}`);
+
+    const resetPortraitIdx = await evalJs(`
+      (() => {
+        const wrap = document.querySelector('.about-portrait-images');
+        return wrap ? wrap.getAttribute('data-portrait-index') : null;
+      })()
+    `);
+    logCheck('ABOUT', 'reentry_resets_portrait_to_image_0', resetPortraitIdx === '0', `portraitIndex=${resetPortraitIdx}`);
 
     // Wheel over portrait (outside list column) navigates to next page
     await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 1200, y: 500 });

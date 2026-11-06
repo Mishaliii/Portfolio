@@ -1,7 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { easePortrait, idlePortrait, portraitMix, portraitOffset, PORTRAIT_DISSOLVE_MS } from "./about-portrait";
+import {
+  easePortrait,
+  idlePortrait,
+  portraitMix,
+  portraitOffset,
+  PORTRAIT_DISSOLVE_MS,
+  ABOUT_IMAGE_INTERVAL_MS,
+  ABOUT_IMAGE_FADE_MS,
+} from "./about-portrait";
 
 describe("About portrait rules", () => {
+  it("defines ABOUT_IMAGE_INTERVAL_MS as 2500ms and crossfade < interval", () => {
+    expect(ABOUT_IMAGE_INTERVAL_MS).toBe(2500);
+    expect(ABOUT_IMAGE_FADE_MS).toBeGreaterThanOrEqual(600);
+    expect(ABOUT_IMAGE_FADE_MS).toBeLessThanOrEqual(900);
+    expect(ABOUT_IMAGE_FADE_MS).toBeLessThan(ABOUT_IMAGE_INTERVAL_MS);
+  });
   it("crossfades only between 0.44 and 0.56", () => {
     expect(portraitMix(0.44)).toBe(0);
     expect(portraitMix(0.5)).toBeCloseTo(0.5);
