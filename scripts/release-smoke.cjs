@@ -1143,6 +1143,40 @@ async function runSmoke() {
     logCheck('WORKS', 'ddss_drawer_opens_at_scroll_0', Boolean(ddssOpenOk),
       drawerInitial ? `scrollTop=${drawerInitial.scrollTop}, section=${drawerInitial.activeSection}` : 'drawer failed to open');
 
+    // Test drawer wheel scroll responsiveness & sensitivity
+    const scrollAreaRect = await evalJs(`
+      (() => {
+        const sa = document.querySelector('aside[data-pull] [data-drawer-scroll]');
+        if (!sa) return null;
+        sa.scrollTop = 0;
+        const r = sa.getBoundingClientRect();
+        return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+      })()
+    `);
+
+    if (scrollAreaRect) {
+      await send('Input.dispatchMouseEvent', {
+        type: 'mouseWheel',
+        x: Math.round(scrollAreaRect.x),
+        y: Math.round(scrollAreaRect.y),
+        deltaX: 0,
+        deltaY: 250
+      });
+      await wait(300);
+
+      const wheelScrollResult = await evalJs(`
+        (() => {
+          const sa = document.querySelector('aside[data-pull] [data-drawer-scroll]');
+          return {
+            scrollTop: sa ? sa.scrollTop : 0
+          };
+        })()
+      `);
+
+      logCheck('WORKS', 'drawer_wheel_scroll_sensitivity', Boolean(wheelScrollResult && wheelScrollResult.scrollTop > 80),
+        `scrollTopAfterWheel=${wheelScrollResult?.scrollTop}px`);
+    }
+
     // Test J/K keyboard navigation
     await send('Input.dispatchKeyEvent', { type: 'rawKeyDown', key: 'j', code: 'KeyJ' });
     await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'j', code: 'KeyJ' });

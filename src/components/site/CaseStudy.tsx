@@ -25,7 +25,6 @@ export function CaseStudy({
   const openTl = useRef<gsap.core.Timeline | null>(null);
   const closeTl = useRef<gsap.core.Timeline | null>(null);
   const scrollTween = useRef<gsap.core.Tween | null>(null);
-  const snapTimer = useRef<number | null>(null);
   const [drawerOpened, setDrawerOpened] = useState(false);
 
   const validSections = useMemo(() => {
@@ -56,59 +55,12 @@ export function CaseStudy({
   const activeSectionRef = useRef(activeSection);
   activeSectionRef.current = activeSection;
 
-  // Snap to the nearest section heading if within 25% of the viewport height
-  const snapToNearestSection = useCallback(() => {
-    const container = scrollArea.current;
-    if (!container) return;
-    const containerH = container.clientHeight;
-    const threshold = containerH * 0.25;
-    const containerRect = container.getBoundingClientRect();
-
-    let nearestOffset = 0;
-    let minDistance = Infinity;
-
-    for (const sec of validSections) {
-      const el = document.getElementById(sec.id);
-      if (!el) continue;
-      const elRect = el.getBoundingClientRect();
-      const relativeTop = elRect.top - containerRect.top;
-      const dist = Math.abs(relativeTop);
-      if (dist < minDistance) {
-        minDistance = dist;
-        nearestOffset = relativeTop;
-      }
-    }
-
-    if (minDistance <= threshold && minDistance > 3) {
-      const maxScroll = Math.max(0, container.scrollHeight - containerH);
-      const targetScroll = Math.max(0, Math.min(maxScroll, container.scrollTop + nearestOffset));
-
-      if (scrollTween.current) scrollTween.current.kill();
-      const proxy = { y: container.scrollTop };
-      scrollTween.current = gsap.to(proxy, {
-        y: targetScroll,
-        duration: 0.5,
-        ease: "power2.out",
-        overwrite: "auto",
-        onUpdate: () => {
-          container.scrollTop = proxy.y;
-          updateSpy();
-        },
-      });
-    }
-  }, [validSections, updateSpy]);
-
-  // Smooth scroll to target section (0.7s power3.inOut, continuous scroll-spy highlight)
+  // Smooth scroll to target section (continuous scroll-spy highlight)
   const scrollToSection = useCallback(
     (id: string) => {
       const container = scrollArea.current;
       const targetEl = document.getElementById(id);
       if (!container || !targetEl) return;
-
-      if (snapTimer.current !== null) {
-        window.clearTimeout(snapTimer.current);
-        snapTimer.current = null;
-      }
 
       const containerH = container.clientHeight;
       const maxScroll = Math.max(0, container.scrollHeight - containerH);
@@ -135,10 +87,11 @@ export function CaseStudy({
         onComplete: () => {
           container.scrollTop = targetScroll;
           setActiveSection(id);
+          scrollTween.current = null;
         },
       });
     },
-    [setActiveSection, updateSpy]
+    [setActiveSection]
   );
 
   const close = useCallback(() => {
@@ -153,14 +106,10 @@ export function CaseStudy({
       openTl.current = null;
     }
 
-    // Cancel scroll and snap
+    // Cancel scroll
     if (scrollTween.current) {
       scrollTween.current.kill();
       scrollTween.current = null;
-    }
-    if (snapTimer.current !== null) {
-      window.clearTimeout(snapTimer.current);
-      snapTimer.current = null;
     }
 
     setDrawerOpened(false);
@@ -247,57 +196,28 @@ export function CaseStudy({
     bd.addEventListener("wheel", stopScroll, { passive: false });
     bd.addEventListener("touchmove", stopScroll, { passive: false });
 
-    // Smooth section scrolling via GSAP on scrollArea
+    // Natural scrolling on scrollArea; stop propagation so events don't escape drawer
     const container = scrollArea.current;
-    let targetScroll = 0;
 
     const onWheel = (e: WheelEvent) => {
-      e.preventDefault();
       e.stopPropagation();
-
-      if (snapTimer.current !== null) {
-        window.clearTimeout(snapTimer.current);
-        snapTimer.current = null;
-      }
-
-      if (!container) return;
-
       if (scrollTween.current && scrollTween.current.isActive()) {
         scrollTween.current.kill();
-        targetScroll = container.scrollTop;
-      } else {
-        targetScroll = container.scrollTop;
+        scrollTween.current = null;
       }
+    };
 
-      let dy = e.deltaY;
-      if (e.deltaMode === 1) dy *= 33;
-      else if (e.deltaMode === 2) dy *= container.clientHeight;
-
-      const maxScroll = Math.max(0, container.scrollHeight - container.clientHeight);
-      targetScroll = Math.max(0, Math.min(maxScroll, targetScroll + dy));
-
-      const proxy = { y: container.scrollTop };
-      scrollTween.current = gsap.to(proxy, {
-        y: targetScroll,
-        duration: 0.35,
-        ease: "power2.out",
-        overwrite: "auto",
-        onUpdate: () => {
-          container.scrollTop = proxy.y;
-          updateSpy();
-        },
-        onComplete: () => {
-          if (snapTimer.current !== null) window.clearTimeout(snapTimer.current);
-          snapTimer.current = window.setTimeout(snapToNearestSection, 160);
-        },
-      });
-
-      if (snapTimer.current !== null) window.clearTimeout(snapTimer.current);
-      snapTimer.current = window.setTimeout(snapToNearestSection, 160);
+    const onTouch = (e: TouchEvent) => {
+      e.stopPropagation();
+      if (scrollTween.current && scrollTween.current.isActive()) {
+        scrollTween.current.kill();
+        scrollTween.current = null;
+      }
     };
 
     if (container) {
-      container.addEventListener("wheel", onWheel, { passive: false });
+      container.addEventListener("wheel", onWheel, { passive: true });
+      container.addEventListener("touchmove", onTouch, { passive: true });
     }
 
     setDrawerOpened(false);
@@ -391,10 +311,7 @@ export function CaseStudy({
       bd.removeEventListener("touchmove", stopScroll);
       if (container) {
         container.removeEventListener("wheel", onWheel);
-      }
-      if (snapTimer.current !== null) {
-        window.clearTimeout(snapTimer.current);
-        snapTimer.current = null;
+        container.removeEventListener("touchmove", onTouch);
       }
       if (scrollTween.current) {
         scrollTween.current.kill();
@@ -410,7 +327,7 @@ export function CaseStudy({
       }
       window.removeEventListener("keydown", key, true);
     };
-  }, [open, close, c, snapToNearestSection, scrollToSection, updateSpy, setActiveSection]);
+  }, [open, close, c, scrollToSection, updateSpy, setActiveSection]);
 
   if (!open || typeof document === "undefined") return null;
 
@@ -498,7 +415,7 @@ export function CaseStudy({
             data-drawer-scroll
             data-lenis-prevent
             className="overflow-y-auto min-h-0 h-full pr-3 sm:pr-6 space-y-16 pb-24"
-            style={{ scrollbarWidth: "thin" }}
+            style={{ scrollbarWidth: "thin", overscrollBehavior: "contain" }}
           >
             {validSections.map((sec) => (
               <section
