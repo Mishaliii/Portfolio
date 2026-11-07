@@ -53,7 +53,7 @@ export function SceneStage() {
     let lastWrapTime = performance.now();
     let playing = false;
 
-    const VIDEO_LEN_SEC = 12.5;
+    const VIDEO_LEN_SEC = 15.0;
     let nextQueued = false;
 
     // Reuse the loader's download: no competing range fetch and no source swap at a loop boundary.
@@ -175,12 +175,12 @@ export function SceneStage() {
     window.addEventListener("stage-fallback", fallback);
 
     let sceneData: SceneData = {
-      video: { w: 1920, h: 1080 },
-      focus: { x: 0.7, y: 0.35 },
-      figure: { x: 0.7, y: 0.52 },
-      glow: { x: 0.633, y: 0.64 },
-      pin: { x: 0.713, y: 0.4 },
-      pivot: 0.537,
+      video: { w: 1920, h: 912 },
+      focus: { x: 0.5, y: 0.5 },
+      figure: { x: 0.65, y: 0.65 },
+      glow: { x: 0.58, y: 0.68 },
+      pin: { x: 0.65, y: 0.55 },
+      pivot: 0.5,
     };
     const scene = () => sceneData;
     stage.scene = sceneData;

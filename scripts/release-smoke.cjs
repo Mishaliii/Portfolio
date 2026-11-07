@@ -601,19 +601,21 @@ async function runSmoke() {
     const charViewportCheck = await evalJs(`
       (() => {
         const w = window.innerWidth, h = window.innerHeight;
-        const as = w / h, va = 16 / 9;
+        const as = w / h, va = 1920 / 912;
         let vHeadY = 0, vLaptopY = 0;
         if (as > va) {
           const renderedH = w / va;
           const excessH = renderedH - h;
-          const topOffset = -excessH * 0.35;
-          vHeadY = 390 * (w / 1920) + topOffset;
-          vLaptopY = 860 * (w / 1920) + topOffset;
+          const topOffset = -excessH * 0.5;
+          vHeadY = 380 * (w / 1920) + topOffset;
+          vLaptopY = 740 * (w / 1920) + topOffset;
         } else {
-          vHeadY = 390 * (h / 1080);
-          vLaptopY = 860 * (h / 1080);
+          const renderedW = h * va;
+          const excessW = renderedW - w;
+          vHeadY = 380 * (h / 912);
+          vLaptopY = 740 * (h / 912);
         }
-        const headVisible = vHeadY > 20 && vHeadY < h - 100;
+        const headVisible = vHeadY > 20 && vHeadY < h - 50;
         const laptopVisible = vLaptopY > 100 && vLaptopY < h;
         return { ok: headVisible && laptopVisible, vHeadY: Math.round(vHeadY), vLaptopY: Math.round(vLaptopY), h };
       })()
@@ -627,7 +629,7 @@ async function runSmoke() {
         const cv = document.createElement('canvas');
         cv.width = 160; cv.height = 90;
         const ctx = cv.getContext('2d');
-        const testTimes = [0.05, 6.2, 6.25, 12.45];
+        const testTimes = [0, 7.4, 7.55, 14.95];
         const frames = [];
         const wasPaused = v.paused;
         const origTime = v.currentTime;

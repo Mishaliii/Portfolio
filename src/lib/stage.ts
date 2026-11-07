@@ -14,7 +14,7 @@ export type SceneData = {
 
 /** Shared, tweenable scene state. GSAP timelines tween these; SceneStage reads them every tick. */
 export const stage = {
-  zoom: 1.5, light: 0, radius: 0, dim: 0, lantern: 0,
+  zoom: 1.0, light: 0, radius: 0, dim: 0, lantern: 0,
   /** cursor response unlocked once the intro completes */
   controls: false,
   /** false while the hero is covered by another page */
