@@ -691,6 +691,26 @@ async function runSmoke() {
     `);
     logCheck('HERO', 'hero_playback_resume_no_freeze', Boolean(resumeCheck?.ok), `advancing=${resumeCheck?.ok}, diff=${Math.round((resumeCheck?.diff || 0)*100)/100}s`);
 
+    // Check Works cards are completely hidden on Hero page
+    const worksHiddenOnHero = await evalJs(`
+      (() => {
+        const cards = Array.from(document.querySelectorAll('#works [data-card]'));
+        const allHidden = cards.every(c => {
+          const vis = window.getComputedStyle(c).visibility;
+          return vis === 'hidden';
+        });
+        const topEl = document.elementFromPoint(window.innerWidth / 2, window.innerHeight / 2);
+        const cardOverlapping = cards.some(c => c === topEl || c.contains(topEl));
+        return {
+          allHidden,
+          cardOverlapping,
+          ok: allHidden && !cardOverlapping
+        };
+      })()
+    `);
+    logCheck('HERO', 'works_cards_completely_hidden_on_hero', Boolean(worksHiddenOnHero?.ok),
+      `allHidden=${worksHiddenOnHero?.allHidden}, cardOverlapping=${worksHiddenOnHero?.cardOverlapping}`);
+
     // =========================================================================
     // CHECK 2: CHAT (SPROUT)
     // =========================================================================
@@ -1614,6 +1634,7 @@ async function runSmoke() {
     console.log('\n--- Checking ALL PAGES Reachability, Transitions & Console / Network ---');
     const pageIds = ['overview', 'about', 'expertise', 'works', 'journey', 'connect'];
     let allReachable = true;
+    let allNonWorksHideCards = true;
     for (const pid of pageIds) {
       await evalJs(`
         (() => {
@@ -1627,8 +1648,21 @@ async function runSmoke() {
         allReachable = false;
         console.log(`Page #${pid} not reached; current=${cur}`);
       }
+      if (pid !== 'works') {
+        const worksHidden = await evalJs(`
+          (() => {
+            const cards = Array.from(document.querySelectorAll('#works [data-card]'));
+            return cards.every(c => window.getComputedStyle(c).visibility === 'hidden');
+          })()
+        `);
+        if (!worksHidden) {
+          allNonWorksHideCards = false;
+          console.log(`Works card visible while on #${pid}!`);
+        }
+      }
     }
     logCheck('ALL_PAGES', 'all_pages_reachable_by_nav', allReachable, `visited ${pageIds.length} pages`);
+    logCheck('ALL_PAGES', 'works_cards_hidden_on_all_other_pages', allNonWorksHideCards, `hiddenOnNonWorks=${allNonWorksHideCards}`);
 
     // Check pairwise symmetric transitions: every pair in both directions leaves no leftover inline opacity 0
     console.log('\n--- Checking PAIRWISE SYMMETRIC PAGE TRANSITIONS (Step 12) ---');

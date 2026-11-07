@@ -1214,6 +1214,18 @@ export function PageWorks({
   // Ensure cards rest in exact positions whenever Works page mounts or becomes active
   useEffect(() => {
     if (!paged) return;
+
+    if (!active) {
+      if (activeTimelineRef.current?.isActive()) {
+        activeTimelineRef.current.kill();
+      }
+      cardRefs.current.forEach((c) => {
+        if (c) c.style.visibility = "hidden";
+      });
+      prevActiveRef.current = false;
+      return;
+    }
+
     const justEntered = active && !prevActiveRef.current;
     prevActiveRef.current = active;
 

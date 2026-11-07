@@ -1310,6 +1310,12 @@ html.paged .page:not(.is-active) .bend-list-hint {
   pointer-events: none !important;
 }
 
+/* Hide Works cards completely when Works page is not active */
+html.paged .page:not(.is-active) [data-card] {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
 /* Mechanical Odometer */
 .odometer {
   display: inline-flex;
