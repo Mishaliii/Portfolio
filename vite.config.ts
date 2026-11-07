@@ -38,7 +38,6 @@ export default defineConfig({
         "lucide-react",
         "clsx",
         "tailwind-merge",
-        "class-variance-authority",
       ],
       exclude: [
         "@tanstack/react-start",

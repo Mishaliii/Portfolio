@@ -66,13 +66,6 @@ export const pages = [
   { id: "connect", num: "05", label: "Connect" },
 ];
 
-export const intro = {
-  status: "Loading portfolio",
-  skip: "SKIP",
-  clusters: ["Backend", "Vision", "Retrieval", "Practice"],
-  lines: ["loading embeddings", "indexing 3 projects", "top-k ready"],
-};
-
 export const hero = {
   line1: "AI / ML",
   line2: "ENGINEER",

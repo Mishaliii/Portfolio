@@ -1,21 +1,57 @@
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: connect the project to GitHub and every change made in Lovable is committed straight to your repository.
-- **Full ownership**: this code is yours. Push to your repository and your changes sync back into Lovable, ready for your next prompt.
+# Muhammed Mishal — AI / ML Engineer Portfolio
 
-## Development
+Interactive portfolio showcasing vision, retrieval, and backend systems for production machine learning.
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+## Tech Stack & Architecture
 
-```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
-npm run dev
+- **Framework**: [TanStack Start](https://tanstack.com/start) with React 19, TypeScript, and Vite.
+- **Server & Deployment**: [Nitro](https://nitro.unjs.io/) multi-preset engine (Node.js server, Cloudflare Pages/Workers).
+- **Motion & Physics**: [GSAP](https://gsap.com/) (Observer, ScrollTrigger, SplitText) with shared motion ticker and springs.
+- **Hero Scene**: Seamless dual-video hardware-decoded ping-pong playback with zero shaders and transform-only cursor parallax.
+- **Styling**: Tailwind CSS + custom design tokens.
+- **Interactive Assistant**: Sprout — client-side intelligent portfolio assistant running purely in-memory from verified structured content.
+
+## Getting Started
+
+### Prerequisites
+- [Bun](https://bun.sh/) (recommended) or Node.js >= 20
+
+### Installation
+```bash
+bun install
 ```
 
-## Built with
+### Development
+Start the local development server:
+```bash
+bun run dev
+```
 
-- TanStack Start
-- TypeScript
-- React
-- Tailwind CSS
+### Production Build & Preview
+Build the production bundle with Nitro:
+```bash
+# Node server build
+NITRO_PRESET=node-server bun run build
+
+# Run local production server
+PORT=3000 node .output/server/index.mjs
+```
+
+### Tests & Quality Audits
+```bash
+# Typecheck
+bun x tsc --noEmit
+
+# Unit & integration tests
+bun run test
+
+# Full release smoke test suite (desktop)
+node scripts/release-smoke.cjs http://127.0.0.1:3000
+
+# Full release smoke test suite (mobile 390x844 touch emulation)
+node scripts/release-smoke.cjs http://127.0.0.1:3000 --mobile
+```
+
+## Deployment
+
+Detailed zero-cost Cloudflare Pages & Cloudflare Workers deployment steps can be found in [DEPLOY.md](DEPLOY.md).

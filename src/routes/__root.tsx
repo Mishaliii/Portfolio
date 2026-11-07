@@ -147,7 +147,7 @@ function RootShell({ children }: { children: ReactNode }) {
       <head>
         <HeadContent />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(personJsonLd) }} />
-        <script dangerouslySetInnerHTML={{ __html: `if(!window.__heroFetch){var v=document.createElement('video');var small=innerWidth<=900;var mp4=v.canPlayType('video/mp4; codecs="avc1.64001f"');var src='/hero/hero'+(small?'-sm':'')+(mp4?'.mp4':'.webm');window.__heroSrc=src;window.__heroFetch=fetch(src).catch(function(){return null;});}` }} />
+        <script dangerouslySetInnerHTML={{ __html: `if(!window.__heroFetch){var small=innerWidth<=900;var src='/hero/hero'+(small?'-sm':'')+'.mp4';window.__heroSrc=src;window.__heroFetch=fetch(src).catch(function(){return null;});}` }} />
       </head>
       <body>
         <noscript>

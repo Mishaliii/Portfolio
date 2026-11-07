@@ -117,6 +117,7 @@ async function runSmoke() {
 
   const consoleErrors = [];
   const failedRequests = [];
+  const requestUrls = new Map();
   let heroSmRequested = false;
 
   try {
@@ -147,6 +148,7 @@ async function runSmoke() {
       }
       if (res.method === 'Network.requestWillBeSent') {
         const u = res.params.request?.url || '';
+        if (res.params.requestId) requestUrls.set(res.params.requestId, u);
         if (u.includes('hero-sm')) heroSmRequested = true;
       }
       if (res.method === 'Network.responseReceived') {
@@ -157,8 +159,9 @@ async function runSmoke() {
         }
       }
       if (res.method === 'Network.loadingFailed') {
-        if (res.params.errorText !== 'net::ERR_ABORTED') {
-          failedRequests.push(`Failed: ${res.params.errorText}`);
+        const u = requestUrls.get(res.params.requestId) || 'unknown';
+        if (res.params.errorText !== 'net::ERR_ABORTED' && !res.params.canceled) {
+          failedRequests.push(`Failed (${u}): ${res.params.errorText}`);
         }
       }
       if (res.id && pending.has(res.id)) {

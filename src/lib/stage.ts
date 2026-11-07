@@ -41,11 +41,7 @@ export function toScreen(p: { x: number; y: number }, w: number, h: number) {
 }
 
 export const videoSrc = () => {
-  const v = document.createElement("video");
   const small = useSmallVideo(window.innerWidth);
-  // H.264 is hardware decoded on a wider range of laptops than VP9.
-  if (v.canPlayType('video/mp4; codecs="avc1.64001f"')) return small ? "/hero/hero-sm.mp4" : "/hero/hero.mp4";
-  if (v.canPlayType('video/webm; codecs="vp9"') || v.canPlayType("video/webm; codecs=vp9")) return small ? "/hero/hero-sm.webm" : "/hero/hero.webm";
   return small ? "/hero/hero-sm.mp4" : "/hero/hero.mp4";
 };
 
@@ -104,7 +100,7 @@ export function boot(): Promise<void> {
           chunks.push(value); got += value.length; markBoot("video", (got / total) * 0.98);
         }
         markBoot("video");
-        return URL.createObjectURL(new Blob(chunks as BlobPart[], { type: res.headers.get("content-type") || "video/webm" }));
+        return URL.createObjectURL(new Blob(chunks as BlobPart[], { type: res.headers.get("content-type") || "video/mp4" }));
       } catch { markBoot("video"); return null; }
     })();
 

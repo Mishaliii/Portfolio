@@ -41,7 +41,7 @@ export function Btn({ children, solid, href, onClick, download, label, ext }: { 
   const enter = (e: React.MouseEvent<HTMLElement>) => wobble(e.currentTarget);
   if (href)
     return (
-      <a className={cls} href={href} download={download || undefined} onMouseEnter={enter} target={ext ? "_blank" : undefined} rel={ext ? "noreferrer" : undefined}>
+      <a className={cls} href={href} download={download || undefined} onMouseEnter={enter} target={ext ? "_blank" : undefined} rel={ext ? "noopener noreferrer" : undefined}>
         {inner}
       </a>
     );
@@ -50,19 +50,4 @@ export function Btn({ children, solid, href, onClick, download, label, ext }: { 
       {inner}
     </button>
   );
-}
-
-/** Text split into words that pull up one by one; animate with pullUpWords(). Reusable for section titles. */
-export function WordsPullUp({ text, className, as: Tag = "span" }: { text: string; className?: string; as?: "span" | "p" | "h2" }) {
-  const words = text.split(" ").filter(Boolean);
-  return (
-    <Tag className={className} data-words aria-label={text}>
-      {words.map((w, i) => (
-        <span key={i}><span aria-hidden data-word className="inline-block">{w}</span>{i < words.length - 1 ? " " : ""}</span>
-      ))}
-    </Tag>
-  );
-}
-export function pullUpWords(root: ParentNode) {
-  return gsap.fromTo(root.querySelectorAll("[data-word]"), { y: 35, opacity: 0 }, { y: 0, opacity: 1, duration: 0.8, ease: "expo.out", stagger: 0.07 });
 }

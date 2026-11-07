@@ -16,6 +16,11 @@ dist-ssr
 .nitro
 *.local
 
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
 # Wrangler / Cloudflare
 .wrangler/
 .dev.vars
@@ -30,4 +35,20 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Scratch & debug directories
 scratch/
+screenshots/
+chrome_prof_*
+*.lighthouse.json
+
+# Temporary / one-off audit scripts & step reports
+verify-*.cjs
+test-*.cjs
+capture-*.cjs
+check-*.cjs
+debug-*.cjs
+audit-*.cjs
+update-*.cjs
+diagnose-*.cjs
+STEP-*-REPORT.md

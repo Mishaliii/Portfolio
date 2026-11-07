@@ -83,8 +83,3 @@ export function Hot({ word, fx, masked }: { word: string; fx: Fx; masked?: boole
     </span>
   );
 }
-
-/** Renders a content string, animating only its {{word|effect}} marks. */
-export function HotText({ text }: { text: string }): ReactNode {
-  return parseHot(text).map((s, i) => (s.fx ? <Hot key={i} word={s.t} fx={s.fx} /> : s.t));
-}
