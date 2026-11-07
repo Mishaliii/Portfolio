@@ -601,19 +601,19 @@ async function runSmoke() {
     const charViewportCheck = await evalJs(`
       (() => {
         const w = window.innerWidth, h = window.innerHeight;
-        const as = w / h, va = 1920 / 912;
+        const as = w / h, va = 1920 / 896;
         let vHeadY = 0, vLaptopY = 0;
         if (as > va) {
           const renderedH = w / va;
           const excessH = renderedH - h;
           const topOffset = -excessH * 0.5;
-          vHeadY = 380 * (w / 1920) + topOffset;
+          vHeadY = 360 * (w / 1920) + topOffset;
           vLaptopY = 740 * (w / 1920) + topOffset;
         } else {
           const renderedW = h * va;
           const excessW = renderedW - w;
-          vHeadY = 380 * (h / 912);
-          vLaptopY = 740 * (h / 912);
+          vHeadY = 360 * (h / 896);
+          vLaptopY = 740 * (h / 896);
         }
         const headVisible = vHeadY > 20 && vHeadY < h - 50;
         const laptopVisible = vLaptopY > 100 && vLaptopY < h;
@@ -629,7 +629,7 @@ async function runSmoke() {
         const cv = document.createElement('canvas');
         cv.width = 160; cv.height = 90;
         const ctx = cv.getContext('2d');
-        const testTimes = [0, 7.4, 7.55, 14.95];
+        const testTimes = [0, 7.7, 7.85, 15.45];
         const frames = [];
         const wasPaused = v.paused;
         const origTime = v.currentTime;
@@ -661,6 +661,21 @@ async function runSmoke() {
       })();
     `);
     logCheck('HERO', 'no_double_image', Boolean(doubleImageCheck?.ok), `seamDiff=${doubleImageCheck?.seamDiff}, normalDiff=${doubleImageCheck?.normalDiff}`);
+
+    // Clarity check: ensure no softening canvas, no grain, and no horizontal halo gradient
+    const clarityCheck = await evalJs(`
+      (() => {
+        const grain = document.querySelector('.scene-grain');
+        const canvasEl = document.querySelector('.scene-canvas');
+        const shade = document.querySelector('.hero-shade');
+        const noCanvas = !canvasEl || window.getComputedStyle(canvasEl).display === 'none';
+        const noGrain = !grain || window.getComputedStyle(grain).display === 'none';
+        const shadeBg = shade ? window.getComputedStyle(shade).backgroundImage : '';
+        const noHalo = !shadeBg.includes('to right');
+        return { ok: noCanvas && noGrain && noHalo, noCanvas, noGrain, noHalo };
+      })()
+    `);
+    logCheck('HERO', 'hero_clarity_no_halo', Boolean(clarityCheck?.ok), `noCanvas=${clarityCheck?.noCanvas}, noGrain=${clarityCheck?.noGrain}, noHalo=${clarityCheck?.noHalo}`);
 
     // Freeze resilience: Hero -> Works -> Hero, test currentTime advancement
     await evalJs(`
