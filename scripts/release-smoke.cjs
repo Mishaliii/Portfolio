@@ -1372,6 +1372,156 @@ async function runSmoke() {
     logCheck('WORKS', 'works_backward_nav_from_journey_resets_card_0', bwdJourneyOk,
       `isWorks=${bwdFromJourney?.isWorks}, activeIdx=${bwdFromJourney?.activeIdx}`);
 
+    // Check Step 15: Works stacked card transition & peeking layers
+    console.log('\n--- Checking WORKS STACKED CARD TRANSITION (Step 15) ---');
+    // Navigate to Works Card 0
+    await evalJs(`
+      (() => {
+        const a = Array.from(document.querySelectorAll('a[data-pill]')).find(x => x.getAttribute('href') === '#works');
+        a?.click();
+      })()
+    `);
+    await wait(1800);
+
+    // Trigger transition from Card 0 to Card 1
+    await evalJs(`
+      (() => {
+        const dots = document.querySelectorAll('#works .page-inner button[aria-label*="Go to"]');
+        dots[1]?.click();
+      })()
+    `);
+
+    // Sample mid-transition at ~250-350ms
+    await wait(300);
+    const midTransitionCheck = await evalJs(`
+      (() => {
+        const cards = Array.from(document.querySelectorAll('#works [data-card]'));
+        if (cards.length < 2) return null;
+        const card0 = cards[0];
+        const card1 = cards[1];
+        const dim0 = card0.querySelector('[data-card-dim]');
+        
+        // Parse scale & yPercent from transform or computed style
+        const tr0 = window.getComputedStyle(card0).transform;
+        let scale0 = 1;
+        if (tr0 && tr0 !== 'none') {
+          const start = tr0.indexOf('(');
+          const end = tr0.indexOf(')');
+          if (start !== -1 && end !== -1) {
+            const parts = tr0.slice(start + 1, end).split(',').map(s => parseFloat(s.trim()));
+            if (tr0.startsWith('matrix3d')) {
+              scale0 = Math.hypot(parts[0], parts[1], parts[2]);
+            } else {
+              scale0 = Math.hypot(parts[0], parts[1]);
+            }
+          }
+        }
+        const dim0Opacity = dim0 ? parseFloat(window.getComputedStyle(dim0).opacity) : 0;
+        const willChange0 = card0.style.willChange;
+
+        return {
+          scale0,
+          dim0Opacity,
+          isScalingDown: scale0 < 0.99,
+          isDimming: dim0Opacity > 0.05,
+          willChangeApplied: willChange0.includes('transform')
+        };
+      })()
+    `);
+
+    const midTransitionOk = Boolean(
+      midTransitionCheck &&
+      midTransitionCheck.isScalingDown &&
+      midTransitionCheck.isDimming
+    );
+    logCheck('WORKS', 'works_stack_mid_transition_scaling_and_dimming', midTransitionOk,
+      `scale0=${midTransitionCheck?.scale0?.toFixed(3)}, dimOpacity=${midTransitionCheck?.dim0Opacity?.toFixed(3)}, willChange=${midTransitionCheck?.willChangeApplied}`);
+
+    // Wait for transition to complete and settle
+    await wait(800);
+
+    // Now navigate to Card 2 to test resting two-layer stack
+    await evalJs(`
+      (() => {
+        const dots = document.querySelectorAll('#works .page-inner button[aria-label*="Go to"]');
+        dots[2]?.click();
+      })()
+    `);
+    await wait(1000);
+
+    const restingStackCheck = await evalJs(`
+      (() => {
+        const cards = Array.from(document.querySelectorAll('#works [data-card]'));
+        if (cards.length < 3) return null;
+        const [c0, c1, c2] = cards;
+        const [d0, d1, d2] = cards.map(c => c.querySelector('[data-card-dim]'));
+
+        const r0 = c0.getBoundingClientRect();
+        const r1 = c1.getBoundingClientRect();
+        const r2 = c2.getBoundingClientRect();
+
+        const getScale = (el) => {
+          const tr = window.getComputedStyle(el).transform;
+          if (!tr || tr === 'none') return 1;
+          const start = tr.indexOf('(');
+          const end = tr.indexOf(')');
+          if (start !== -1 && end !== -1) {
+            const parts = tr.slice(start + 1, end).split(',').map(s => parseFloat(s.trim()));
+            if (tr.startsWith('matrix3d')) {
+              return Math.hypot(parts[0], parts[1], parts[2]);
+            }
+            return Math.hypot(parts[0], parts[1]);
+          }
+          return 1;
+        };
+
+        const s0 = getScale(c0);
+        const s1 = getScale(c1);
+        const s2 = getScale(c2);
+
+        const op0 = d0 ? parseFloat(window.getComputedStyle(d0).opacity) : 0;
+        const op1 = d1 ? parseFloat(window.getComputedStyle(d1).opacity) : 0;
+        const op2 = d2 ? parseFloat(window.getComputedStyle(d2).opacity) : 0;
+
+        const vis0 = window.getComputedStyle(c0).visibility;
+        const vis1 = window.getComputedStyle(c1).visibility;
+        const vis2 = window.getComputedStyle(c2).visibility;
+
+        // Card 0 and Card 1 must peek above Card 2: r0.top < r1.top < r2.top
+        // Scale depth: s0 < s1 < s2
+        // Dim depth: op0 > op1 > op2
+        const peekingDepth = (r0.top < r1.top) && (r1.top < r2.top);
+        const scaleDepth = (s0 < 0.92) && (s1 < 0.97) && (s2 >= 0.99);
+        const dimDepth = (op0 > 0.6) && (op1 > 0.3) && (op2 < 0.1);
+        const allVisible = vis0 !== 'hidden' && vis1 !== 'hidden' && vis2 !== 'hidden';
+
+        return {
+          r0Top: r0.top,
+          r1Top: r1.top,
+          r2Top: r2.top,
+          s0, s1, s2,
+          op0, op1, op2,
+          peekingDepth,
+          scaleDepth,
+          dimDepth,
+          allVisible,
+          willChangeCleared: c0.style.willChange === 'auto' || !c0.style.willChange
+        };
+      })()
+    `);
+
+    const restingStackOk = Boolean(
+      restingStackCheck &&
+      restingStackCheck.peekingDepth &&
+      restingStackCheck.scaleDepth &&
+      restingStackCheck.dimDepth &&
+      restingStackCheck.allVisible
+    );
+    logCheck('WORKS', 'works_stack_at_rest_two_peeking_layers', restingStackOk,
+      `tops=[${restingStackCheck?.r0Top?.toFixed(1)}, ${restingStackCheck?.r1Top?.toFixed(1)}, ${restingStackCheck?.r2Top?.toFixed(1)}], ` +
+      `scales=[${restingStackCheck?.s0?.toFixed(2)}, ${restingStackCheck?.s1?.toFixed(2)}, ${restingStackCheck?.s2?.toFixed(2)}], ` +
+      `dims=[${restingStackCheck?.op0?.toFixed(2)}, ${restingStackCheck?.op1?.toFixed(2)}, ${restingStackCheck?.op2?.toFixed(2)}]`);
+
     // =========================================================================
     // CHECK 7: CONNECT
     // =========================================================================

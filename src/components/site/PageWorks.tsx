@@ -1204,42 +1204,56 @@ export function PageWorks({
   const dimRefs = useRef<(HTMLDivElement | null)[]>([]);
   const prevSub = useRef(sub);
   const initialRender = useRef(true);
+  const prevActiveRef = useRef(active);
+  const activeTimelineRef = useRef<gsap.core.Timeline | null>(null);
 
   useEffect(() => {
     preloadScreenshots();
   }, []);
 
-  // Ensure cards rest in exact positions whenever Works enters/becomes active
-  useEffect(() => {
-    if (!paged || !active) return;
-    const cards = cardRefs.current;
-    const dims = dimRefs.current;
-    cards.forEach((c, i) => {
-      if (!c) return;
-      const dim = dims[i];
-      if (i > sub) {
-        gsap.set(c, { yPercent: 100, scale: 1 });
-        if (dim) gsap.set(dim, { opacity: 0 });
-      } else if (i === sub) {
-        gsap.set(c, { yPercent: 0, scale: 1 });
-        if (dim) gsap.set(dim, { opacity: 0 });
-      } else {
-        const depth = sub - i;
-        gsap.set(c, { yPercent: -4 * depth, scale: Math.max(0.8, 1 - 0.06 * depth) });
-        if (dim) gsap.set(dim, { opacity: Math.min(0.8, 0.45 * depth) });
-      }
-    });
-    prevSub.current = sub;
-  }, [active, paged, sub]);
-
+  // Ensure cards rest in exact positions whenever Works page mounts or becomes active
   useEffect(() => {
     if (!paged) return;
+    const justEntered = active && !prevActiveRef.current;
+    prevActiveRef.current = active;
+
+    if (justEntered || initialRender.current) {
+      initialRender.current = false;
+      if (activeTimelineRef.current?.isActive()) {
+        activeTimelineRef.current.kill();
+      }
+      const cards = cardRefs.current;
+      const dims = dimRefs.current;
+      cards.forEach((c, i) => {
+        if (!c) return;
+        const dim = dims[i];
+        if (i > sub) {
+          gsap.set(c, { yPercent: 100, scale: 1 });
+          if (dim) gsap.set(dim, { opacity: 0 });
+          c.style.visibility = "hidden";
+        } else if (i === sub) {
+          gsap.set(c, { yPercent: 0, scale: 1 });
+          if (dim) gsap.set(dim, { opacity: 0 });
+          c.style.visibility = "visible";
+        } else {
+          const depth = sub - i;
+          gsap.set(c, { yPercent: -4 * depth, scale: Math.max(0.8, 1 - 0.06 * depth) });
+          if (dim) gsap.set(dim, { opacity: Math.min(0.8, 0.45 * depth) });
+          c.style.visibility = "visible";
+        }
+      });
+      prevSub.current = sub;
+    }
+  }, [active, paged, sub]);
+
+  // Card change stacking animation
+  useEffect(() => {
+    if (!paged || !active) return;
 
     const cards = cardRefs.current;
     const dims = dimRefs.current;
 
-    if (initialRender.current || reduced()) {
-      initialRender.current = false;
+    if (reduced()) {
       prevSub.current = sub;
       cards.forEach((c, i) => {
         if (!c) return;
@@ -1247,13 +1261,16 @@ export function PageWorks({
         if (i > sub) {
           gsap.set(c, { yPercent: 100, scale: 1 });
           if (dim) gsap.set(dim, { opacity: 0 });
+          c.style.visibility = "hidden";
         } else if (i === sub) {
           gsap.set(c, { yPercent: 0, scale: 1 });
           if (dim) gsap.set(dim, { opacity: 0 });
+          c.style.visibility = "visible";
         } else {
           const depth = sub - i;
           gsap.set(c, { yPercent: -4 * depth, scale: Math.max(0.8, 1 - 0.06 * depth) });
           if (dim) gsap.set(dim, { opacity: Math.min(0.8, 0.45 * depth) });
+          c.style.visibility = "visible";
         }
       });
       return;
@@ -1261,16 +1278,23 @@ export function PageWorks({
 
     const from = prevSub.current;
     const to = sub;
+    if (from === to) return;
     prevSub.current = sub;
 
-    if (from === to) return;
+    if (activeTimelineRef.current?.isActive()) {
+      activeTimelineRef.current.kill();
+    }
 
+    // Set will-change and visibility before starting tween
     cards.forEach((c, i) => {
       if (!c) return;
-      if (i <= Math.max(from, to) && i >= Math.min(from, to) - 1) {
+      if (i <= Math.max(from, to) && i >= 0) {
         c.style.visibility = "visible";
       }
       c.style.willChange = "transform";
+    });
+    dims.forEach((d) => {
+      if (d) d.style.willChange = "opacity";
     });
 
     const tl = gsap.timeline({
@@ -1278,52 +1302,150 @@ export function PageWorks({
         cards.forEach((c, i) => {
           if (!c) return;
           c.style.willChange = "auto";
-          if (i > to || i < to - 1) {
+          if (i > to) {
             c.style.visibility = "hidden";
           } else {
             c.style.visibility = "visible";
           }
         });
+        dims.forEach((d) => {
+          if (d) d.style.willChange = "auto";
+        });
       },
     });
+    activeTimelineRef.current = tl;
 
     if (to > from) {
-      // Forward transition: incoming card slides up over previous card (which stays static as snapshot)
+      // Forward transition: incoming card slides up over current card (0.7s power3.inOut),
+      // while previous cards scale down to ~0.94, move up ~4%, and dim with dark overlay.
       cards.forEach((c, i) => {
         if (!c) return;
+        const dim = dims[i];
+
         if (i === to) {
           tl.fromTo(
             c,
-            { yPercent: 100 },
-            { yPercent: 0, duration: 0.75, ease: "expo.out" },
+            { yPercent: 100, scale: 1 },
+            { yPercent: 0, scale: 1, duration: 0.7, ease: "power3.inOut" },
             0
           );
+          if (dim) {
+            tl.fromTo(dim, { opacity: 0 }, { opacity: 0, duration: 0.7, ease: "power3.inOut" }, 0);
+          }
         } else if (i < to) {
-          tl.set(c, { yPercent: 0 }, 0);
+          const depth = to - i;
+          const targetScale = Math.max(0.8, 1 - 0.06 * depth);
+          const targetYPercent = -4 * depth;
+          const targetDim = Math.min(0.8, 0.45 * depth);
+
+          tl.to(
+            c,
+            {
+              yPercent: targetYPercent,
+              scale: targetScale,
+              duration: 0.7,
+              ease: "power3.inOut",
+            },
+            0
+          );
+          if (dim) {
+            tl.to(
+              dim,
+              {
+                opacity: targetDim,
+                duration: 0.7,
+                ease: "power3.inOut",
+              },
+              0
+            );
+          }
         } else {
-          tl.set(c, { yPercent: 100 }, 0);
+          tl.set(c, { yPercent: 100, scale: 1 }, 0);
+          if (dim) tl.set(dim, { opacity: 0 }, 0);
         }
       });
     } else {
-      // Reverse transition: top card slides down revealing previous card underneath
+      // Reverse transition: top card slides down and revealing the card beneath,
+      // which scales back to 1 and dim returns to 0.
       cards.forEach((c, i) => {
         if (!c) return;
+        const dim = dims[i];
+
         if (i > to) {
           tl.to(
             c,
             {
               yPercent: 100,
-              duration: 0.75,
-              ease: "expo.out",
+              scale: 1,
+              duration: 0.7,
+              ease: "power3.inOut",
             },
             0
           );
+          if (dim) {
+            tl.to(
+              dim,
+              {
+                opacity: 0,
+                duration: 0.7,
+                ease: "power3.inOut",
+              },
+              0
+            );
+          }
+        } else if (i === to) {
+          tl.to(
+            c,
+            {
+              yPercent: 0,
+              scale: 1,
+              duration: 0.7,
+              ease: "power3.inOut",
+            },
+            0
+          );
+          if (dim) {
+            tl.to(
+              dim,
+              {
+                opacity: 0,
+                duration: 0.7,
+                ease: "power3.inOut",
+              },
+              0
+            );
+          }
         } else {
-          tl.set(c, { yPercent: 0 }, 0);
+          const depth = to - i;
+          const targetScale = Math.max(0.8, 1 - 0.06 * depth);
+          const targetYPercent = -4 * depth;
+          const targetDim = Math.min(0.8, 0.45 * depth);
+
+          tl.to(
+            c,
+            {
+              yPercent: targetYPercent,
+              scale: targetScale,
+              duration: 0.7,
+              ease: "power3.inOut",
+            },
+            0
+          );
+          if (dim) {
+            tl.to(
+              dim,
+              {
+                opacity: targetDim,
+                duration: 0.7,
+                ease: "power3.inOut",
+              },
+              0
+            );
+          }
         }
       });
     }
-  }, [sub, paged]);
+  }, [sub, paged, active]);
 
   return (
     <div
@@ -1375,10 +1497,10 @@ export function PageWorks({
               background: "var(--cream)",
               color: "var(--ink)",
               zIndex: paged ? (i + 1) * 10 : undefined,
-              contain: paged ? "paint layout" : undefined,
+              contain: paged ? "layout" : undefined,
               borderTop: paged ? "1px solid rgba(11, 11, 11, 0.12)" : undefined,
-              boxShadow: paged ? "0 -2px 10px rgba(11, 11, 11, 0.05)" : undefined,
-              visibility: !active ? "hidden" : (paged && i < sub - 1 ? "hidden" : undefined),
+              boxShadow: paged ? "0 -8px 24px rgba(11, 11, 11, 0.08)" : undefined,
+              visibility: !active ? "hidden" : (paged && i > sub ? "hidden" : undefined),
             }}
             aria-hidden={paged && i !== sub}
             inert={paged && i !== sub ? true : undefined}
