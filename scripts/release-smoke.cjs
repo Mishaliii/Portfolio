@@ -1855,6 +1855,67 @@ async function runSmoke() {
     logCheck('ALL_PAGES', 'no_empty_main_area_during_transition', Boolean(noEmptyMainArea?.ok), `samples=${noEmptyMainArea?.sampleCount}, allSolid=true`);
     await wait(1000);
 
+    // =========================================================================
+    // STEP 18: CONTENT ALIGNMENT & RESUME TRUTH AUDIT
+    // =========================================================================
+    console.log('\n--- Checking CONTENT ALIGNMENT (Step 18) ---');
+    
+    // 1. CV file check and all 4 Download CV buttons
+    const cvFileStats = fs.statSync(path.join(__dirname, '..', 'public', 'cv.pdf'));
+    const cvButtonsCheck = await evalJs(`
+      (() => {
+        const cvLinks = Array.from(document.querySelectorAll('a[href="/cv.pdf"]'));
+        const allHaveDownload = cvLinks.every(a => a.hasAttribute('download'));
+        return { count: cvLinks.length, allHaveDownload };
+      })()
+    `);
+    const cvOk = cvFileStats.size > 2000 && cvButtonsCheck && cvButtonsCheck.allHaveDownload && cvButtonsCheck.count >= 3;
+    logCheck('CONTENT', 'cv_file_replaced_and_buttons_download', Boolean(cvOk),
+      `size=${cvFileStats.size}B, renderedButtons=${cvButtonsCheck?.count}, hasDownload=${cvButtonsCheck?.allHaveDownload}`);
+
+    // 2. LinkedIn URL everywhere
+    const linkedInCheck = await evalJs(`
+      (() => {
+        const links = Array.from(document.querySelectorAll('a[href*="linkedin.com"]'));
+        const allCorrect = links.every(a => a.getAttribute('href') === 'https://www.linkedin.com/in/muhammedmishal13/');
+        return { count: links.length, allCorrect };
+      })()
+    `);
+    logCheck('CONTENT', 'linkedin_url_everywhere_correct', Boolean(linkedInCheck?.allCorrect && linkedInCheck?.count >= 1),
+      `count=${linkedInCheck?.count}, allCorrect=${linkedInCheck?.allCorrect}`);
+
+    // 3. GitHub URL & rel="noopener noreferrer"
+    const githubCheck = await evalJs(`
+      (() => {
+        const links = Array.from(document.querySelectorAll('a[href*="github.com"]'));
+        const allCorrectUrl = links.every(a => a.getAttribute('href') === 'https://github.com/Mishaliii');
+        const allNoOpener = links.every(a => {
+          const rel = a.getAttribute('rel') || '';
+          return rel.includes('noopener') && rel.includes('noreferrer');
+        });
+        return { count: links.length, allCorrectUrl, allNoOpener };
+      })()
+    `);
+    logCheck('CONTENT', 'github_url_and_rel_noopener_noreferrer', Boolean(githubCheck?.allCorrectUrl && githubCheck?.allNoOpener),
+      `count=${githubCheck?.count}, correctUrl=${githubCheck?.allCorrectUrl}, noopenerNoreferrer=${githubCheck?.allNoOpener}`);
+
+    // 4. DDSS and Productivity resume facts
+    const contentTruthCheck = await evalJs(`
+      (() => {
+        const fullText = document.body.textContent || '';
+        const no224 = !fullText.includes('224x224') && !fullText.includes('224×224');
+        const noDoctorLogin = !fullText.includes('doctor login');
+        const noQualityChecks = !fullText.includes('automated quality checks');
+        const noKMeansInBody = !fullText.includes('K-Means clustering');
+        const hasBlueCast = fullText.includes('Blue Cast Technologies') || fullText.includes('Blue Cast');
+        return { no224, noDoctorLogin, noQualityChecks, noKMeansInBody, hasBlueCast };
+      })()
+    `);
+    const contentTruthOk = contentTruthCheck && contentTruthCheck.no224 && contentTruthCheck.noDoctorLogin &&
+      contentTruthCheck.noQualityChecks && contentTruthCheck.noKMeansInBody && contentTruthCheck.hasBlueCast;
+    logCheck('CONTENT', 'content_facts_aligned_with_resume', Boolean(contentTruthOk),
+      `no224=${contentTruthCheck?.no224}, noDoctorLogin=${contentTruthCheck?.noDoctorLogin}, noKMeans=${contentTruthCheck?.noKMeansInBody}, hasBlueCast=${contentTruthCheck?.hasBlueCast}`);
+
     logCheck('ALL_PAGES', 'zero_console_errors_across_session', consoleErrors.length === 0, consoleErrors.length ? consoleErrors.join(' | ') : 'zero errors');
     logCheck('ALL_PAGES', 'zero_failed_network_requests', failedRequests.length === 0, failedRequests.length ? failedRequests.join(' | ') : 'zero failures');
     }

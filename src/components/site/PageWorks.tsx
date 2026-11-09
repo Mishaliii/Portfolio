@@ -604,13 +604,13 @@ function ProductivityExplorer({
         { scale: 1 },
         { scale: 1.015, duration: 0.25, yoyo: true, repeat: 1, ease: "power2.out" }
       );
-    } else if (pulseTarget === "regression" && scoreBoxRef.current) {
+    } else if ((pulseTarget === "models" || pulseTarget === "regression") && scoreBoxRef.current) {
       gsap.fromTo(
         scoreBoxRef.current,
         { scale: 1 },
         { scale: 1.05, duration: 0.25, yoyo: true, repeat: 1, ease: "power2.out" }
       );
-    } else if (pulseTarget === "clustering" && roleChipRef.current) {
+    } else if ((pulseTarget === "accuracy" || pulseTarget === "clustering") && roleChipRef.current) {
       gsap.fromTo(
         roleChipRef.current,
         { scale: 1 },
@@ -661,7 +661,7 @@ function ProductivityExplorer({
           ))}
         </div>
         <span className="mono text-[10px] sm:text-[11px] text-[#1F5A3A] font-semibold uppercase tracking-wider">
-          Session Activity
+          Sample Session Data
         </span>
       </div>
 
@@ -739,10 +739,10 @@ function RoleCard({ p, active }: { p: Project; active: boolean }) {
   const [pulseTarget, setPulseTarget] = useState<string | null>(null);
 
   const pipelineSteps = [
-    { label: "Behaviour features", target: "features" },
-    { label: "Random Forest regression", target: "regression" },
-    { label: "K-Means clustering", target: "clustering" },
-    { label: "Score and role", target: "score-role" },
+    { label: "EDA & feature engineering", target: "features" },
+    { label: "Random Forest & Logistic Regression", target: "models" },
+    { label: "~87% classification accuracy", target: "accuracy" },
+    { label: "Streamlit & joblib deployment", target: "score-role" },
   ];
 
   const titleNode = (
@@ -1465,20 +1465,25 @@ export function PageWorks({
       style={{ background: "var(--cream)", color: "var(--ink)" }}
     >
       {/* Progress indicator row */}
-      <div className="flex items-center justify-end gap-2 pb-2" data-fade>
-        {works.projects.map((p, idx) => (
-          <button
-            key={p.id}
-            type="button"
-            onClick={() => onSelectSub?.(idx)}
-            aria-label={`Go to ${p.title}`}
-            className="inline-block h-[3px] rounded-full transition-all duration-500 ease-out cursor-pointer p-0 border-0 outline-none focus-visible:ring-1 focus-visible:ring-[#1F5A3A]"
-            style={{
-              width: !paged || sub === idx ? 32 : 12,
-              backgroundColor: !paged || sub === idx ? "var(--accent-green)" : "var(--line)",
-            }}
-          />
-        ))}
+      <div className="flex items-center justify-between pb-2" data-fade>
+        <span className="mono text-[10px] sm:text-[11px] text-[#6B645A] tracking-wider truncate mr-2">
+          Additional projects: Build Track Pro · Fresh Cart · Drop for Life
+        </span>
+        <div className="flex items-center gap-2 shrink-0">
+          {works.projects.map((p, idx) => (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => onSelectSub?.(idx)}
+              aria-label={`Go to ${p.title}`}
+              className="inline-block h-[3px] rounded-full transition-all duration-500 ease-out cursor-pointer p-0 border-0 outline-none focus-visible:ring-1 focus-visible:ring-[#1F5A3A]"
+              style={{
+                width: !paged || sub === idx ? 32 : 12,
+                backgroundColor: !paged || sub === idx ? "var(--accent-green)" : "var(--line)",
+              }}
+            />
+          ))}
+        </div>
       </div>
 
       <h2 className="sr-only">{works.heading}</h2>

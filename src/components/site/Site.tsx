@@ -527,8 +527,8 @@ export function Site() {
     if (it.kind === "page") go(idx(it.target));
     else if (it.kind === "cv") { const a = document.createElement("a"); a.href = site.cv; a.download = ""; a.click(); }
     else if (it.kind === "email") copyEmail();
-    else if (it.kind === "github") window.open(site.github, "_blank", "noopener");
-    else window.open(site.linkedin, "_blank", "noopener");
+    else if (it.kind === "github") window.open(site.github, "_blank", "noopener,noreferrer");
+    else window.open(site.linkedin, "_blank", "noopener,noreferrer");
   };
 
   const heroTheme = cur === 0;

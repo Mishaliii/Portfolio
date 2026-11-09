@@ -45,15 +45,15 @@ describe("PageJourney unit tests", () => {
 
       // Stop 1: 2024
       expect(stops[1].year).toBe("2024");
-      expect(stops[1].role).toBe("MCA · CGPA 8.33");
-      expect(stops[1].place).toBe("TKM College of Engineering, Kollam");
+      expect(stops[1].role).toBe("MCA · GPA 8.33/10");
+      expect(stops[1].place).toBe("TKM College of Engineering");
       expect(stops[1].line.length).toBeGreaterThan(10);
       expect(stops[1].tag).toBe("Postgraduate");
 
       // Stop 2: 2026
       expect(stops[2].year).toBe("2026");
-      expect(stops[2].role).toBe("AI / ML Intern, DDSS");
-      expect(stops[2].place).toBe("Bluecast Technologies (Jan to Apr)");
+      expect(stops[2].role).toBe("AI / ML Developer Intern");
+      expect(stops[2].place).toBe("Blue Cast Technologies (Jan - Apr 2026)");
       expect(stops[2].line.length).toBeGreaterThan(10);
       expect(stops[2].tag).toBe("Internship");
 

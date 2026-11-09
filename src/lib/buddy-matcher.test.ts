@@ -322,12 +322,12 @@ describe("buddy-matcher comprehensive test suite (>= 60 phrasing & typo tests)",
     {
       query: "how does the productivity model work?",
       expectedIntent: "productivity_how",
-      textContains: ["Random Forest", "K-Means"],
+      textContains: ["Random Forest", "Logistic Regression"],
     },
     {
       query: "how does role prediction work",
       expectedIntent: "productivity_how",
-      textContains: ["Random Forest", "K-Means"],
+      textContains: ["Random Forest", "Logistic Regression"],
     },
     {
       query: "what is role prediction?",
@@ -384,7 +384,7 @@ describe("buddy-matcher comprehensive test suite (>= 60 phrasing & typo tests)",
     {
       query: "why should I hire him?",
       expectedIntent: "why_hire",
-      textContains: ["Bluecast Technologies", "FastAPI", "TKM College of Engineering"],
+      textContains: ["Blue Cast Technologies", "FastAPI", "TKM College of Engineering"],
     },
     {
       query: "why hire mishal",
@@ -418,7 +418,7 @@ describe("buddy-matcher comprehensive test suite (>= 60 phrasing & typo tests)",
     {
       query: "what is his edukation?", // typo edukation
       expectedIntent: "education",
-      textContains: ["TKM College of Engineering", "CGPA 8.33", "BCA"],
+      textContains: ["TKM College of Engineering", "8.33", "BCA"],
     },
     {
       query: "what colledge did he attend?", // typo colledge
@@ -433,12 +433,22 @@ describe("buddy-matcher comprehensive test suite (>= 60 phrasing & typo tests)",
     {
       query: "tell me about his exprerience", // typo exprerience
       expectedIntent: "experience",
-      textContains: ["Bluecast Technologies", "AI / ML Intern"],
+      textContains: ["Blue Cast Technologies", "AI / ML Developer Intern"],
     },
     {
       query: "internship background",
       expectedIntent: "experience",
-      textContains: ["Bluecast Technologies"],
+      textContains: ["Blue Cast Technologies"],
+    },
+    {
+      query: "what certifications does he have?",
+      expectedIntent: "certifications",
+      textContains: ["Azure AI Essentials", "Keras", "NPTEL"],
+    },
+    {
+      query: "additional projects",
+      expectedIntent: "additional_projects",
+      textContains: ["Build Track Pro", "Fresh Cart", "Drop for Life"],
     },
     {
       query: "is he available to hire?",

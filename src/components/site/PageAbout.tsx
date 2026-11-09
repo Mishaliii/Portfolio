@@ -171,12 +171,14 @@ export function PageAbout({ go, active = true }: { go: (id: string) => void; act
   }, []);
 
   const items = useMemo(() => {
-    const factEdu = about.facts[0];
-    const factExp = about.facts[1];
-    const factStack = about.facts[2];
-    const factStatus = about.facts[3];
+    const factEdu = about.facts.find((f) => f.label === "EDUCATION") || about.facts[0];
+    const factExp = about.facts.find((f) => f.label === "EXPERIENCE") || about.facts[1];
+    const factCert = about.facts.find((f) => f.label === "CERTIFICATIONS");
+    const factAdd = about.facts.find((f) => f.label === "ADDITIONAL");
+    const factStack = about.facts.find((f) => f.label === "STACK") || about.facts[2];
+    const factStatus = about.facts.find((f) => f.label === "STATUS") || about.facts[3];
 
-    return [
+    const cards = [
       // 1) bio paragraph 1
       <div key="bio-1" className="about-wheel-card">
         <div className="about-wheel-label font-mono text-[11px] sm:text-[12px] uppercase tracking-wider text-[#1F5A3A] font-semibold mb-1">
@@ -204,8 +206,8 @@ export function PageAbout({ go, active = true }: { go: (id: string) => void; act
         </div>
         <p className="about-wheel-body text-[clamp(13px,1.1vw,16px)] font-sans text-[#0B0B0B] leading-relaxed">
           <strong>
-            {"bold" in factEdu && factEdu.bold === "MCA · CGPA 8.33" ? (
-              <>MCA · CGPA <Odometer value="8.33" active={active} delay={0.2} /></>
+            {"bold" in factEdu && factEdu.bold && factEdu.bold.includes("8.33") ? (
+              <>MCA · GPA <Odometer value="8.33" active={active} delay={0.2} />/10</>
             ) : (
               "bold" in factEdu ? factEdu.bold : ""
             )}
@@ -235,7 +237,22 @@ export function PageAbout({ go, active = true }: { go: (id: string) => void; act
         )}
       </div>,
 
-      // 5) Stack
+      // 5) Certifications (small & honest)
+      ...(factCert
+        ? [
+            <div key="cert" className="about-wheel-card">
+              <div className="about-wheel-label font-mono text-[11px] sm:text-[12px] uppercase tracking-wider text-[#1F5A3A] font-semibold mb-1">
+                {factCert.label}
+              </div>
+              <p className="about-wheel-body text-[clamp(13px,1.1vw,16px)] font-sans text-[#0B0B0B] leading-relaxed">
+                <strong>{"bold" in factCert ? factCert.bold : ""}</strong>
+                {factCert.text}
+              </p>
+            </div>,
+          ]
+        : []),
+
+      // 6) Stack & Additional Projects
       <div key="stack" className="about-wheel-card">
         <div className="about-wheel-label font-mono text-[11px] sm:text-[12px] uppercase tracking-wider text-[#1F5A3A] font-semibold mb-1">
           {factStack.label}
@@ -243,9 +260,15 @@ export function PageAbout({ go, active = true }: { go: (id: string) => void; act
         <p className="about-wheel-body text-[clamp(13px,1.1vw,16px)] font-sans text-[#0B0B0B] leading-relaxed">
           {factStack.text}
         </p>
+        {factAdd && (
+          <p className="about-wheel-secondary text-[clamp(11px,0.95vw,13px)] text-[#6B645A] font-sans mt-1.5">
+            <span className="font-semibold text-[#0B0B0B]">{"bold" in factAdd ? factAdd.bold : ""}:</span>
+            {factAdd.text}
+          </p>
+        )}
       </div>,
 
-      // 6) Location + availability
+      // 7) Location + availability
       <div key="loc" className="about-wheel-card">
         <div className="about-wheel-label font-mono text-[11px] sm:text-[12px] uppercase tracking-wider text-[#1F5A3A] font-semibold mb-1 flex items-center gap-1.5">
           <span className="w-1.5 h-1.5 rounded-full bg-[#1F5A3A]" aria-hidden="true" />
@@ -266,6 +289,8 @@ export function PageAbout({ go, active = true }: { go: (id: string) => void; act
         </p>
       </div>,
     ];
+
+    return cards;
   }, [bioSentences, active]);
 
   return (

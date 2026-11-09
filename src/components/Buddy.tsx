@@ -127,7 +127,7 @@ const IDLE_BUBBLES_POOL: IdleBubbleItem[] = [
   { id: "c2", text: "Coffee chat or job offer? He's open to both.", action: "Is he available?", query: "Is he available to hire?", page: "connect" },
   // Page aware: About
   { id: "a1", text: "All facts verified. No hallucinations in this bio.", action: "Why hire him?", query: "Why should I hire him?", page: "about" },
-  { id: "a2", text: "TKM College of Engineering and Bluecast roots!", action: "Background", query: "Tell me about your background", page: "about" },
+  { id: "a2", text: "TKM College of Engineering and Blue Cast roots!", action: "Background", query: "Tell me about your background", page: "about" },
   // Generic & playful
   { id: "g1", text: "I can tell jokes. They are bad.", action: "Tell me a joke", query: "Tell me a joke" },
   { id: "g2", text: "Poke me. I dare you." },

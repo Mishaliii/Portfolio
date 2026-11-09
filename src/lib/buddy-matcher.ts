@@ -444,7 +444,7 @@ export function matchBuddyIntent(
     const edu = about.facts.find((f) => f.label === "EDUCATION");
     return {
       intent: "why_hire",
-      text: `Three reasons: **1. Real AI/ML experience** (${exp?.text?.trim() || "Bluecast Technologies"}) building clinical case retrieval; **2. Full-stack capability** from PyTorch and FastAPI to 60fps web apps; **3. Rigorous foundation** with ${edu?.bold || "MCA"} (${edu?.text?.trim() || "TKM College of Engineering"}).`,
+      text: `Three reasons: **1. Real AI/ML experience** (${exp?.text?.trim() || "Blue Cast Technologies"}) building clinical case retrieval; **2. Full-stack capability** from PyTorch and FastAPI to 60fps web apps; **3. Rigorous foundation** with ${edu?.bold || "MCA"} (${edu?.text?.trim() || "TKM College of Engineering"}).`,
       mood: "excited",
       reaction: "Here's why!",
       followUps: ["Is he available?", "Download CV", "Contact"],
@@ -455,7 +455,7 @@ export function matchBuddyIntent(
   if (/\b(how does ddss work|ddss (how|pipeline|architecture)|how does (the )?case retrieval work)\b/i.test(normalized)) {
     return {
       intent: "ddss_how",
-      text: "Doctors upload a clinical skin photo, **DINOv2** generates a 768-dimensional embedding, and **FAISS** retrieves the closest benchmark cases from the SD-198 dataset with similarity scores in under 120ms.",
+      text: "A clinician uploads a lesion photo, **DINOv2 (ViT-Base)** extracts a 768-dimensional dense embedding, and **FAISS** with **Supabase PostgreSQL/pgvector** retrieves the most similar cases across 198 SD-198 disease classes with High/Moderate/Low confidence indicators, served via **FastAPI**.",
       mood: "excited",
       reaction: "Here's how!",
       followUps: ["What are the limits?", "Show other projects", "Tech stack?"],
@@ -490,7 +490,7 @@ export function matchBuddyIntent(
   if (/\b(how does (the )?productivity|productivity (how|pipeline|model)|how does (the )?role prediction work)\b/i.test(normalized)) {
     return {
       intent: "productivity_how",
-      text: "The pipeline extracts 8 behavioural metrics (typing intensity, idle duration, task switching, application breakdown), applies **Random Forest** regression for a continuous 0–100 score, and **K-Means** clustering to identify behavioural role patterns like Manager.",
+      text: "The pipeline performs EDA and feature engineering across session activity metrics (typing intensity, idle intervals, application usage), training **Random Forest** and **Logistic Regression** models saved with **joblib** and served through an interactive **Streamlit** app with ~87% classification accuracy.",
       mood: "excited",
       reaction: "Here's how!",
       followUps: ["Productivity project", "Show other projects", "Why hire him?"],
@@ -498,7 +498,7 @@ export function matchBuddyIntent(
   }
 
   // Productivity Overview
-  if (/\b(productivity|role prediction|worker|cluster|clustering|k-means|random forest)\b/i.test(normalized)) {
+  if (/\b(productivity|role prediction|worker|random forest|logistic regression|streamlit)\b/i.test(normalized)) {
     const role = works.projects.find((p) => p.id === "role") || works.projects[1];
     return {
       intent: "productivity",
@@ -529,6 +529,17 @@ export function matchBuddyIntent(
       mood: "excited",
       reaction: "CareerLens!",
       followUps: ["How does it work?", "Show other projects", "Tech stack?"],
+    };
+  }
+
+  // Additional projects
+  if (/\b(additional projects?|other projects?|build track pro|fresh cart|drop for life)\b/i.test(normalized)) {
+    return {
+      intent: "additional_projects",
+      text: `Besides his flagship AI/ML systems, ${site.name} has built: **Build Track Pro** (Django, MySQL contractor management), **Fresh Cart** (PHP, JavaScript, MySQL e-commerce), and **Drop for Life** (blood donation coordination platform).`,
+      mood: "happy",
+      reaction: "More projects!",
+      followUps: ["Tell me about DDSS", "Productivity project", "Tech stack?"],
     };
   }
 
@@ -597,11 +608,11 @@ export function matchBuddyIntent(
   }
 
   // Education / Degree
-  if (/\b(education|college|degree|mca|bca|tkm|musaliar|studies|study|cgpa|university)\b/i.test(normalized)) {
+  if (/\b(education|college|degree|mca|bca|tkm|musaliar|studies|study|gpa|cgpa|university)\b/i.test(normalized)) {
     const edu = about.facts.find((f) => f.label === "EDUCATION");
     return {
       intent: "education",
-      text: `**${edu?.bold || "MCA · CGPA 8.33"}**${edu?.text || " · TKM College of Engineering, Kollam · 2024-26"}, preceded by **${edu?.secondary || "BCA · Musaliar College of Arts and Science · 2021-24"}**.`,
+      text: `**${edu?.bold || "MCA · GPA 8.33/10"}**${edu?.text || " · TKM College of Engineering · 08/2024 - 07/2026"}, preceded by **${edu?.secondary || "BCA · Musaliar College of Arts and Science · 08/2021 - 04/2024"}**.`,
       mood: "happy",
       reaction: "Education!",
       followUps: ["Experience", "Why hire him?", "Tech stack?"],
@@ -609,14 +620,25 @@ export function matchBuddyIntent(
   }
 
   // Experience / Internship
-  if (/\b(experience|intern|internship|bluecast|career|background|work history)\b/i.test(normalized)) {
+  if (/\b(experience|intern|internship|blue cast|bluecast|career|background|work history)\b/i.test(normalized)) {
     const exp = about.facts.find((f) => f.label === "EXPERIENCE");
     return {
       intent: "experience",
-      text: `**${exp?.bold || "AI / ML Intern, DDSS"}**${exp?.text || " · Bluecast Technologies · Jan-Apr 2026"}. ${exp?.secondary || "Built a dermatology decision-support system using DINOv2 case retrieval."}`,
+      text: `**${exp?.bold || "AI / ML Developer Intern"}**${exp?.text || " · Blue Cast Technologies · Jan - Apr 2026"}. ${exp?.secondary || "Contributed to an image-based dermatology decision-support system using 768-dim DINOv2 embeddings and FastAPI pgvector pipeline across 198 classes."}`,
       mood: "happy",
       reaction: "Experience!",
       followUps: ["Tell me about DDSS", "Why hire him?", "Education"],
+    };
+  }
+
+  // Certifications
+  if (/\b(certifications?|certified|credentials?|azure ai|keras|nptel)\b/i.test(normalized)) {
+    return {
+      intent: "certifications",
+      text: `${site.name} holds 5 key certifications: **Microsoft Azure AI Essentials** (LinkedIn), **Deep Learning Essentials with Keras** (IBM), **Java Certification** (NPTEL), **Python Data Science, Machine Learning & AI**, and **Data Engineering: SQL, Python & Spark**.`,
+      mood: "happy",
+      reaction: "Certified!",
+      followUps: ["Tech stack?", "Education", "Projects"],
     };
   }
 

@@ -128,8 +128,8 @@ const personJsonLd = {
   url: "https://mishal.dev/",
   image: "https://mishal.dev/og-image.png",
   sameAs: [
-    "https://github.com/muhammedmishal",
-    "https://www.linkedin.com/"
+    "https://github.com/Mishaliii",
+    "https://www.linkedin.com/in/muhammedmishal13/"
   ],
   knowsAbout: [
     "Artificial Intelligence",
