@@ -1812,14 +1812,14 @@ async function runSmoke() {
     logCheck('ALL_PAGES', 'pairwise_symmetric_page_transitions_no_leftover_opacity_zero',
       allTransitionsClean, `${transitionPairs.length} pairs tested; all clean=${allTransitionsClean}`);
 
-    // Step 17: Transition duration timing check (duration <= 1000ms)
+    // Step 19: Transition duration timing check (paced comfortably between 1100ms and 1450ms)
     const transitionTiming = await evalJs(`
       (() => new Promise((resolve) => {
         const t0 = performance.now();
         const onEnd = () => {
           window.removeEventListener('page-transition-end', onEnd);
           const dur = performance.now() - t0;
-          resolve({ dur: Math.round(dur), ok: dur <= 1000 });
+          resolve({ dur: Math.round(dur), ok: dur >= 1100 && dur <= 1450 });
         };
         window.addEventListener('page-transition-end', onEnd);
         const a = document.querySelector('a[data-pill][href="#about"]');
@@ -1827,7 +1827,7 @@ async function runSmoke() {
         else resolve({ ok: false, reason: 'link not found' });
       }))()
     `);
-    logCheck('ALL_PAGES', 'page_transition_timing_under_1000ms', Boolean(transitionTiming?.ok), `duration=${transitionTiming?.dur}ms`);
+    logCheck('ALL_PAGES', 'page_transition_timing_paced_comfortably', Boolean(transitionTiming?.ok), `duration=${transitionTiming?.dur}ms (target 1100-1450ms)`);
     await wait(400);
 
     // Step 17: No empty main area during transition (sampled pixels across 700ms)

@@ -242,14 +242,14 @@ export function Site() {
     const tl = gsap.timeline({ onComplete: done });
     w.style.willChange = "transform";
 
-    // 1. Wipe covers the viewport in 0.38s (transform-only, GPU composited)
-    tl.fromTo(w, { yPercent: down ? 100 : -100 }, { yPercent: 0, duration: 0.38, ease: EASE.tr }, 0);
+    // 1. Wipe covers viewport in 0.55s with smooth, weighted power3.inOut (deliberate, elegant pacing)
+    tl.fromTo(w, { yPercent: down ? 100 : -100 }, { yPercent: 0, duration: 0.55, ease: "power3.inOut" }, 0);
 
-    // 2. Wipe label: snappy entrance and exit (total visibility <= 0.35s)
-    tl.fromTo(label, { yPercent: down ? 25 : -25, opacity: 0 }, { yPercent: 0, opacity: 1, duration: 0.18, ease: "power2.out" }, 0.08);
-    tl.to(label, { opacity: 0, yPercent: down ? -20 : 20, duration: 0.14, ease: "power2.in" }, 0.28);
+    // 2. Wipe label: enters smoothly, rests during center hold, then dissolves out
+    tl.fromTo(label, { yPercent: down ? 25 : -25, opacity: 0 }, { yPercent: 0, opacity: 1, duration: 0.32, ease: "power2.out" }, 0.12);
+    tl.to(label, { opacity: 0, yPercent: down ? -20 : 20, duration: 0.20, ease: "power2.in" }, 0.55);
 
-    // 3. At 0.38s, viewport is 100% covered: swap active page, scene state, and trigger entrance
+    // 3. At 0.55s, viewport is 100% covered: swap active page and prepare new layout during 0.15s hold
     tl.add(() => {
       stage.covered = target !== 0;
       stage.heroOn = target === 0;
@@ -259,16 +259,20 @@ export function Site() {
       curRef.current = target;
       oldEl.classList.remove("is-active");
       newEl.classList.add("is-active");
+    }, 0.55);
+
+    // 4. Wipe uncovers viewport in 0.55s (0.70s to 1.25s) with a 0.15s hold
+    tl.to(w, { yPercent: down ? -100 : 100, duration: 0.55, ease: "power3.inOut" }, 0.70);
+
+    // 5. As the wipe peels back to reveal incoming page, trigger entrance animation
+    tl.add(() => {
       if (target === 0) {
         heroEnter(newEl);
       } else {
         enterPage(newEl);
-        settlePage(newEl, 500);
+        settlePage(newEl, 700);
       }
-    }, 0.38);
-
-    // 4. Wipe uncovers viewport in 0.38s (0.40s to 0.78s), revealing incoming page already built
-    tl.to(w, { yPercent: down ? -100 : 100, duration: 0.38, ease: EASE.tr }, 0.40);
+    }, 0.72);
   }, [paged]);
   const goRef = useRef(go); goRef.current = go;
 
