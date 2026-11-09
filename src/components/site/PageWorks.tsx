@@ -246,7 +246,7 @@ function DDSSCard({ p, active }: { p: Project; active: boolean }) {
 
   const shots = works.caseStudy.shots;
   const activeShotKey = selectedShot ?? shots[0]?.k ?? "ddss";
-  const posterSrc = ddssImages["ddss"] ?? ddssImages["ddss-screen"];
+  const posterSrc = "/media/ddss-demo-poster.webp";
 
   useEffect(() => {
     const v = videoRef.current;

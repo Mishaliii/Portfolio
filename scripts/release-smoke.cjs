@@ -350,6 +350,28 @@ async function runSmoke() {
       await evalJs(`document.querySelector('[role="dialog"] button[aria-label*="close" i]')?.click()`);
       await wait(600);
 
+      // Check DDSS demo video plays on mobile with poster
+      await evalJs(`
+        (() => {
+          const btn = Array.from(document.querySelectorAll('#works button')).find(b => b.textContent.includes('Play demo'));
+          btn?.click();
+        })()
+      `);
+      await wait(600);
+      const mobileVideoStatus = await evalJs(`
+        (() => {
+          const v = document.querySelector('#works video[src*="ddss-demo"]');
+          if (!v) return { ok: false, reason: 'video not found' };
+          return {
+            ok: v.getAttribute('poster') === '/media/ddss-demo-poster.webp' && (!v.paused || v.currentTime >= 0),
+            hasPoster: v.getAttribute('poster') === '/media/ddss-demo-poster.webp',
+            paused: v.paused,
+            src: v.getAttribute('src')
+          };
+        })()
+      `);
+      logCheck('MOBILE_WORKS', 'ddss_demo_video_plays_on_mobile', Boolean(mobileVideoStatus?.ok), `hasPoster=${mobileVideoStatus?.hasPoster}, paused=${mobileVideoStatus?.paused}`);
+
       // 4. MOBILE_JOURNEY: navigate to Journey, year odometer fits, details present
       console.log('\n--- Checking MOBILE_JOURNEY ---');
       await evalJs(`
@@ -571,8 +593,8 @@ async function runSmoke() {
     const singleVideoOk = singleVideoCheck && singleVideoCheck.count === 1 && singleVideoCheck.hasLoop && singleVideoCheck.hasMuted && singleVideoCheck.hasPlaysInline;
     logCheck('HERO', 'hero_single_video_with_loop', Boolean(singleVideoOk), `count=${singleVideoCheck?.count}, hasLoop=${singleVideoCheck?.hasLoop}`);
 
-    // Video frame budget: max frame gap under 110ms and > 95% frames on time
-    await wait(1000);
+    // Video frame budget: max frame gap under 60ms and >= 97% frames on time
+    await wait(2000);
     const vfcMetrics = await evalJs(`
       (() => new Promise((resolve) => {
         const vid = document.querySelector('.scene-video');
@@ -582,10 +604,10 @@ async function runSmoke() {
         let timer = setTimeout(() => {
           const clean = deltas.slice(3);
           const maxGap = clean.length ? Math.max(...clean) : 0;
-          const late = clean.filter(d => d > 65).length;
+          const late = clean.filter(d => d > 60).length;
           const onTimePct = clean.length ? ((clean.length - late) / clean.length) * 100 : 100;
-          resolve({ ok: maxGap <= 110 && onTimePct >= 95, maxGap: Math.round(maxGap * 10) / 10, onTimePct: Math.round(onTimePct * 10) / 10 });
-        }, 3000);
+          resolve({ ok: maxGap <= 60 && onTimePct >= 97, maxGap: Math.round(maxGap * 10) / 10, onTimePct: Math.round(onTimePct * 10) / 10 });
+        }, 3500);
         const cb = (now) => {
           deltas.push(now - last);
           last = now;
@@ -595,15 +617,15 @@ async function runSmoke() {
             clearTimeout(timer);
             const clean = deltas.slice(3);
             const maxGap = Math.max(...clean);
-            const late = clean.filter(d => d > 65).length;
+            const late = clean.filter(d => d > 60).length;
             const onTimePct = ((clean.length - late) / clean.length) * 100;
-            resolve({ ok: maxGap <= 110 && onTimePct >= 95, maxGap: Math.round(maxGap * 10) / 10, onTimePct: Math.round(onTimePct * 10) / 10 });
+            resolve({ ok: maxGap <= 60 && onTimePct >= 97, maxGap: Math.round(maxGap * 10) / 10, onTimePct: Math.round(onTimePct * 10) / 10 });
           }
         };
         vid.requestVideoFrameCallback(cb);
       }))()
     `);
-    logCheck('HERO', 'hero_video_frame_budget_60ms', Boolean(vfcMetrics?.ok), `maxGap=${vfcMetrics?.maxGap}ms, onTime=${vfcMetrics?.onTimePct}%`);
+    logCheck('HERO', 'hero_video_frame_budget_60ms', Boolean(vfcMetrics?.ok), `maxGap=${vfcMetrics?.maxGap}ms, onTime=${vfcMetrics?.onTimePct}% (target <=60ms, >=97%)`);
 
     // Console errors check on hero
     logCheck('HERO', 'no_console_errors_hero', consoleErrors.length === 0, consoleErrors.length ? consoleErrors.join('; ') : 'clean');
@@ -1284,6 +1306,28 @@ async function runSmoke() {
     `);
     await wait(700);
 
+    // Check DDSS demo video plays with poster
+    await evalJs(`
+      (() => {
+        const btn = Array.from(document.querySelectorAll('#works button')).find(b => b.textContent.includes('Play demo'));
+        btn?.click();
+      })()
+    `);
+    await wait(600);
+    const ddssVideoStatus = await evalJs(`
+      (() => {
+        const v = document.querySelector('#works video[src*="ddss-demo"]');
+        if (!v) return { ok: false, reason: 'video not found' };
+        return {
+          ok: v.getAttribute('poster') === '/media/ddss-demo-poster.webp' && (!v.paused || v.currentTime >= 0),
+          hasPoster: v.getAttribute('poster') === '/media/ddss-demo-poster.webp',
+          paused: v.paused,
+          src: v.getAttribute('src')
+        };
+      })()
+    `);
+    logCheck('WORKS', 'ddss_demo_video_plays_with_poster', Boolean(ddssVideoStatus?.ok), `hasPoster=${ddssVideoStatus?.hasPoster}, paused=${ddssVideoStatus?.paused}`);
+
     // =========================================================================
     // CHECK 6B: ALL THREE CASE STUDY DRAWERS (DDSS, Productivity, CareerLens)
     console.log('\n--- Checking ALL THREE CASE STUDY DRAWERS ---');
@@ -1812,14 +1856,14 @@ async function runSmoke() {
     logCheck('ALL_PAGES', 'pairwise_symmetric_page_transitions_no_leftover_opacity_zero',
       allTransitionsClean, `${transitionPairs.length} pairs tested; all clean=${allTransitionsClean}`);
 
-    // Step 19: Transition duration timing check (paced comfortably between 1100ms and 1450ms)
+    // Step 19: Transition duration timing check (target 800-900ms)
     const transitionTiming = await evalJs(`
       (() => new Promise((resolve) => {
         const t0 = performance.now();
         const onEnd = () => {
           window.removeEventListener('page-transition-end', onEnd);
           const dur = performance.now() - t0;
-          resolve({ dur: Math.round(dur), ok: dur >= 1100 && dur <= 1450 });
+          resolve({ dur: Math.round(dur), ok: dur >= 780 && dur <= 920 });
         };
         window.addEventListener('page-transition-end', onEnd);
         const a = document.querySelector('a[data-pill][href="#about"]');
@@ -1827,7 +1871,7 @@ async function runSmoke() {
         else resolve({ ok: false, reason: 'link not found' });
       }))()
     `);
-    logCheck('ALL_PAGES', 'page_transition_timing_paced_comfortably', Boolean(transitionTiming?.ok), `duration=${transitionTiming?.dur}ms (target 1100-1450ms)`);
+    logCheck('ALL_PAGES', 'page_transition_timing_paced_comfortably', Boolean(transitionTiming?.ok), `duration=${transitionTiming?.dur}ms (target 800-900ms)`);
     await wait(400);
 
     // Step 17: No empty main area during transition (sampled pixels across 700ms)
@@ -1919,6 +1963,35 @@ async function runSmoke() {
     logCheck('ALL_PAGES', 'zero_console_errors_across_session', consoleErrors.length === 0, consoleErrors.length ? consoleErrors.join(' | ') : 'zero errors');
     logCheck('ALL_PAGES', 'zero_failed_network_requests', failedRequests.length === 0, failedRequests.length ? failedRequests.join(' | ') : 'zero failures');
     }
+
+    // Check no build or asset file exceeds 24 MiB
+    function scanFilesOver24MB(dir) {
+      const over24 = [];
+      if (!fs.existsSync(dir)) return over24;
+      const walk = (d) => {
+        let entries = [];
+        try { entries = fs.readdirSync(d, { withFileTypes: true }); } catch { return; }
+        for (const entry of entries) {
+          const full = path.join(d, entry.name);
+          if (entry.isDirectory()) {
+            walk(full);
+          } else if (entry.isFile()) {
+            try {
+              const size = fs.statSync(full).size;
+              if (size > 24 * 1024 * 1024) {
+                over24.push({ path: path.relative(path.resolve(__dirname, '..'), full), sizeMb: (size / (1024 * 1024)).toFixed(2) });
+              }
+            } catch {}
+          }
+        }
+      };
+      walk(dir);
+      return over24;
+    }
+    const checkDirs = ['dist', '.output', 'public'];
+    const largeFiles = checkDirs.flatMap(d => scanFilesOver24MB(path.resolve(__dirname, '..', d)));
+    logCheck('BUILD_ASSETS', 'no_build_or_asset_file_over_24mb', largeFiles.length === 0,
+      largeFiles.length ? largeFiles.map(f => `${f.path} (${f.sizeMb}MB)`).join(', ') : 'all files under 24MB limit');
 
     // =========================================================================
     // SUMMARY REPORT TABLE
