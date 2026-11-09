@@ -144,17 +144,17 @@ export const expertise = {
 };
 
 export type ImportanceItem = { label: string; value: number };
-export type PipelineStep = { label: string; shot: string; zoom?: boolean };
-export type PipelineRow = { label: string; shot: string; zoom?: boolean };
-export type FilmstripItem = { k: string; t: string };
-export type PipelineBox = { label: string; caption: string; built: boolean; desc?: string };
+type PipelineStep = { label: string; shot: string; zoom?: boolean };
+type PipelineRow = { label: string; shot: string; zoom?: boolean };
+type FilmstripItem = { k: string; t: string };
+type PipelineBox = { label: string; caption: string; built: boolean; desc?: string };
 
-export type TableRow = {
+type TableRow = {
   id: string;
   vals: string[];
 };
 
-export type TableOutput = {
+type TableOutput = {
   label: string;
   vals: string[];
 };
@@ -203,7 +203,7 @@ export type CaseStudyData = {
   shots?: { k: string; t: string; d: string }[];
 };
 
-export type CaseStudyScreen = { shot: string; label: string; desc: string };
+type CaseStudyScreen = { shot: string; label: string; desc: string };
 
 export type CaseStudySection = {
   id: string;
