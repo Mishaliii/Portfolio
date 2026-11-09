@@ -271,6 +271,16 @@ export function Intro({
       window.dispatchEvent(new CustomEvent("intro-end"));
       window.dispatchEvent(new CustomEvent("hero-assemble"));
 
+      // Start navbar fade immediately at the reveal start so no frame shows hero without navbar
+      const headerEl = document.querySelector("header");
+      if (headerEl) {
+        gsap.fromTo(
+          headerEl,
+          { opacity: 0, y: 0, visibility: "visible" },
+          { opacity: 1, duration: 0.65, ease: "power2.out" }
+        );
+      }
+
       const flightDuration = mode === "short" ? 0.45 : 1.25;
 
       // A. Wordmark FLIP flight to top-left nav logo
@@ -285,8 +295,8 @@ export function Intro({
 
         targetNavBrand.style.opacity = "0";
 
-        // Elevate wordmark over expanding hero
-        wordmarkWrapRef.current.style.zIndex = "70";
+        // Elevate wordmark over expanding hero and navbar
+        wordmarkWrapRef.current.style.zIndex = "75";
 
         gsap.to(wordmarkWrapRef.current, {
           x: dx,
@@ -297,6 +307,9 @@ export function Intro({
           ease: "power3.inOut",
           onComplete: () => {
             targetNavBrand.style.opacity = "1";
+            if (wordmarkWrapRef.current) {
+              wordmarkWrapRef.current.style.opacity = "0";
+            }
             finish();
           },
         });

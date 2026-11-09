@@ -47,6 +47,9 @@ export function HeadlineDissolve({
   erase = false,
   active = true,
   className = "",
+  capSpeckle,
+  cleanDuration,
+  disableReduced = false,
 }: {
   children: ReactNode;
   bg?: string;
@@ -56,6 +59,9 @@ export function HeadlineDissolve({
   erase?: boolean;
   active?: boolean;
   className?: string;
+  capSpeckle?: number;
+  cleanDuration?: number;
+  disableReduced?: boolean;
 }) {
   const wrap = useRef<HTMLDivElement>(null);
   const cv = useRef<HTMLCanvasElement>(null);
@@ -76,10 +82,17 @@ export function HeadlineDissolve({
   useEffect(() => {
     const w = wrap.current, c = cv.current;
     if (!w || !c) return;
+
+    const id = instanceId.current;
+    if (disableReduced && reduced()) {
+      headlineReady.add(id);
+      window.dispatchEvent(new Event("headline-first-frame"));
+      return;
+    }
+
     const ctx = c.getContext("2d", { willReadFrequently: false });
     if (!ctx) return;
 
-    const id = instanceId.current;
     const pointerEnabled = !coarse() && !reduced();
     const h1 = w.querySelector<HTMLElement>("h1, h2, .display");
 
@@ -370,7 +383,7 @@ export function HeadlineDissolve({
             1 + Math.random() * 3.2 * (1 - d / rad + 0.3),
           );
         }
-        if (Math.random() < 0.6) {
+        if (Math.random() < 0.6 && (capSpeckle === undefined || specks.length < capSpeckle)) {
           const s = speckPool.pop();
           if (s) {
             s.x = mx + (Math.random() - 0.5) * rad;
@@ -429,10 +442,11 @@ export function HeadlineDissolve({
       }
 
       // --- 2. UPDATE DOT LIFETIMES ---
+      const dotDecayRate = cleanDuration && cleanDuration > 0 ? 1 / cleanDuration : 1.0;
       let keep = 0;
       for (let i = 0; i < dots.length; i++) {
         const d = dots[i];
-        d.life -= dt;
+        d.life -= dt * dotDecayRate;
         if (d.life <= 0) {
           pool.push(d);
           continue;
@@ -479,9 +493,10 @@ export function HeadlineDissolve({
       // --- 4. DRAW DRIFTING DUST SPECKS ---
       ctx.globalCompositeOperation = "source-over";
       const speckColor = activeErase && textLayout ? textLayout.color : inkc;
+      const speckDecayRate = cleanDuration && cleanDuration > 0 ? 1 / (cleanDuration * 0.75) : 0.8;
       for (let i = specks.length - 1; i >= 0; i--) {
         const s = specks[i];
-        s.life -= dt * 0.8;
+        s.life -= dt * speckDecayRate;
         s.x += s.vx * dt;
         s.y += s.vy * dt;
         if (s.life <= 0) {

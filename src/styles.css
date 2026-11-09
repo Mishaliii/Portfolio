@@ -191,9 +191,18 @@ a[href^="mailto"]:hover { color: var(--burgundy-soft); }
 .entry-bottom .btn:hover { background: var(--cream); color: var(--ink); }
 .entry-point { position: fixed; left: 0; top: 0; width: 16px; height: 16px; margin-left: -8px; margin-top: -8px; border-radius: 50%; background: var(--accent-green); opacity: 0; pointer-events: none; z-index: 2; }
 .site-shell.is-loading main { visibility: hidden; }
-.site-shell.is-loading header { visibility: hidden; transform: translateY(-100%); }
+.site-shell.is-loading header {
+  visibility: hidden;
+  opacity: 0;
+  transform: translateY(0);
+}
 .site-shell.is-loading.is-revealing main { visibility: visible; }
-.site-shell.is-revealing header { visibility: visible; }
+.site-shell.is-revealing header,
+.site-shell.is-loading.is-revealing header {
+  visibility: visible;
+  opacity: 1;
+  transform: translateY(0);
+}
 .site-shell.is-loading .live-dot { animation-play-state: paused; }
 @keyframes entry-nav { to { transform: translateY(0); } }
 @media (max-width: 767px) {
@@ -297,6 +306,14 @@ body:has(#connect.is-active) .hero-chip-tr {
   opacity: 0 !important;
   visibility: hidden !important;
   pointer-events: none !important;
+}
+@media (min-width: 1024px) {
+  body:has(#works.is-active) .hero-chip-tr,
+  .hero-chip-tr.hero-chip-works {
+    top: 12px;
+    right: calc(var(--pad) + 230px);
+    z-index: 66;
+  }
 }
 @media (max-width: 1023px) {
   .hero-chip-tr {

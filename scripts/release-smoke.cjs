@@ -500,6 +500,31 @@ async function runSmoke() {
     const loaderPaceValid = Boolean(loaderPace && loaderPace.durationMs >= 2300 && loaderPace.durationMs <= 3400);
     logCheck('LOADER', 'loader_pacing_between_2_3s_and_3_4s', loaderPaceValid, `duration=${loaderPace?.durationMs}ms (2300-3400ms), totalFlight=${loaderPace?.totalMs}ms`);
 
+    // Check: Navbar visible at reveal start and throughout hero
+    const navVisibilityCheck = await evalJs(`
+      (() => {
+        const header = document.querySelector('header');
+        if (!header) return { ok: false, reason: 'header not found' };
+        const cs = window.getComputedStyle(header);
+        const opacity = parseFloat(cs.opacity || '1');
+        const visibility = cs.visibility;
+        const display = cs.display;
+        const rect = header.getBoundingClientRect();
+        const brand = header.querySelector('[data-brand="wordmark"], a[href="#overview"]');
+        const brandRect = brand ? brand.getBoundingClientRect() : null;
+        const ok = visibility !== 'hidden' && display !== 'none' && opacity > 0.8 && rect.height > 30;
+        return {
+          ok,
+          opacity,
+          visibility,
+          display,
+          headerHeight: rect.height,
+          brandVisible: Boolean(brandRect && brandRect.width > 20)
+        };
+      })()
+    `);
+    logCheck('LOADER', 'navbar_visible_at_reveal_start_and_throughout_hero', Boolean(navVisibilityCheck?.ok), `opacity=${navVisibilityCheck?.opacity}, visibility=${navVisibilityCheck?.visibility}, height=${navVisibilityCheck?.headerHeight}px`);
+
     // =========================================================================
     // CHECK 1: HERO
     // =========================================================================
@@ -1756,6 +1781,45 @@ async function runSmoke() {
     logCheck('CONNECT', 'connect_single_badge_no_overlap_1366x768', badge1366Ok,
       `chipHidden=${connectBadgeCheck1366?.chipHidden}, singleBadge=${connectBadgeCheck1366?.availBadgeVisible}, zeroOverlap=${connectBadgeCheck1366?.zeroOverlap}`);
 
+    // Multi-viewport layout overlap checks (1280, 1440, 1920)
+    for (const w of [1280, 1440, 1920]) {
+      await send('Emulation.setDeviceMetricsOverride', { width: w, height: 900, deviceScaleFactor: 1, mobile: false });
+      await wait(400);
+
+      // Connect: CTRL hint vs Sprout door
+      const connectOverlap = await evalJs(`
+        (() => {
+          const door = document.querySelector(".buddy-door");
+          const hint = Array.from(document.querySelectorAll("#connect span, #connect button")).find(el => el.textContent.includes("Ctrl K") || el.textContent.includes("CTRL"));
+          const dr = door ? door.getBoundingClientRect() : null;
+          const hr = hint ? hint.getBoundingClientRect() : null;
+          const overlap = dr && hr ? !(hr.right < dr.left || hr.left > dr.right || hr.bottom < dr.top || hr.top > dr.bottom) : false;
+          return { overlap, gapX: hr && dr ? Math.round(dr.left - hr.right) : null };
+        })()
+      `);
+      logCheck('CONNECT', `connect_ctrl_hint_sprout_door_no_overlap_${w}w`, !connectOverlap?.overlap, `width=${w}px, gapX=${connectOverlap?.gapX}px`);
+
+      // Works: OPEN TO WORK pill vs card edge
+      await evalJs(`document.querySelector('a[data-pill][href="#works"]')?.click()`);
+      await wait(1200);
+
+      const worksOverlap = await evalJs(`
+        (() => {
+          const chip = document.querySelector(".hero-chip-tr");
+          const card = document.querySelector("#works [data-card][data-active], #works article");
+          const cr = chip ? chip.getBoundingClientRect() : null;
+          const cardR = card ? card.getBoundingClientRect() : null;
+          const overlap = cr && cardR ? !(cr.right < cardR.left || cr.left > cardR.right || cr.bottom < cardR.top || cr.top > cardR.bottom) : false;
+          return { overlap, gapY: cardR && cr ? Math.round(cardR.top - cr.bottom) : null };
+        })()
+      `);
+      logCheck('WORKS', `works_pill_card_edge_no_overlap_${w}w`, !worksOverlap?.overlap, `width=${w}px, gapY=${worksOverlap?.gapY}px`);
+
+      // Navigate back to Connect for next iteration or restore
+      await evalJs(`document.querySelector('a[data-pill][href="#connect"]')?.click()`);
+      await wait(1200);
+    }
+
     // Restore desktop metrics
     await send('Emulation.setDeviceMetricsOverride', { width: 1918, height: 932, deviceScaleFactor: 1, mobile: false });
     await wait(600);
@@ -1856,14 +1920,14 @@ async function runSmoke() {
     logCheck('ALL_PAGES', 'pairwise_symmetric_page_transitions_no_leftover_opacity_zero',
       allTransitionsClean, `${transitionPairs.length} pairs tested; all clean=${allTransitionsClean}`);
 
-    // Step 19: Transition duration timing check (target 800-900ms)
+    // Step 19: Transition duration timing check (target 950-1050ms)
     const transitionTiming = await evalJs(`
       (() => new Promise((resolve) => {
         const t0 = performance.now();
         const onEnd = () => {
           window.removeEventListener('page-transition-end', onEnd);
           const dur = performance.now() - t0;
-          resolve({ dur: Math.round(dur), ok: dur >= 780 && dur <= 920 });
+          resolve({ dur: Math.round(dur), ok: dur >= 950 && dur <= 1050 });
         };
         window.addEventListener('page-transition-end', onEnd);
         const a = document.querySelector('a[data-pill][href="#about"]');
@@ -1871,7 +1935,7 @@ async function runSmoke() {
         else resolve({ ok: false, reason: 'link not found' });
       }))()
     `);
-    logCheck('ALL_PAGES', 'page_transition_timing_paced_comfortably', Boolean(transitionTiming?.ok), `duration=${transitionTiming?.dur}ms (target 800-900ms)`);
+    logCheck('ALL_PAGES', 'page_transition_timing_paced_comfortably', Boolean(transitionTiming?.ok), `duration=${transitionTiming?.dur}ms (target 950-1050ms)`);
     await wait(400);
 
     // Step 17: No empty main area during transition (sampled pixels across 700ms)

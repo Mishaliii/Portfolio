@@ -298,12 +298,12 @@ export const works = {
           "Time_Docs",
         ],
         rows: [
-          { id: "S001", vals: ["75", "23", "11", "4.9", "7.65", "9.8", "13.78", "13.16"] },
-          { id: "S003", vals: ["61", "9", "7", "10.86", "12.22", "7.87", "7.6", "7.33"] },
-          { id: "S007", vals: ["87", "13", "4", "18.26", "19.24", "12.07", "0.33", "0.33"] },
+          { id: "Sample 1", vals: ["75", "23", "11", "4.9", "7.65", "9.8", "13.78", "13.16"] },
+          { id: "Sample 2", vals: ["61", "9", "7", "10.86", "12.22", "7.87", "7.6", "7.33"] },
+          { id: "Sample 3", vals: ["87", "13", "4", "18.26", "19.24", "12.07", "0.33", "0.33"] },
         ],
         outputs: [
-          { label: "Productivity score", vals: ["S001 53.48", "S003 54.36", "S007 77.14"] },
+          { label: "Productivity score", vals: ["53.48", "54.36", "77.14"] },
           { label: "Label", vals: ["Medium", "Medium", "High"] },
           { label: "Role", vals: ["Manager"] },
         ],
@@ -646,12 +646,82 @@ export const roleCaseStudy: CaseStudyData = {
       text: "Model benchmarks and operational boundaries evaluated on curated session datasets:",
       points: [
         "Classification benchmark: ~87% classification accuracy across validated test splits.",
-        "Sample session data: Evaluated against benchmark subjects (e.g. S001, S003, S007) with Medium and High productivity classifications.",
+        "Sample session data: Evaluated against benchmark test sessions with Medium and High productivity classifications.",
         "Desktop activity scope: Evaluates computer interaction patterns only; does not capture offline meetings or subjective work quality.",
       ],
     },
   ],
 };
+
+export interface CareerLensStage {
+  num: string;
+  label: string;
+  fullLabel?: string;
+  caption: string;
+  built: boolean;
+  desc: string;
+}
+
+export const careerlensStages: CareerLensStage[] = [
+  {
+    num: "01",
+    label: "Resume PDF",
+    caption: "Resume parsing",
+    built: true,
+    desc: "Parses candidate profile data from raw PDF documents into structured entities.",
+  },
+  {
+    num: "02",
+    label: "Profile extraction",
+    caption: "Profile extraction",
+    built: true,
+    desc: "Extracts technical skills, experience, and education into structured entities.",
+  },
+  {
+    num: "03",
+    label: "Embeddings (MiniLM)",
+    caption: "MiniLM embeddings",
+    built: true,
+    desc: "Generates 384-dimensional dense semantic vectors using Sentence Transformers.",
+  },
+  {
+    num: "04",
+    label: "FAISS search",
+    caption: "Cosine similarity",
+    built: true,
+    desc: "Indexes role definitions and runs fast nearest-neighbor similarity searches.",
+  },
+  {
+    num: "05",
+    label: "Gemini citations",
+    fullLabel: "Gemini explanation with citations",
+    caption: "Gemini citations",
+    built: true,
+    desc: "Synthesises personalised skill gap analysis with direct source citations.",
+  },
+  {
+    num: "06",
+    label: "Job match & gaps",
+    fullLabel: "Job match and skill gaps",
+    caption: "SQLAlchemy store",
+    built: true,
+    desc: "Calculates match scores and persists role-fit evaluation in SQLite.",
+  },
+  {
+    num: "07",
+    label: "Front end",
+    caption: "Being rebuilt",
+    built: false,
+    desc: "Next-generation responsive UI currently in active development.",
+  },
+  {
+    num: "08",
+    label: "Deployment",
+    caption: "Pending",
+    built: false,
+    desc: "Cloud containerization and deployment pending frontend completion.",
+  },
+];
 
 export const careerlensCaseStudy: CaseStudyData = {
   title: ["CAREERLENS AI", "ARCHITECTURE."],
@@ -680,29 +750,11 @@ export const careerlensCaseStudy: CaseStudyData = {
       id: "how-it-works",
       num: "2",
       title: "How it works",
-      text: "A semantic retrieval and cited explanation pipeline processes candidate profiles through five stages:",
-      methods: [
-        {
-          name: "Resume PDF Parsing",
-          desc: "Parses candidate profile data from raw PDF documents into structured entities covering skills, experience, and education.",
-        },
-        {
-          name: "MiniLM Embeddings",
-          desc: "Generates 384-dimensional dense semantic vectors using Sentence Transformers to capture role nuances.",
-        },
-        {
-          name: "FAISS Cosine Search",
-          desc: "Indexes role definitions and runs sub-millisecond nearest-neighbor similarity searches.",
-        },
-        {
-          name: "Gemini Gap Explanation",
-          desc: "Synthesises personalised skill gap analysis with direct textual citations from the resume and target job description.",
-        },
-        {
-          name: "SQLAlchemy Store",
-          desc: "Calculates match scores and persists role-fit evaluation in SQLite.",
-        },
-      ],
+      text: `A semantic retrieval and cited explanation pipeline processes candidate profiles through ${careerlensStages.length} stages:`,
+      methods: careerlensStages.map((stage) => ({
+        name: stage.fullLabel || stage.label,
+        desc: `${stage.desc}${stage.built ? "" : ` (${stage.caption})`}`,
+      })),
       points: [
         "Local vectorization: Dense embeddings are computed locally using Sentence Transformers, keeping resume data private.",
         "Direct citation: Gap explanations cite exact job qualification requirements and corresponding candidate experiences.",

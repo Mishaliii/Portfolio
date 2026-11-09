@@ -86,3 +86,39 @@ The repository includes `public/_headers` which Cloudflare Pages reads automatic
 - `/assets/*`: `Cache-Control: public, max-age=31536000, immutable` (hashed chunks are permanently cached on the edge and browser).
 - `/hero/*.mp4` and `/media/*`: `Accept-Ranges: bytes` (enables browser video scrubbing and instant streaming).
 - `cv.pdf`: `Cache-Control: public, max-age=3600, must-revalidate` (ensures visitors always get updated resumes).
+
+---
+
+## Post-Deploy Security & Health Verification Checklist
+
+Run these commands immediately after deployment to verify live edge security and routing:
+
+### 1. Verify Security Headers
+```bash
+curl -I https://mishal.dev/
+```
+Expected response headers:
+- `HTTP/2 200`
+- `content-security-policy: default-src 'self'; script-src 'self' 'unsafe-inline'; ... connect-src 'self'; ...`
+- `x-content-type-options: nosniff`
+- `x-frame-options: DENY`
+- `referrer-policy: strict-origin-when-cross-origin`
+- `permissions-policy: camera=(), microphone=(), geolocation=()`
+
+### 2. Verify Sensitive Files Are Inaccessible (404 Not Found)
+Ensure no environment files, git configurations, or hidden files leak to the public web:
+```bash
+# Must return 404
+curl -I -s -o /dev/null -w "%{http_code}\n" https://mishal.dev/.env
+# Must return 404
+curl -I -s -o /dev/null -w "%{http_code}\n" https://mishal.dev/.git/config
+# Must return 404
+curl -I -s -o /dev/null -w "%{http_code}\n" https://mishal.dev/.env.production
+```
+
+### 3. Verify Automatic HTTPS Redirection
+Ensure plain HTTP traffic is forced to HTTPS:
+```bash
+curl -I http://mishal.dev/
+# Expect 301 Moved Permanently or 308 Permanent Redirect to https://mishal.dev/
+```

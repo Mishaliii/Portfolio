@@ -242,14 +242,14 @@ export function Site() {
     const tl = gsap.timeline({ onComplete: done });
     w.style.willChange = "transform";
 
-    // 1. Wipe covers viewport in 0.40s with smooth, weighted power3.inOut
-    tl.fromTo(w, { yPercent: down ? 100 : -100 }, { yPercent: 0, duration: 0.40, ease: "power3.inOut" }, 0);
+    // 1. Wipe covers viewport in 0.45s with smooth, weighted power3.inOut
+    tl.fromTo(w, { yPercent: down ? 100 : -100 }, { yPercent: 0, duration: 0.45, ease: "power3.inOut" }, 0);
 
     // 2. Wipe label: enters smoothly, rests during center hold, then dissolves out
-    tl.fromTo(label, { yPercent: down ? 25 : -25, opacity: 0 }, { yPercent: 0, opacity: 1, duration: 0.22, ease: "power2.out" }, 0.08);
-    tl.to(label, { opacity: 0, yPercent: down ? -20 : 20, duration: 0.12, ease: "power2.in" }, 0.40);
+    tl.fromTo(label, { yPercent: down ? 25 : -25, opacity: 0 }, { yPercent: 0, opacity: 1, duration: 0.24, ease: "power2.out" }, 0.10);
+    tl.to(label, { opacity: 0, yPercent: down ? -20 : 20, duration: 0.12, ease: "power2.in" }, 0.45);
 
-    // 3. At 0.40s, viewport is 100% covered: swap active page and prepare new layout
+    // 3. At 0.45s, viewport is 100% covered: swap active page and prepare new layout
     tl.add(() => {
       stage.covered = target !== 0;
       stage.heroOn = target === 0;
@@ -259,10 +259,10 @@ export function Site() {
       curRef.current = target;
       oldEl.classList.remove("is-active");
       newEl.classList.add("is-active");
-    }, 0.40);
+    }, 0.45);
 
-    // 4. Wipe uncovers viewport in 0.40s (0.44s to 0.84s) with a brief hold
-    tl.to(w, { yPercent: down ? -100 : 100, duration: 0.40, ease: "power3.inOut" }, 0.44);
+    // 4. Wipe holds for 0.12s, then uncovers viewport in 0.45s (0.57s to 1.02s)
+    tl.to(w, { yPercent: down ? -100 : 100, duration: 0.45, ease: "power3.inOut" }, 0.57);
 
     // 5. As the wipe peels back to reveal incoming page, trigger entrance animation
     tl.add(() => {
@@ -272,7 +272,7 @@ export function Site() {
         enterPage(newEl);
         settlePage(newEl, 550);
       }
-    }, 0.46);
+    }, 0.59);
   }, [paged]);
   const goRef = useRef(go); goRef.current = go;
 
@@ -584,7 +584,7 @@ export function Site() {
       <SceneStage />
       {showIntro && !booted && mode !== "none" && <Intro mode={mode} onReveal={revealIntro} onDone={finishIntro} />}
 
-      <header inert={!booted} className={`fixed inset-x-0 top-0 z-50 flex items-center justify-between gap-4 px-[var(--pad)] py-3 transition-colors duration-500 ${inv ? "inv" : ""}`} style={{ background: heroTheme ? "rgba(11,11,11,.72)" : inv ? "var(--ink)" : "var(--cream)" }}>
+      <header inert={!booted} className={`fixed inset-x-0 top-0 z-[65] flex items-center justify-between gap-4 px-[var(--pad)] py-3 transition-colors duration-500 ${inv ? "inv" : ""}`} style={{ background: heroTheme ? "rgba(11,11,11,.72)" : inv ? "var(--ink)" : "var(--cream)" }}>
         <a href="#overview" onClick={(e) => { e.preventDefault(); go(0); }} className="flex items-baseline gap-2">
           <span data-brand="wordmark" className="display text-[24px] tracking-tight">{site.wordmark}</span>
           <span className="mono goldt whitespace-nowrap">{site.tag}</span>
@@ -709,7 +709,7 @@ export function Site() {
 
       {booted && (
         <span
-          className={`hero-chip hero-chip-tr mono ${!inv ? "hero-chip-light" : ""} ${cur === 5 ? "pointer-events-none opacity-0 invisible" : ""}`}
+          className={`hero-chip hero-chip-tr mono ${!inv ? "hero-chip-light" : ""} ${cur === 3 ? "hero-chip-works" : ""} ${cur === 5 ? "pointer-events-none opacity-0 invisible" : ""}`}
           aria-label="Open to work"
         >
           <span className="live-dot" aria-hidden />

@@ -5,6 +5,7 @@ import {
   works,
   roleCaseStudy,
   careerlensCaseStudy,
+  careerlensStages,
   type Project,
 } from "@/content";
 import { SplitReveal } from "./Split";
@@ -468,25 +469,25 @@ const ROLE_FEATURES = [
   { key: "Time_Docs", label: "Time docs", max: 13.16 },
 ];
 
-type SubjectId = "S001" | "S003" | "S007";
+type SubjectId = "Sample 1" | "Sample 2" | "Sample 3";
 
 const SUBJECT_ROWS: Record<
   SubjectId,
   { vals: number[]; score: number; label: string; role: string }
 > = {
-  S001: {
+  "Sample 1": {
     vals: [75, 23, 11, 4.9, 7.65, 9.8, 13.78, 13.16],
     score: 53.48,
     label: "Medium",
     role: "Manager",
   },
-  S003: {
+  "Sample 2": {
     vals: [61, 9, 7, 10.86, 12.22, 7.87, 7.6, 7.33],
     score: 54.36,
     label: "Medium",
     role: "Manager",
   },
-  S007: {
+  "Sample 3": {
     vals: [87, 13, 4, 18.26, 19.24, 12.07, 0.33, 0.33],
     score: 77.14,
     label: "High",
@@ -566,7 +567,7 @@ function ProductivityExplorer({
   active: boolean;
   pulseTarget: string | null;
 }) {
-  const [selectedId, setSelectedId] = useState<SubjectId>("S001");
+  const [selectedId, setSelectedId] = useState<SubjectId>("Sample 1");
   const barRefs = useRef<(HTMLDivElement | null)[]>([]);
   const barsContainerRef = useRef<HTMLDivElement>(null);
   const scoreBoxRef = useRef<HTMLDivElement>(null);
@@ -643,9 +644,9 @@ function ProductivityExplorer({
       <div className="flex items-center justify-between border-b border-[#0B0B0B]/15 pb-2.5 shrink-0">
         <div className="flex items-center gap-1.5 sm:gap-2">
           <span className="mono text-[11px] text-[#6B645A] uppercase tracking-wider mr-1">
-            Subject:
+            Sample:
           </span>
-          {(["S001", "S003", "S007"] as SubjectId[]).map((id) => (
+          {(["Sample 1", "Sample 2", "Sample 3"] as SubjectId[]).map((id) => (
             <button
               key={id}
               type="button"
@@ -821,68 +822,7 @@ function RoleCard({ p, active }: { p: Project; active: boolean }) {
   );
 }
 
-const CAREERLENS_NODES = [
-  // Row 1 (built)
-  {
-    num: "01",
-    label: "Resume PDF",
-    caption: "Resume parsing",
-    built: true,
-    desc: "Parses candidate profile data from raw PDF documents.",
-  },
-  {
-    num: "02",
-    label: "Profile extraction",
-    caption: "Profile extraction",
-    built: true,
-    desc: "Extracts technical skills, experience, and education into structured entities.",
-  },
-  {
-    num: "03",
-    label: "Embeddings (MiniLM)",
-    caption: "MiniLM embeddings",
-    built: true,
-    desc: "Generates 384-dimensional dense semantic vectors using Sentence Transformers.",
-  },
-  {
-    num: "04",
-    label: "FAISS search",
-    caption: "Cosine similarity",
-    built: true,
-    desc: "Indexes role definitions and runs fast nearest-neighbor similarity searches.",
-  },
-  // Row 2 (nodes 5 & 6 built, 7 & 8 pending)
-  {
-    num: "05",
-    label: "Gemini citations",
-    fullLabel: "Gemini explanation with citations",
-    caption: "Gemini citations",
-    built: true,
-    desc: "Synthesises personalised skill gap analysis with direct source citations.",
-  },
-  {
-    num: "06",
-    label: "Job match & gaps",
-    fullLabel: "Job match and skill gaps",
-    caption: "SQLAlchemy store",
-    built: true,
-    desc: "Calculates match scores and persists role-fit evaluation in SQLite.",
-  },
-  {
-    num: "07",
-    label: "Front end",
-    caption: "Being rebuilt",
-    built: false,
-    desc: "Next-generation responsive UI currently in active development.",
-  },
-  {
-    num: "08",
-    label: "Deployment",
-    caption: "Pending",
-    built: false,
-    desc: "Cloud containerization and deployment pending frontend completion.",
-  },
-];
+const CAREERLENS_NODES = careerlensStages;
 
 function CareerLensPipeline({ active }: { active: boolean }) {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
@@ -981,7 +921,7 @@ function CareerLensPipeline({ active }: { active: boolean }) {
           Architecture Flow
         </span>
         <span className="mono text-[10px] sm:text-[11px] text-[#1F5A3A] font-semibold uppercase tracking-wider">
-          8 Pipeline Stages
+          {careerlensStages.length} Pipeline Stages
         </span>
       </div>
 
@@ -1130,13 +1070,7 @@ function CareerLensCard({ p, active }: { p: Project; active: boolean }) {
   const [cs, setCs] = useState(false);
   const closeCs = useCallback(() => setCs(false), []);
 
-  const pipelineSteps = [
-    { label: "Resume extraction" },
-    { label: "MiniLM embeddings" },
-    { label: "FAISS search" },
-    { label: "Gemini citations" },
-    { label: "Skill gaps & store" },
-  ];
+  const pipelineSteps = careerlensStages.map((s) => ({ label: s.label }));
 
   const titleNode = (
     <span className="block"><SplitReveal text="CareerLens AI" /></span>

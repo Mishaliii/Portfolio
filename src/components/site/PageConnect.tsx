@@ -19,7 +19,7 @@ export function PageConnect({ copyEmail, go }: { copyEmail: () => void; go: (id:
           <Greeting lines={connect.greetings} />
           <span className="muted">{connect.namePrefix}{site.name}</span>
         </div>
-        <HeadlineDissolve bg="var(--ink)" ink="var(--cream)" auto>
+        <HeadlineDissolve bg="var(--ink)" ink="var(--cream)" auto capSpeckle={12} cleanDuration={1.5} disableReduced>
           <h2 className="display" style={{ fontSize: "clamp(56px, min(13vw, 22dvh), 300px)", lineHeight: 0.9 }}>
             <span className="block"><SplitReveal text={connect.heading[0]} /></span>
             <span className="block pl-[10vw]"><SplitReveal text={connect.heading[1]} /></span>
@@ -35,7 +35,7 @@ export function PageConnect({ copyEmail, go }: { copyEmail: () => void; go: (id:
         </div>
       </div>
       <div data-fade><ElasticLine stroke="var(--line-inv)" /></div>
-      <div className="mono flex justify-between pt-3 max-sm:pb-14 max-sm:flex-wrap max-sm:gap-2" style={{ paddingLeft: "clamp(0px, 15vw, 175px)" }} data-fade>
+      <div className="mono flex justify-between pt-3 max-sm:pb-14 max-sm:flex-wrap max-sm:gap-2" style={{ paddingLeft: "clamp(0px, 15vw, 175px)", paddingRight: "clamp(88px, 8vw, 120px)" }} data-fade>
         <span>{ui.copyright}</span>
         <button onClick={() => go("overview")} className="underline-offset-4 hover:underline">{ui.backToOverview}</button>
         <span className="muted">{ui.paletteHint}</span>
