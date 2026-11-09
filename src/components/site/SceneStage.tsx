@@ -6,19 +6,18 @@ import { boot, coverFit, markBoot, markSceneReady, stage, videoBlob, videoSrc, t
 
 /**
  * One shared full-bleed scene behind the whole site.
- * Native hardware-decoded <video> playback with ping-pong dual video crossfade,
+ * Native hardware-decoded <video> playback with single native loop,
  * transform-only cursor parallax, zero shaders, zero filters, and zero idle ticker wakeups.
  */
 export function SceneStage() {
   const box = useRef<HTMLDivElement>(null);
-  const vidA = useRef<HTMLVideoElement>(null);
-  const vidB = useRef<HTMLVideoElement>(null);
+  const vidRef = useRef<HTMLVideoElement>(null);
   const mover = useRef<HTMLDivElement>(null);
   const dimEl = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const el = box.current, vA = vidA.current, vB = vidB.current, mv = mover.current, dm = dimEl.current;
-    if (!el || !vA || !vB || !mv || !dm) return;
+    const el = box.current, vid = vidRef.current, mv = mover.current, dm = dimEl.current;
+    if (!el || !vid || !mv || !dm) return;
     let dead = false, onScreen = true;
     let frameId = 0;
     const cleanups: (() => void)[] = [];
@@ -26,110 +25,34 @@ export function SceneStage() {
     el.classList.add("is-native");
     markBoot("depth");
 
-    // Dual video management
-    let currentVid = vA;
-    let nextVid = vB;
-    let vfcHandle: number | undefined;
-    let lastWrapTime = performance.now();
     let playing = false;
-
-    const VIDEO_LEN_SEC = 15.5;
-    let nextQueued = false;
-
-    // Reuse the loader's download: no competing range fetch and no source swap at a loop boundary.
     let sourceReady = false;
-    vA.muted = true; vA.playsInline = true; vA.preload = "auto";
-    vB.muted = true; vB.playsInline = true; vB.preload = "auto";
+
+    vid.muted = true;
+    vid.playsInline = true;
+    vid.loop = true;
+    vid.preload = "auto";
+    (vid as any).disableRemotePlayback = true;
+
     void boot();
     videoBlob.then((url) => {
       if (dead) return;
       const src = url ?? videoSrc();
-      vA.src = src;
-      vB.src = src;
+      vid.src = src;
       sourceReady = true;
+      markSceneReady();
       syncPlayback();
     });
-
-    const swapVideo = (now: number) => {
-      currentVid.pause();
-      currentVid.currentTime = 0;
-      currentVid.style.opacity = "0";
-      nextVid.style.opacity = "1";
-
-      const loopGap = Math.round((now - lastWrapTime) * 10) / 10;
-      lastWrapTime = now;
-      window.dispatchEvent(new CustomEvent("hero-loop-gap", { detail: { gapMs: loopGap } }));
-
-      const temp = currentVid;
-      currentVid = nextVid;
-      nextVid = temp;
-      nextQueued = false;
-
-      if (currentVid.requestVideoFrameCallback) {
-        vfcHandle = currentVid.requestVideoFrameCallback(pingPongFrame);
-      }
-    };
-
-    const pingPongFrame: VideoFrameRequestCallback = (now, meta) => {
-      if (dead) return;
-      const t = meta.mediaTime;
-      const len = currentVid.duration && isFinite(currentVid.duration) && currentVid.duration > 0
-        ? currentVid.duration
-        : VIDEO_LEN_SEC;
-      const queueTime = len - 0.20;
-      const handoffTime = len - 0.04;
-
-      if (!nextQueued && t >= queueTime) {
-        nextQueued = true;
-        nextVid.currentTime = 0;
-        void nextVid.play().catch(() => {});
-      }
-
-      if (t >= handoffTime || (nextQueued && t < 0.2 && meta.presentedFrames > 5)) {
-        swapVideo(now);
-        return;
-      }
-
-      if (currentVid.requestVideoFrameCallback) {
-        vfcHandle = currentVid.requestVideoFrameCallback(pingPongFrame);
-      }
-    };
-
-    const handleEnded = (e: Event) => {
-      if (dead) return;
-      if (e.target === currentVid) {
-        swapVideo(performance.now());
-      }
-    };
-    vA.addEventListener("ended", handleEnded);
-    vB.addEventListener("ended", handleEnded);
-    cleanups.push(() => {
-      vA.removeEventListener("ended", handleEnded);
-      vB.removeEventListener("ended", handleEnded);
-    });
-
-    const startDualVideo = () => {
-      currentVid = vA;
-      nextVid = vB;
-      vA.style.opacity = "1";
-      vB.style.opacity = "0";
-      markSceneReady();
-      playing = true;
-      void vA.play().catch(() => {});
-      if (vA.requestVideoFrameCallback) {
-        vfcHandle = vA.requestVideoFrameCallback(pingPongFrame);
-      }
-    };
 
     const fallback = () => {
       el.classList.add("is-fallback");
       if (!sourceReady) {
         const src = videoSrc();
-        vA.src = src;
-        vB.src = src;
+        vid.src = src;
         sourceReady = true;
       }
-      startDualVideo();
+      markSceneReady();
+      syncPlayback();
     };
     window.addEventListener("stage-fallback", fallback);
 
@@ -160,9 +83,7 @@ export function SceneStage() {
       size();
     }).catch(() => {});
 
-    startDualVideo();
-
-    const vfc = vA.requestVideoFrameCallback?.bind(vA);
+    const vfc = vid.requestVideoFrameCallback?.bind(vid);
     const onFrame = () => {
       markSceneReady();
     };
@@ -257,38 +178,16 @@ export function SceneStage() {
       const active = onScreen && stage.heroOn && !stage.covered && performanceLayers.video && !document.hidden;
       if (!active || !sourceReady) {
         if (playing) {
-          currentVid.pause();
-          nextVid.pause();
+          vid.pause();
           playing = false;
-          if (vfcHandle) {
-            currentVid.cancelVideoFrameCallback?.(vfcHandle);
-            vfcHandle = undefined;
-          }
         }
         el.style.visibility = "hidden";
       } else {
         el.style.visibility = "visible";
-        const len = currentVid.duration && isFinite(currentVid.duration) && currentVid.duration > 0
-          ? currentVid.duration
-          : VIDEO_LEN_SEC;
-
-        if (currentVid.ended || currentVid.currentTime >= len - 0.1) {
-          currentVid.currentTime = 0;
-          currentVid.style.opacity = "1";
-          nextVid.style.opacity = "0";
-          nextVid.pause();
-          nextVid.currentTime = 0;
-          nextQueued = false;
-        }
-
-        if (currentVid.paused) {
-          void currentVid.play().catch(() => {});
+        if (vid.paused) {
+          void vid.play().catch(() => {});
         }
         playing = true;
-
-        if (currentVid.requestVideoFrameCallback && !vfcHandle) {
-          vfcHandle = currentVid.requestVideoFrameCallback(pingPongFrame);
-        }
       }
     };
 
@@ -316,8 +215,7 @@ export function SceneStage() {
       window.removeEventListener("perf-layer-change", syncPlayback);
       window.removeEventListener("page-motion-pause", syncPlayback);
       window.removeEventListener("page-motion-resume", syncPlayback);
-      if (frameId) vA.cancelVideoFrameCallback?.(frameId);
-      if (vfcHandle) currentVid.cancelVideoFrameCallback?.(vfcHandle);
+      if (frameId) vid.cancelVideoFrameCallback?.(frameId);
       window.removeEventListener("resize", size);
       window.removeEventListener("stage-fallback", fallback);
       window.removeEventListener("pointermove", onMove);
@@ -327,8 +225,7 @@ export function SceneStage() {
 
     return () => {
       dead = true;
-      vA.pause();
-      vB.pause();
+      vid.pause();
       cleanups.forEach((f) => f());
     };
   }, []);
@@ -337,8 +234,7 @@ export function SceneStage() {
     <div ref={box} aria-hidden className="scene-stage is-native">
       <img src="/hero/poster.webp" alt="" className="scene-poster" draggable={false} />
       <div ref={mover} className="scene-move">
-        <video ref={vidA} className="scene-video scene-video-a" muted playsInline preload="auto" />
-        <video ref={vidB} className="scene-video scene-video-b" muted playsInline preload="auto" style={{ opacity: 0 }} />
+        <video ref={vidRef} className="scene-video" loop muted playsInline preload="auto" disableRemotePlayback />
       </div>
       <div ref={dimEl} className="scene-dim" />
     </div>

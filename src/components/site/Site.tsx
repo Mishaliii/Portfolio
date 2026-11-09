@@ -239,42 +239,36 @@ export function Site() {
     const dark = INV.has(pages[target].id);
     w.style.background = dark ? "var(--ink)" : "var(--cream)";
     label.style.color = dark ? "var(--cream)" : "var(--ink)";
-    const bar = w.querySelector<HTMLElement>("[data-progress]");
-    if (!bar) { done(); return; }
-    const tl = gsap.timeline({ onComplete: done, delay: 1 / 60 });
+    const tl = gsap.timeline({ onComplete: done });
     w.style.willChange = "transform";
-    // Keep oldEl solid until wipe panel reaches 0% (t = 0.66s) to prevent premature disappearance / blank frame
-    if (from === 0) {
-      stage.covered = true;
-      stage.heroOn = false;
-      window.dispatchEvent(new Event("stage-hero-on"));
-      tl.to(stage, { dim: 0.35, duration: 0.6, ease: EASE.tr }, 0.1);
-    }
-    if (target === 0) {
-      stage.heroOn = true;
-      stage.covered = false;
-      window.dispatchEvent(new Event("stage-hero-on"));
-      tl.set(stage, { dim: 0.35 }, 0);
-      tl.to(stage, { dim: 0, duration: 0.7, ease: EASE.tr }, 0.66);
-    }
-    tl.fromTo(bar, { scaleX: 0 }, { scaleX: 1, duration: 1.15, ease: "none" }, 0.05);
-    // transform-only panel: composited on the GPU, no full-screen repaint per frame
-    tl.fromTo(w, { yPercent: down ? 100 : -100 }, { yPercent: 0, duration: 0.55, ease: EASE.tr }, 0.1);
-    tl.fromTo(label, { yPercent: down ? 40 : -40, opacity: 0 }, { yPercent: 0, opacity: 1, duration: 0.45, ease: EASE.in }, 0.35);
+
+    // 1. Wipe covers the viewport in 0.38s (transform-only, GPU composited)
+    tl.fromTo(w, { yPercent: down ? 100 : -100 }, { yPercent: 0, duration: 0.38, ease: EASE.tr }, 0);
+
+    // 2. Wipe label: snappy entrance and exit (total visibility <= 0.35s)
+    tl.fromTo(label, { yPercent: down ? 25 : -25, opacity: 0 }, { yPercent: 0, opacity: 1, duration: 0.18, ease: "power2.out" }, 0.08);
+    tl.to(label, { opacity: 0, yPercent: down ? -20 : 20, duration: 0.14, ease: "power2.in" }, 0.28);
+
+    // 3. At 0.38s, viewport is 100% covered: swap active page, scene state, and trigger entrance
     tl.add(() => {
       stage.covered = target !== 0;
-      if (target !== 0) stage.heroOn = false;
+      stage.heroOn = target === 0;
       window.dispatchEvent(new Event("stage-hero-on"));
       newEl.classList.remove("is-prepared");
       setCur(target);
       curRef.current = target;
       oldEl.classList.remove("is-active");
       newEl.classList.add("is-active");
-    }, 0.66);
-    tl.to(label, { opacity: 0, yPercent: down ? -30 : 30, duration: 0.25, ease: "power3.in" }, 0.75);
-    tl.to(w, { yPercent: down ? -100 : 100, duration: 0.55, ease: EASE.tr }, 0.8);
-    // Reveal during last 40% of page wipe (wipe exit is 0.8s to 1.35s)
-    tl.add(() => { if (target === 0) heroEnter(newEl); else { enterPage(newEl); settlePage(newEl); } }, 1.0);
+      if (target === 0) {
+        heroEnter(newEl);
+      } else {
+        enterPage(newEl);
+        settlePage(newEl, 500);
+      }
+    }, 0.38);
+
+    // 4. Wipe uncovers viewport in 0.38s (0.40s to 0.78s), revealing incoming page already built
+    tl.to(w, { yPercent: down ? -100 : 100, duration: 0.38, ease: EASE.tr }, 0.40);
   }, [paged]);
   const goRef = useRef(go); goRef.current = go;
 
@@ -707,7 +701,6 @@ export function Site() {
 
       <div ref={wipe} aria-hidden className="pointer-events-none fixed inset-0 z-40 flex items-center justify-center" style={{ background: "var(--ink)", visibility: "hidden" }}>
         <div ref={wipeLabel} className="display" style={{ color: "var(--cream)", fontSize: "clamp(56px, min(14vw, 22dvh), 280px)", opacity: 0 }} />
-        <div data-progress className="absolute inset-x-0 bottom-0 h-[2px] origin-left" style={{ background: "var(--burgundy)", transform: "scaleX(0)" }} />
       </div>
 
       {booted && (

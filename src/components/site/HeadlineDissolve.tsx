@@ -262,11 +262,9 @@ export function HeadlineDissolve({
 
     const move = (e: PointerEvent) => {
       if (!onPage(w) || !performanceLayers.headline || destroyed) return;
-      if (bounds.width === 0 || bounds.height === 0 || W === 0 || H === 0) {
-        bounds = c.getBoundingClientRect();
-        W = bounds.width;
-        H = bounds.height;
-      }
+      bounds = c.getBoundingClientRect();
+      W = bounds.width;
+      H = bounds.height;
       mx = e.clientX - bounds.left;
       my = e.clientY - bounds.top;
       inside = mx >= 0 && my >= 0 && mx <= W && my <= H;
@@ -558,8 +556,10 @@ export function HeadlineDissolve({
     window.addEventListener("perf-layer-change", refresh);
 
     if (pointerEnabled) {
-      window.addEventListener("pointermove", move);
+      window.addEventListener("pointermove", move as any);
+      window.addEventListener("mousemove", move as any);
       w.addEventListener("pointerenter", onPointerEnter);
+      w.addEventListener("mouseenter", onPointerEnter);
     }
 
     return () => {

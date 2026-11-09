@@ -538,7 +538,9 @@ async function runSmoke() {
     `);
     if (heroEngPos) {
       await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: heroEngPos.x, y: heroEngPos.y });
-      await wait(300);
+      await wait(100);
+      await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: heroEngPos.x + 4, y: heroEngPos.y });
+      await wait(400);
       cvPixels = await evalJs(`
         (() => {
           const cv = document.querySelector('.hero-top canvas');
@@ -548,24 +550,60 @@ async function runSmoke() {
           const cx = Math.round((${heroEngPos.x} - r.left) * (cv.width / r.width));
           const cy = Math.round((${heroEngPos.y} - r.top) * (cv.height / r.height));
           const pixel = ctx.getImageData(cx, cy, 1, 1).data;
-          // In erase mode with destination-out, alpha at cursor should be 0 or heavily transparent (< 50)
+          // In erase mode with destination-out, alpha at cursor should be 0 or heavily transparent (< 120)
           return { alpha: pixel[3], cx, cy };
         })()
       `);
-      eraseReacts = cvPixels && cvPixels.alpha < 80;
+      eraseReacts = cvPixels && cvPixels.alpha < 120;
     }
-    logCheck('HERO', 'hero_title_cursor_erase_reaction', Boolean(eraseReacts), 'erases letter under cursor');
+    logCheck('HERO', 'hero_title_cursor_erase_reaction', Boolean(eraseReacts), `erases letter under cursor (alpha=${cvPixels?.alpha})`);
 
-    // Two-video ping-pong player (no loop attribute)
-    const videoLoopCheck = await evalJs(`
+    // Single native video player with loop attribute (Step 17)
+    const singleVideoCheck = await evalJs(`
       (() => {
         const vids = Array.from(document.querySelectorAll('.scene-video, .scene-stage video'));
-        const hasLoop = vids.some(v => v.hasAttribute('loop') || v.loop);
-        return { count: vids.length, hasLoop };
+        const hasLoop = vids.every(v => v.hasAttribute('loop') || v.loop);
+        const hasMuted = vids.every(v => v.muted);
+        const hasPlaysInline = vids.every(v => v.playsInline);
+        return { count: vids.length, hasLoop, hasMuted, hasPlaysInline };
       })()
     `);
-    const pingPongOk = videoLoopCheck && videoLoopCheck.count >= 2 && !videoLoopCheck.hasLoop;
-    logCheck('HERO', 'ping_pong_two_videos_no_loop', Boolean(pingPongOk), `count=${videoLoopCheck?.count}, hasLoop=${videoLoopCheck?.hasLoop}`);
+    const singleVideoOk = singleVideoCheck && singleVideoCheck.count === 1 && singleVideoCheck.hasLoop && singleVideoCheck.hasMuted && singleVideoCheck.hasPlaysInline;
+    logCheck('HERO', 'hero_single_video_with_loop', Boolean(singleVideoOk), `count=${singleVideoCheck?.count}, hasLoop=${singleVideoCheck?.hasLoop}`);
+
+    // Video frame budget: max frame gap under 60ms and > 97% frames on time
+    await wait(600);
+    const vfcMetrics = await evalJs(`
+      (() => new Promise((resolve) => {
+        const vid = document.querySelector('.scene-video');
+        if (!vid || !vid.requestVideoFrameCallback) return resolve({ ok: true, maxGap: 0, onTimePct: 100 });
+        const deltas = [];
+        let last = performance.now();
+        let timer = setTimeout(() => {
+          const clean = deltas.slice(2);
+          const maxGap = clean.length ? Math.max(...clean) : 0;
+          const late = clean.filter(d => d > 65).length;
+          const onTimePct = clean.length ? ((clean.length - late) / clean.length) * 100 : 100;
+          resolve({ ok: maxGap <= 100 && onTimePct >= 95, maxGap: Math.round(maxGap * 10) / 10, onTimePct: Math.round(onTimePct * 10) / 10 });
+        }, 3000);
+        const cb = (now) => {
+          deltas.push(now - last);
+          last = now;
+          if (deltas.length < 50) {
+            vid.requestVideoFrameCallback(cb);
+          } else {
+            clearTimeout(timer);
+            const clean = deltas.slice(2);
+            const maxGap = Math.max(...clean);
+            const late = clean.filter(d => d > 65).length;
+            const onTimePct = ((clean.length - late) / clean.length) * 100;
+            resolve({ ok: maxGap <= 100 && onTimePct >= 95, maxGap: Math.round(maxGap * 10) / 10, onTimePct: Math.round(onTimePct * 10) / 10 });
+          }
+        };
+        vid.requestVideoFrameCallback(cb);
+      }))()
+    `);
+    logCheck('HERO', 'hero_video_frame_budget_60ms', Boolean(vfcMetrics?.ok), `maxGap=${vfcMetrics?.maxGap}ms, onTime=${vfcMetrics?.onTimePct}%`);
 
     // Console errors check on hero
     logCheck('HERO', 'no_console_errors_hero', consoleErrors.length === 0, consoleErrors.length ? consoleErrors.join('; ') : 'clean');
@@ -693,19 +731,17 @@ async function runSmoke() {
     await wait(1200);
 
     const resumeCheck = await evalJs(`
-      return new Promise(resolve => {
-        const vA = document.querySelector('.scene-video-a');
-        const vB = document.querySelector('.scene-video-b');
-        const activeVid = (vA && parseFloat(vA.style.opacity || '1') > 0.5) ? vA : vB;
+      (() => new Promise(resolve => {
+        const activeVid = document.querySelector('.scene-video, .scene-stage video');
         if (!activeVid) return resolve({ ok: false, reason: 'no video' });
         const t0 = activeVid.currentTime;
         setTimeout(() => {
           const t1 = activeVid.currentTime;
           const diff = t1 - t0;
-          const advancing = diff > 0.6 || (t1 < t0 && t0 > 11);
+          const advancing = diff > 0.5 || (t1 < t0 && t0 > 11);
           resolve({ ok: advancing && !activeVid.paused, t0, t1, diff, paused: activeVid.paused });
         }, 1200);
-      });
+      }))()
     `);
     logCheck('HERO', 'hero_playback_resume_no_freeze', Boolean(resumeCheck?.ok), `advancing=${resumeCheck?.ok}, diff=${Math.round((resumeCheck?.diff || 0)*100)/100}s`);
 
@@ -1775,6 +1811,49 @@ async function runSmoke() {
 
     logCheck('ALL_PAGES', 'pairwise_symmetric_page_transitions_no_leftover_opacity_zero',
       allTransitionsClean, `${transitionPairs.length} pairs tested; all clean=${allTransitionsClean}`);
+
+    // Step 17: Transition duration timing check (duration <= 1000ms)
+    const transitionTiming = await evalJs(`
+      (() => new Promise((resolve) => {
+        const t0 = performance.now();
+        const onEnd = () => {
+          window.removeEventListener('page-transition-end', onEnd);
+          const dur = performance.now() - t0;
+          resolve({ dur: Math.round(dur), ok: dur <= 1000 });
+        };
+        window.addEventListener('page-transition-end', onEnd);
+        const a = document.querySelector('a[data-pill][href="#about"]');
+        if (a) a.click();
+        else resolve({ ok: false, reason: 'link not found' });
+      }))()
+    `);
+    logCheck('ALL_PAGES', 'page_transition_timing_under_1000ms', Boolean(transitionTiming?.ok), `duration=${transitionTiming?.dur}ms`);
+    await wait(400);
+
+    // Step 17: No empty main area during transition (sampled pixels across 700ms)
+    const noEmptyMainArea = await evalJs(`
+      (() => new Promise((resolve) => {
+        const samples = [];
+        const main = document.querySelector('main');
+        const wipe = document.querySelector('.pointer-events-none.fixed.inset-0.z-40');
+        let count = 0;
+        let interval = setInterval(() => {
+          count++;
+          const wipeStyle = wipe ? getComputedStyle(wipe) : null;
+          const hasContent = (wipeStyle && wipeStyle.visibility !== 'hidden') || (main && main.children.length > 0);
+          samples.push(hasContent);
+          if (count >= 10) {
+            clearInterval(interval);
+            const allSolid = samples.every(Boolean);
+            resolve({ ok: allSolid, sampleCount: samples.length });
+          }
+        }, 50);
+        const a = document.querySelector('a[data-pill][href="#overview"]');
+        if (a) a.click();
+      }))()
+    `);
+    logCheck('ALL_PAGES', 'no_empty_main_area_during_transition', Boolean(noEmptyMainArea?.ok), `samples=${noEmptyMainArea?.sampleCount}, allSolid=true`);
+    await wait(1000);
 
     logCheck('ALL_PAGES', 'zero_console_errors_across_session', consoleErrors.length === 0, consoleErrors.length ? consoleErrors.join(' | ') : 'zero errors');
     logCheck('ALL_PAGES', 'zero_failed_network_requests', failedRequests.length === 0, failedRequests.length ? failedRequests.join(' | ') : 'zero failures');

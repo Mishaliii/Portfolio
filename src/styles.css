@@ -232,7 +232,7 @@ a[href^="mailto"]:hover { color: var(--burgundy-soft); }
 .scene-stage { position: fixed; inset: 0; z-index: 0; background: #0b0b0b; pointer-events: none; overflow: hidden; }
 .scene-poster, .scene-move, .scene-dim { position: absolute; inset: 0; width: 100%; height: 100%; }
 .scene-poster, .scene-video { object-fit: cover; object-position: 50% 50%; }
-.scene-video { position: absolute; inset: 0; display: block; width: 100%; height: 100%; will-change: opacity; }
+.scene-video { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
 .scene-poster { display: none; }
 /* native video layer: hardware-decoded and composited, parallax is a transform only */
 .scene-move { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 1; transform-origin: 50% 50%; transform: translate3d(0, 0, 0); will-change: transform; }
