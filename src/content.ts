@@ -376,7 +376,7 @@ export const works = {
       problem:
         "Predicts employee productivity and roles, reaching approximately 87% classification accuracy.",
       approach:
-        "Random Forest and Logistic Regression models evaluated with cross-validation and served through Streamlit.",
+        "Random Forest and Logistic Regression models trained with model evaluation and served through Streamlit.",
       stack: ["scikit-learn", "Streamlit", "joblib", "Python", "pandas"],
     },
     {
@@ -745,7 +745,7 @@ export const roleCaseStudy: CaseStudyData = {
         },
         {
           name: "Model Evaluation & Persistence",
-          desc: "Rigorous cross-validation, feature importance ranking, and serialization with joblib for instant deployment.",
+          desc: "Model evaluation, feature importance ranking, and serialization with joblib for instant deployment.",
         },
         {
           name: "Streamlit App Deployment",
@@ -764,7 +764,7 @@ export const roleCaseStudy: CaseStudyData = {
       title: "Stack and architecture",
       text: "Built in Python using established machine learning and data science libraries:",
       points: [
-        "scikit-learn: Powers Random Forest, Logistic Regression, model evaluation, and cross-validation pipelines.",
+        "scikit-learn: Powers Random Forest, Logistic Regression, and model evaluation pipelines.",
         "Streamlit: Delivers the interactive front-end application for real-time model scoring and visualization.",
         "joblib: Serializes trained machine learning pipelines for lightweight, fast-loading inference.",
         "pandas & NumPy: Handles exploratory data analysis, data cleaning, and feature engineering transformations.",
