@@ -401,11 +401,11 @@ export function Site() {
       const tl = gsap.timeline({ onComplete: done });
       w.style.willChange = "transform";
 
-      // 1. Wipe covers viewport in 0.45s with smooth, weighted power3.inOut
+      // 1. Wipe covers viewport in 0.55s with smooth, weighted power3.inOut
       tl.fromTo(
         w,
         { yPercent: down ? 100 : -100 },
-        { yPercent: 0, duration: 0.45, ease: "power3.inOut" },
+        { yPercent: 0, duration: 0.55, ease: "power3.inOut" },
         0,
       );
 
@@ -413,16 +413,16 @@ export function Site() {
       tl.fromTo(
         label,
         { yPercent: down ? 25 : -25, opacity: 0 },
-        { yPercent: 0, opacity: 1, duration: 0.24, ease: "power2.out" },
-        0.1,
+        { yPercent: 0, opacity: 1, duration: 0.3, ease: "power2.out" },
+        0.12,
       );
       tl.to(
         label,
-        { opacity: 0, yPercent: down ? -20 : 20, duration: 0.12, ease: "power2.in" },
-        0.45,
+        { opacity: 0, yPercent: down ? -20 : 20, duration: 0.15, ease: "power2.in" },
+        0.55,
       );
 
-      // 3. At 0.45s, viewport is 100% covered: swap active page and prepare new layout
+      // 3. At 0.55s, viewport is 100% covered: swap active page and prepare new layout
       tl.add(() => {
         stage.covered = target !== 0;
         stage.heroOn = target === 0;
@@ -432,10 +432,10 @@ export function Site() {
         curRef.current = target;
         oldEl.classList.remove("is-active");
         newEl.classList.add("is-active");
-      }, 0.45);
+      }, 0.55);
 
-      // 4. Wipe holds for 0.12s, then uncovers viewport in 0.45s (0.57s to 1.02s)
-      tl.to(w, { yPercent: down ? -100 : 100, duration: 0.45, ease: "power3.inOut" }, 0.57);
+      // 4. Wipe holds for 0.15s, then uncovers viewport in 0.55s (0.70s to 1.25s)
+      tl.to(w, { yPercent: down ? -100 : 100, duration: 0.55, ease: "power3.inOut" }, 0.7);
 
       // 5. As the wipe peels back to reveal incoming page, trigger entrance animation
       tl.add(() => {
@@ -443,9 +443,9 @@ export function Site() {
           heroEnter(newEl);
         } else {
           enterPage(newEl);
-          settlePage(newEl, 550);
+          settlePage(newEl, 600);
         }
-      }, 0.59);
+      }, 0.72);
     },
     [paged],
   );
