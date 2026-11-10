@@ -11,7 +11,7 @@ export const site = {
   github: "https://github.com/Mishaliii",
   linkedin: "https://www.linkedin.com/in/muhammedmishal13/",
   cv: "/cv.pdf",
-  availability: "Open to roles in Kerala, UAE or remote",
+  availability: "Open to roles in Kerala, India, GCC or remote",
   timezone: "Asia/Kolkata",
 };
 
@@ -113,7 +113,7 @@ export const about = {
       label: "STACK",
       text: "Python, FastAPI, Supabase PostgreSQL, pgvector, PyTorch, FAISS, scikit-learn, Streamlit",
     },
-    { label: "STATUS", bold: "Open to work, 2026", text: " · Kerala, UAE or remote", live: true },
+    { label: "STATUS", bold: "Open to work, 2026", text: " · Kerala, India, GCC or remote", live: true },
   ],
 };
 
@@ -654,7 +654,7 @@ export const journey = {
       year: "2026",
       role: "AI / ML Engineer",
       place: "Open to work",
-      line: "Building Python machine learning and computer vision applications, open to work in Kerala, UAE or remote.",
+      line: "Building Python machine learning and computer vision applications, open to work in Kerala, India, GCC or remote.",
       tag: "Available",
     },
   ] as JourneyStop[],
