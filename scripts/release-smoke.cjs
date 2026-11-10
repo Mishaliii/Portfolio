@@ -2263,7 +2263,7 @@ async function runSmoke() {
 
         // Works: OPEN TO WORK pill vs card edge
         await evalJs(`document.querySelector('a[data-pill][href="#works"]')?.click()`);
-        await wait(1600);
+        await wait(1800);
 
         const worksOverlap = await evalJs(`
         (() => {
@@ -2284,7 +2284,7 @@ async function runSmoke() {
 
         // Navigate back to Connect for next iteration or restore
         await evalJs(`document.querySelector('a[data-pill][href="#connect"]')?.click()`);
-        await wait(1600);
+        await wait(1800);
       }
 
       // Restore desktop metrics
@@ -2310,7 +2310,7 @@ async function runSmoke() {
           a?.click();
         })()
       `);
-        await wait(1800);
+        await wait(2000);
         const cur = await evalJs(
           `document.querySelector('a[data-pill][aria-current="page"]')?.getAttribute('href')`,
         );
@@ -2371,7 +2371,7 @@ async function runSmoke() {
           a?.click();
         })()
       `);
-        await wait(1800);
+        await wait(2000);
 
         const targetCheck = await evalJs(`
         (() => {
@@ -2410,14 +2410,14 @@ async function runSmoke() {
         `${transitionPairs.length} pairs tested; all clean=${allTransitionsClean}`,
       );
 
-      // Step 19: Transition duration timing check (target 1200-1300ms, centered at 1250ms)
+      // Step 19: Transition duration timing check (target 1450-1550ms, centered at 1500ms)
       const transitionTiming = await evalJs(`
       (() => new Promise((resolve) => {
         const t0 = performance.now();
         const onEnd = () => {
           window.removeEventListener('page-transition-end', onEnd);
           const dur = performance.now() - t0;
-          resolve({ dur: Math.round(dur), ok: dur >= 1180 && dur <= 1320 });
+          resolve({ dur: Math.round(dur), ok: dur >= 1420 && dur <= 1580 });
         };
         window.addEventListener('page-transition-end', onEnd);
         const a = document.querySelector('a[data-pill][href="#about"]');
@@ -2429,7 +2429,7 @@ async function runSmoke() {
         "ALL_PAGES",
         "page_transition_timing_paced_comfortably",
         Boolean(transitionTiming?.ok),
-        `duration=${transitionTiming?.dur}ms (target 1200-1300ms)`,
+        `duration=${transitionTiming?.dur}ms (target 1450-1550ms)`,
       );
       await wait(600);
 
@@ -2461,7 +2461,7 @@ async function runSmoke() {
         Boolean(noEmptyMainArea?.ok),
         `samples=${noEmptyMainArea?.sampleCount}, allSolid=true`,
       );
-      await wait(1600);
+      await wait(1800);
 
       // =========================================================================
       // STEP 18: CONTENT ALIGNMENT & RESUME TRUTH AUDIT
