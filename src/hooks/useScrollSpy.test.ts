@@ -59,7 +59,7 @@ describe("useScrollSpy", () => {
       useScrollSpy({
         containerRef: { current: container },
         sectionIds,
-      })
+      }),
     );
 
     expect(result.current.activeSection).toBe("sec-1");
@@ -70,7 +70,7 @@ describe("useScrollSpy", () => {
       useScrollSpy({
         containerRef: { current: container },
         sectionIds,
-      })
+      }),
     );
 
     // Scroll to 320px -> sec-2 relativeTop is 300 - 320 = -20px <= 24px
@@ -95,7 +95,7 @@ describe("useScrollSpy", () => {
       useScrollSpy({
         containerRef: { current: container },
         sectionIds,
-      })
+      }),
     );
 
     act(() => {
@@ -112,7 +112,7 @@ describe("useScrollSpy", () => {
       useScrollSpy({
         containerRef: { current: container },
         sectionIds,
-      })
+      }),
     );
 
     act(() => {

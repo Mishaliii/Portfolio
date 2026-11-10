@@ -365,7 +365,11 @@ describe("buddy-matcher comprehensive test suite (>= 60 phrasing & typo tests)",
     {
       query: "what has Mishal built?",
       expectedIntent: "projects",
-      textContains: ["Dermatology Decision Support", "Productivity & Role Prediction", "CareerLens AI"],
+      textContains: [
+        "Dermatology Decision Support",
+        "Productivity & Role Prediction",
+        "CareerLens AI",
+      ],
     },
     {
       query: "show me his portfolio projects",
@@ -605,7 +609,7 @@ describe("buddy-matcher comprehensive test suite (>= 60 phrasing & typo tests)",
       if (customAssert) {
         customAssert(res);
       }
-    }
+    },
   );
 
   // Normalizer specific test

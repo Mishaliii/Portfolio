@@ -74,12 +74,12 @@ export class ContinuousWheelAccumulator {
     this.flickAccumulated += deltaItems;
     this.flickAccumulated = Math.max(
       -this.maxItemsPerFlick,
-      Math.min(this.maxItemsPerFlick, this.flickAccumulated)
+      Math.min(this.maxItemsPerFlick, this.flickAccumulated),
     );
 
     const nextTarget = Math.max(
       0,
-      Math.min(this.itemCount - 1, this.flickStartPos + this.flickAccumulated)
+      Math.min(this.itemCount - 1, this.flickStartPos + this.flickAccumulated),
     );
     this.targetPosition = nextTarget;
     this.onTargetChange?.(this.targetPosition);
@@ -184,4 +184,3 @@ export class WheelAccumulator {
     }
   }
 }
-

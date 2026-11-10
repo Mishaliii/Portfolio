@@ -1,15 +1,15 @@
-const { spawn, execSync } = require('child_process');
-const http = require('http');
-const fs = require('fs');
-const path = require('path');
+const { spawn, execSync } = require("child_process");
+const http = require("http");
+const fs = require("fs");
+const path = require("path");
 
-let targetUrl = 'http://localhost:3000';
+let targetUrl = "http://localhost:3000";
 let runs = 3;
 
 for (const arg of process.argv.slice(2)) {
-  if (arg.startsWith('--runs=')) {
+  if (arg.startsWith("--runs=")) {
     runs = parseInt(arg.slice(7), 10) || 3;
-  } else if (!arg.startsWith('--')) {
+  } else if (!arg.startsWith("--")) {
     targetUrl = arg;
   }
 }
@@ -28,38 +28,46 @@ function median(values) {
 async function runSingleSession(sessionIndex, url) {
   const chromePort = 9225 + sessionIndex;
   const profileDir = `C:\\temp\\chrome_perf_${Date.now()}_${sessionIndex}`;
-  try { fs.mkdirSync(profileDir, { recursive: true }); } catch {}
+  try {
+    fs.mkdirSync(profileDir, { recursive: true });
+  } catch {}
 
-  const chromeProc = spawn('C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe', [
+  const chromeProc = spawn("C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", [
     `--remote-debugging-port=${chromePort}`,
     `--user-data-dir=${profileDir}`,
-    '--disable-extensions',
-    '--no-first-run',
-    '--no-default-browser-check',
-    '--window-size=1918,932',
-    'about:blank',
+    "--disable-extensions",
+    "--no-first-run",
+    "--no-default-browser-check",
+    "--window-size=1918,932",
+    "about:blank",
   ]);
 
   const killChrome = () => {
     try {
       if (chromeProc?.pid) {
-        execSync(`taskkill /pid ${chromeProc.pid} /T /F`, { stdio: 'ignore' });
+        execSync(`taskkill /pid ${chromeProc.pid} /T /F`, { stdio: "ignore" });
       }
     } catch {}
-    try { fs.rmSync(profileDir, { recursive: true, force: true }); } catch {}
+    try {
+      fs.rmSync(profileDir, { recursive: true, force: true });
+    } catch {}
   };
 
   try {
     await wait(1500);
 
     const pages = await new Promise((res, rej) => {
-      http.get(`http://localhost:${chromePort}/json/list`, (r) => {
-        let d = ''; r.on('data', (c) => (d += c)); r.on('end', () => res(JSON.parse(d)));
-      }).on('error', rej);
+      http
+        .get(`http://localhost:${chromePort}/json/list`, (r) => {
+          let d = "";
+          r.on("data", (c) => (d += c));
+          r.on("end", () => res(JSON.parse(d)));
+        })
+        .on("error", rej);
     });
 
-    const targetPage = pages.find((p) => p.type === 'page') || pages[0];
-    const ws = new (globalThis.WebSocket)(targetPage.webSocketDebuggerUrl);
+    const targetPage = pages.find((p) => p.type === "page") || pages[0];
+    const ws = new globalThis.WebSocket(targetPage.webSocketDebuggerUrl);
     await new Promise((r) => (ws.onopen = r));
 
     let msgId = 1;
@@ -83,14 +91,25 @@ async function runSingleSession(sessionIndex, url) {
 
     const evalJs = async (expr) => {
       let script = expr.trim();
-      if (script.startsWith('(() =>') || script.startsWith('(()=>') || script.startsWith('function')) {
+      if (
+        script.startsWith("(() =>") ||
+        script.startsWith("(()=>") ||
+        script.startsWith("function")
+      ) {
         // already wrapped
-      } else if (script.includes('\n') || script.includes(';') || script.includes('const ') || script.includes('let ') || script.includes('var ') || script.startsWith('{')) {
+      } else if (
+        script.includes("\n") ||
+        script.includes(";") ||
+        script.includes("const ") ||
+        script.includes("let ") ||
+        script.includes("var ") ||
+        script.startsWith("{")
+      ) {
         script = `(() => {\n${script}\n})()`;
       } else {
         script = `(() => { return (${script}); })()`;
       }
-      const res = await send('Runtime.evaluate', {
+      const res = await send("Runtime.evaluate", {
         expression: script,
         returnByValue: true,
         awaitPromise: true,
@@ -101,10 +120,10 @@ async function runSingleSession(sessionIndex, url) {
       return res.result?.value;
     };
 
-    await send('Page.enable');
-    await send('Runtime.enable');
-    await send('DOM.enable');
-    await send('Emulation.setDeviceMetricsOverride', {
+    await send("Page.enable");
+    await send("Runtime.enable");
+    await send("DOM.enable");
+    await send("Emulation.setDeviceMetricsOverride", {
       width: 1918,
       height: 932,
       deviceScaleFactor: 1,
@@ -198,12 +217,14 @@ async function runSingleSession(sessionIndex, url) {
     `;
 
     // 1. Navigate to target URL
-    await send('Page.navigate', { url });
+    await send("Page.navigate", { url });
 
     // Wait for boot & intro
     for (let i = 0; i < 60; i++) {
       await wait(300);
-      const booted = await evalJs(`Boolean(window.__siteBooted && !document.querySelector('.site-shell')?.classList.contains('is-loading'))`).catch(() => false);
+      const booted = await evalJs(
+        `Boolean(window.__siteBooted && !document.querySelector('.site-shell')?.classList.contains('is-loading'))`,
+      ).catch(() => false);
       if (booted) break;
     }
     await wait(800);
@@ -214,7 +235,7 @@ async function runSingleSession(sessionIndex, url) {
       paged: document.documentElement.classList.contains("paged"),
       matches: window.matchMedia("(min-width: 1024px) and (min-height: 600px)").matches
     })`);
-    console.log('[DEBUG] Window info:', JSON.stringify(winInfo));
+    console.log("[DEBUG] Window info:", JSON.stringify(winInfo));
 
     // Inject recorder script
     await evalJs(installRecorderScript);
@@ -230,14 +251,14 @@ async function runSingleSession(sessionIndex, url) {
     // MEASUREMENT 1: Expertise -> Works
     await evalJs(`window.__perfRecorder.start()`);
     // Dispatch mouse move then wheel down to trigger transition from Expertise (page 2) to Works (page 3)
-    await send('Input.dispatchMouseEvent', {
-      type: 'mouseMoved',
+    await send("Input.dispatchMouseEvent", {
+      type: "mouseMoved",
       x: 960,
       y: 466,
     });
     await wait(100);
-    await send('Input.dispatchMouseEvent', {
-      type: 'mouseWheel',
+    await send("Input.dispatchMouseEvent", {
+      type: "mouseWheel",
       x: 960,
       y: 466,
       deltaX: 0,
@@ -254,7 +275,7 @@ async function runSingleSession(sessionIndex, url) {
       return active ? active.id : (pill ? pill.replace('#', '') : '');
     })()`);
 
-    if (curPage !== 'works') {
+    if (curPage !== "works") {
       console.warn(`[WARN] Not on Works page (got ${curPage}), forcing navigation to #works`);
       await evalJs(`(() => { window.location.hash = '#works'; })()`);
       await wait(1500);
@@ -278,8 +299,8 @@ async function runSingleSession(sessionIndex, url) {
       const t = transitions[stepIdx];
       await evalJs(`window.__perfRecorder.start()`);
 
-      await send('Input.dispatchMouseEvent', {
-        type: 'mouseWheel',
+      await send("Input.dispatchMouseEvent", {
+        type: "mouseWheel",
         x: 960,
         y: 466,
         deltaX: 0,
@@ -300,9 +321,9 @@ async function runSingleSession(sessionIndex, url) {
     const worstCardFrame = Math.max(...cardChanges.map((c) => c.worstFrame));
     const totalCardFramesOver50 = cardChanges.reduce((acc, c) => acc + c.framesOver50, 0);
     const maxCardFramesOver33 = Math.max(...cardChanges.map((c) => c.framesOver33));
-    const avgCardFps = Math.round(
-      (cardChanges.reduce((acc, c) => acc + c.avgFps, 0) / cardChanges.length) * 10
-    ) / 10;
+    const avgCardFps =
+      Math.round((cardChanges.reduce((acc, c) => acc + c.avgFps, 0) / cardChanges.length) * 10) /
+      10;
 
     // MEASUREMENT 3: DDSS Case Study Drawer Open / Close
     // Return to card 0 (DDSS) if not already on 0
@@ -369,15 +390,23 @@ async function runBenchmark() {
       const res = await runSingleSession(i, targetUrl);
       results.push(res);
       console.log(`Iter ${i}:`);
-      console.log(`  Expertise -> Works: worst=${res.expToWorks.worstFrame}ms, topFrames=[${res.expToWorks.topFrames.join(', ')}], >50ms=${res.expToWorks.framesOver50}, >33ms=${res.expToWorks.framesOver33}, fps=${res.expToWorks.avgFps}`);
+      console.log(
+        `  Expertise -> Works: worst=${res.expToWorks.worstFrame}ms, topFrames=[${res.expToWorks.topFrames.join(", ")}], >50ms=${res.expToWorks.framesOver50}, >33ms=${res.expToWorks.framesOver33}, fps=${res.expToWorks.avgFps}`,
+      );
       if (res.expToWorks.loafEntries?.length) {
         console.log(`    LoAF entries:`, JSON.stringify(res.expToWorks.loafEntries));
       }
-      console.log(`  Card Changes (5): worst=${res.cardWorstFrame}ms, total >50ms=${res.cardFramesOver50}, max >33ms=${res.cardMaxFramesOver33}, avg fps=${res.cardAvgFps}`);
+      console.log(
+        `  Card Changes (5): worst=${res.cardWorstFrame}ms, total >50ms=${res.cardFramesOver50}, max >33ms=${res.cardMaxFramesOver33}, avg fps=${res.cardAvgFps}`,
+      );
       res.cardChanges.forEach((cc, idx) => {
-        console.log(`    Card change ${cc.step}: worst=${cc.worstFrame}ms, top=[${cc.topFrames.join(', ')}], >50=${cc.framesOver50}, >33=${cc.framesOver33}`);
+        console.log(
+          `    Card change ${cc.step}: worst=${cc.worstFrame}ms, top=[${cc.topFrames.join(", ")}], >50=${cc.framesOver50}, >33=${cc.framesOver33}`,
+        );
       });
-      console.log(`  Drawer Open: worst=${res.drawerOpen.worstFrame}ms, fps=${res.drawerOpen.avgFps} | Close: worst=${res.drawerClose.worstFrame}ms, fps=${res.drawerClose.avgFps}`);
+      console.log(
+        `  Drawer Open: worst=${res.drawerOpen.worstFrame}ms, fps=${res.drawerOpen.avgFps} | Close: worst=${res.drawerClose.worstFrame}ms, fps=${res.drawerClose.avgFps}`,
+      );
     } catch (e) {
       console.error(`Iteration ${i} failed:`, e);
     }
@@ -385,7 +414,7 @@ async function runBenchmark() {
   }
 
   if (!results.length) {
-    console.error('No successful benchmark runs.');
+    console.error("No successful benchmark runs.");
     process.exit(1);
   }
 
@@ -407,33 +436,33 @@ async function runBenchmark() {
   console.log(`MEDIAN RESULTS ACROSS ${results.length} RUNS`);
   console.log(`======================================================`);
   console.table({
-    'Expertise -> Works': {
-      'Worst Frame (ms)': medianExpWorst,
-      'Frames > 50ms': medianExpOver50,
-      'Frames > 33ms': medianExpOver33,
-      'Avg FPS': medianExpFps,
-      Target: '< 33 ms worst',
+    "Expertise -> Works": {
+      "Worst Frame (ms)": medianExpWorst,
+      "Frames > 50ms": medianExpOver50,
+      "Frames > 33ms": medianExpOver33,
+      "Avg FPS": medianExpFps,
+      Target: "< 33 ms worst",
     },
-    'Works Card Changes': {
-      'Worst Frame (ms)': medianCardWorst,
-      'Frames > 50ms': medianCardOver50,
-      'Frames > 33ms': medianCardMaxOver33,
-      'Avg FPS': medianCardFps,
-      Target: '0 frames > 50ms, <=3 > 33ms',
+    "Works Card Changes": {
+      "Worst Frame (ms)": medianCardWorst,
+      "Frames > 50ms": medianCardOver50,
+      "Frames > 33ms": medianCardMaxOver33,
+      "Avg FPS": medianCardFps,
+      Target: "0 frames > 50ms, <=3 > 33ms",
     },
-    'DDSS Drawer Open': {
-      'Worst Frame (ms)': medianDrawerOpenWorst,
-      'Frames > 50ms': median(results.map((r) => r.drawerOpen.framesOver50)),
-      'Frames > 33ms': median(results.map((r) => r.drawerOpen.framesOver33)),
-      'Avg FPS': median(results.map((r) => r.drawerOpen.avgFps)),
-      Target: 'Smooth transition',
+    "DDSS Drawer Open": {
+      "Worst Frame (ms)": medianDrawerOpenWorst,
+      "Frames > 50ms": median(results.map((r) => r.drawerOpen.framesOver50)),
+      "Frames > 33ms": median(results.map((r) => r.drawerOpen.framesOver33)),
+      "Avg FPS": median(results.map((r) => r.drawerOpen.avgFps)),
+      Target: "Smooth transition",
     },
-    'DDSS Drawer Close': {
-      'Worst Frame (ms)': medianDrawerCloseWorst,
-      'Frames > 50ms': median(results.map((r) => r.drawerClose.framesOver50)),
-      'Frames > 33ms': median(results.map((r) => r.drawerClose.framesOver33)),
-      'Avg FPS': median(results.map((r) => r.drawerClose.avgFps)),
-      Target: 'Smooth transition',
+    "DDSS Drawer Close": {
+      "Worst Frame (ms)": medianDrawerCloseWorst,
+      "Frames > 50ms": median(results.map((r) => r.drawerClose.framesOver50)),
+      "Frames > 33ms": median(results.map((r) => r.drawerClose.framesOver33)),
+      "Avg FPS": median(results.map((r) => r.drawerClose.avgFps)),
+      Target: "Smooth transition",
     },
   });
 

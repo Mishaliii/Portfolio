@@ -22,12 +22,18 @@ export const headlineInstances = new Set<string>();
 export const headlineReady = new Set<string>();
 export const activeHeadlineDrawLoops = new Map<string, (t: number) => void>();
 
-export function assertSingleDrawLoopPerHeadline(): { valid: boolean; activeLoops: number; totalInstances: number } {
+export function assertSingleDrawLoopPerHeadline(): {
+  valid: boolean;
+  activeLoops: number;
+  totalInstances: number;
+} {
   const activeLoops = activeHeadlineDrawLoops.size;
   const totalInstances = headlineInstances.size;
   const valid = activeLoops <= totalInstances;
   if (!valid) {
-    console.error(`[HeadlineDissolve] Assertion failed: ${activeLoops} active draw loops for ${totalInstances} instances`);
+    console.error(
+      `[HeadlineDissolve] Assertion failed: ${activeLoops} active draw loops for ${totalInstances} instances`,
+    );
   }
   return { valid, activeLoops, totalInstances };
 }
@@ -80,7 +86,8 @@ export function HeadlineDissolve({
   }, []);
 
   useEffect(() => {
-    const w = wrap.current, c = cv.current;
+    const w = wrap.current,
+      c = cv.current;
     if (!w || !c) return;
 
     const id = instanceId.current;
@@ -109,7 +116,8 @@ export function HeadlineDissolve({
     const inkc = resolve(ink);
     const greenc = resolve("var(--green-light)");
 
-    let W = 0, H = 0;
+    let W = 0,
+      H = 0;
     let dpr = erase ? Math.min(1.5, window.devicePixelRatio || 1) : 1;
 
     let textLayout: TextLayout | null = null;
@@ -124,7 +132,8 @@ export function HeadlineDissolve({
 
       const cs = getComputedStyle(h1);
       const font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
-      const letterSpacing = cs.letterSpacing && cs.letterSpacing !== "normal" ? cs.letterSpacing : "";
+      const letterSpacing =
+        cs.letterSpacing && cs.letterSpacing !== "normal" ? cs.letterSpacing : "";
       const wordSpacing = cs.wordSpacing && cs.wordSpacing !== "normal" ? cs.wordSpacing : "";
       const color = cs.color || resolve("var(--cream)");
 
@@ -141,7 +150,8 @@ export function HeadlineDissolve({
         span.remove();
 
         const hr = hline.getBoundingClientRect();
-        let dx = 0, dy = 0;
+        let dx = 0,
+          dy = 0;
         try {
           const tf = getComputedStyle(hline).transform;
           if (tf && tf !== "none") {
@@ -149,7 +159,9 @@ export function HeadlineDissolve({
             dx = m.m41;
             dy = m.m42;
           }
-        } catch {}
+        } catch {
+          /* ignore */
+        }
 
         const x = hr.left - dx - wrapRect.left;
         const y = sr.bottom - dy - wrapRect.top;
@@ -161,7 +173,8 @@ export function HeadlineDissolve({
       if (dotEl) {
         const dr = dotEl.getBoundingClientRect();
         const dcs = getComputedStyle(dotEl);
-        let dx = 0, dy = 0;
+        let dx = 0,
+          dy = 0;
         try {
           const parentHline = dotEl.closest<HTMLElement>("[data-hline]");
           const tf = getComputedStyle(parentHline || dotEl).transform;
@@ -170,7 +183,9 @@ export function HeadlineDissolve({
             dx = m.m41;
             dy = m.m42;
           }
-        } catch {}
+        } catch {
+          /* ignore */
+        }
         dot = {
           x: dr.left - dx - wrapRect.left + dr.width / 2,
           y: dr.top - dy - wrapRect.top + dr.height / 2,
@@ -221,7 +236,13 @@ export function HeadlineDissolve({
     const dots: Dot[] = [],
       specks: Speck[] = [];
     const pool: Dot[] = Array.from({ length: 4100 }, () => ({ x: 0, y: 0, r: 0, life: 0 }));
-    const speckPool: Speck[] = Array.from({ length: 150 }, () => ({ x: 0, y: 0, vx: 0, vy: 0, life: 0 }));
+    const speckPool: Speck[] = Array.from({ length: 150 }, () => ({
+      x: 0,
+      y: 0,
+      vx: 0,
+      vy: 0,
+      life: 0,
+    }));
     let unsub: (() => void) | undefined;
     let timer = 0;
 
@@ -465,7 +486,8 @@ export function HeadlineDissolve({
             ctx.beginPath();
             for (let i = 0; i < dots.length; i++) {
               const d = dots[i];
-              if (Math.min(LEVELS - 1, Math.floor(Math.min(1, d.life * 1.6) * LEVELS - 1e-6)) !== k) continue;
+              if (Math.min(LEVELS - 1, Math.floor(Math.min(1, d.life * 1.6) * LEVELS - 1e-6)) !== k)
+                continue;
               ctx.moveTo(d.x + d.r, d.y);
               ctx.arc(d.x, d.y, d.r, 0, 6.283);
             }
@@ -480,7 +502,8 @@ export function HeadlineDissolve({
             ctx.beginPath();
             for (let i = 0; i < dots.length; i++) {
               const d = dots[i];
-              if (Math.min(LEVELS - 1, Math.floor(Math.min(1, d.life * 1.6) * LEVELS - 1e-6)) !== k) continue;
+              if (Math.min(LEVELS - 1, Math.floor(Math.min(1, d.life * 1.6) * LEVELS - 1e-6)) !== k)
+                continue;
               ctx.moveTo(d.x + d.r, d.y);
               ctx.arc(d.x, d.y, d.r, 0, 6.283);
             }

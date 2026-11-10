@@ -16,8 +16,7 @@ export const INTRO_KEY = "mishal_loader_seen";
 export const MIN_HOLD_MS = 2300;
 export const HARD_LIMIT_MS = 3200;
 export const REDUCED_FADE_MS = 300;
-export const ASSET_TIMEOUT_MS = 2300;
-export const INTRO_TIMEOUT_MS = HARD_LIMIT_MS;
+const ASSET_TIMEOUT_MS = MIN_HOLD_MS;
 
 export const LOADER_WEIGHTS = {
   fonts: 20,
@@ -31,7 +30,7 @@ export const LOADER_WEIGHTS = {
 export type LoaderPart = keyof typeof LOADER_WEIGHTS;
 
 // Kept for backward compatibility with stage.ts
-export const INTRO_WEIGHTS = { fonts: 20, poster: 15, video: 30 };
+const INTRO_WEIGHTS = { fonts: 20, poster: 15, video: 30 };
 export type BootPart = keyof typeof INTRO_WEIGHTS | "depth" | "init" | "secondary";
 
 export function loadingProgress(parts: Partial<Record<BootPart, number>>) {

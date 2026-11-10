@@ -3,7 +3,7 @@ import { Odometer } from "@/components/Odometer";
 import { createPortal } from "react-dom";
 import { gsap } from "gsap";
 import { works, type CaseStudyData } from "@/content";
-import { useScrollSpy } from "@/hooks/useScrollSpy";
+import { useScrollSpy } from "@/hooks";
 import { ddssImages } from "./ScreenshotGallery";
 
 export function CaseStudy({
@@ -34,7 +34,7 @@ export function CaseStudy({
       const hasMethods = Boolean(sec.methods && sec.methods.length > 0);
       const hasScreens = Boolean(sec.screens && sec.screens.length > 0);
       const hasShots = Boolean(
-        (sec.shot && ddssImages[sec.shot]) || (sec.shots && sec.shots.length > 0)
+        (sec.shot && ddssImages[sec.shot]) || (sec.shots && sec.shots.length > 0),
       );
       return hasText || hasPoints || hasMethods || hasScreens || hasShots;
     });
@@ -69,7 +69,10 @@ export function CaseStudy({
       const scrollOffset = 20;
       const targetScroll = Math.max(
         0,
-        Math.min(maxScroll, container.scrollTop + (targetRect.top - containerRect.top) - scrollOffset)
+        Math.min(
+          maxScroll,
+          container.scrollTop + (targetRect.top - containerRect.top) - scrollOffset,
+        ),
       );
 
       if (scrollTween.current) scrollTween.current.kill();
@@ -91,7 +94,7 @@ export function CaseStudy({
         },
       });
     },
-    [setActiveSection]
+    [setActiveSection],
   );
 
   const close = useCallback(() => {
@@ -136,7 +139,7 @@ export function CaseStudy({
         stagger: 0.03,
         ease: "power2.in",
       },
-      0
+      0,
     );
 
     // Panel slides out to the right with power3.in (0.45 s) while backdrop fades out
@@ -147,7 +150,7 @@ export function CaseStudy({
         duration: 0.45,
         ease: "power3.in",
       },
-      0.05
+      0.05,
     );
 
     if (bd) {
@@ -158,7 +161,7 @@ export function CaseStudy({
           duration: 0.45,
           ease: "power2.in",
         },
-        0.05
+        0.05,
       );
     }
   }, [onClose]);
@@ -181,7 +184,7 @@ export function CaseStudy({
     // Collapse any open details or expanded accordions across all projects
     el.querySelectorAll("details[open]").forEach((d) => d.removeAttribute("open"));
     el.querySelectorAll<HTMLElement>("[aria-expanded='true']").forEach((b) =>
-      b.setAttribute("aria-expanded", "false")
+      b.setAttribute("aria-expanded", "false"),
     );
 
     const origHtmlOverflow = document.documentElement.style.overflow;
@@ -249,7 +252,7 @@ export function CaseStudy({
         stagger: 0.04,
         ease: "power2.out",
       },
-      0.12
+      0.12,
     );
 
     const key = (e: KeyboardEvent) => {
@@ -259,20 +262,14 @@ export function CaseStudy({
         return;
       }
 
-      if (
-        e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLTextAreaElement
-      ) {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
         return;
       }
 
       if (e.key === "PageDown" || e.key === "j" || e.key === "J") {
         e.preventDefault();
         const currIdx = validSections.findIndex((s) => s.id === activeSectionRef.current);
-        const nextIdx = Math.min(
-          validSections.length - 1,
-          (currIdx >= 0 ? currIdx : 0) + 1
-        );
+        const nextIdx = Math.min(validSections.length - 1, (currIdx >= 0 ? currIdx : 0) + 1);
         scrollToSection(validSections[nextIdx].id);
         return;
       }
@@ -445,10 +442,7 @@ export function CaseStudy({
                       {sec.points && sec.points.length > 0 && (
                         <ul className="space-y-2.5">
                           {sec.points.map((pt) => (
-                            <li
-                              key={pt}
-                              className="flex gap-3 text-[15px] text-[#0B0B0B]"
-                            >
+                            <li key={pt} className="flex gap-3 text-[15px] text-[#0B0B0B]">
                               <span className="mono text-[#1F5A3A] shrink-0">•</span>
                               <span>{pt}</span>
                             </li>
@@ -558,36 +552,29 @@ export function CaseStudy({
                         <span className="mono text-[12px] font-semibold text-[#1F5A3A] block">
                           {m.name}
                         </span>
-                        <p className="text-[14px] text-[#6B645A] mt-0.5">
-                          {m.desc}
-                        </p>
+                        <p className="text-[14px] text-[#6B645A] mt-0.5">{m.desc}</p>
                       </div>
                     ))}
                   </div>
                 )}
 
                 {/* Bullet points (when not already rendered beside a single shot) */}
-                {(!sec.shot || !ddssImages[sec.shot]) &&
-                  sec.points &&
-                  sec.points.length > 0 && (
-                    <ul className="space-y-2.5 max-w-[58ch] mt-4">
-                      {sec.points.map((pt) => (
-                        <li
-                          key={pt}
-                          className="flex gap-3 text-[15px] text-[#0B0B0B]"
-                        >
-                          <span className="mono text-[#1F5A3A] shrink-0">•</span>
-                          <span>{pt}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                {(!sec.shot || !ddssImages[sec.shot]) && sec.points && sec.points.length > 0 && (
+                  <ul className="space-y-2.5 max-w-[58ch] mt-4">
+                    {sec.points.map((pt) => (
+                      <li key={pt} className="flex gap-3 text-[15px] text-[#0B0B0B]">
+                        <span className="mono text-[#1F5A3A] shrink-0">•</span>
+                        <span>{pt}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </section>
             ))}
           </div>
         </div>
       </aside>
     </>,
-    document.body
+    document.body,
   );
 }

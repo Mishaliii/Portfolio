@@ -1,16 +1,30 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { GreetingItem } from "@/content";
 import { coarse } from "@/lib/motion";
-import { useCycle } from "@/lib/hooks";
+import { useCycle } from "@/hooks";
 
 /** Faint animated film grain that never eats clicks. */
-export function Grain({ tone = "ink", opacity = 0.055 }: { tone?: "ink" | "cream"; opacity?: number }) {
+export function Grain({
+  tone = "ink",
+  opacity = 0.055,
+}: {
+  tone?: "ink" | "cream";
+  opacity?: number;
+}) {
   const dot = tone === "ink" ? "rgba(11,11,11,.55)" : "rgba(232,222,208,.55)";
   return (
-    <div aria-hidden className="pointer-events-none absolute inset-0 z-20 overflow-hidden" style={{ opacity }}>
+    <div
+      aria-hidden
+      className="pointer-events-none absolute inset-0 z-20 overflow-hidden"
+      style={{ opacity }}
+    >
       <div
         className="grain-shift absolute"
-        style={{ inset: "-20%", backgroundImage: `radial-gradient(${dot} 1px, transparent 1px)`, backgroundSize: "3px 3px" }}
+        style={{
+          inset: "-20%",
+          backgroundImage: `radial-gradient(${dot} 1px, transparent 1px)`,
+          backgroundSize: "3px 3px",
+        }}
       />
     </div>
   );
@@ -52,7 +66,13 @@ export function Greeting({ lines }: { lines: GreetingItem[] }) {
 }
 
 /** Buttons that lean toward the pointer. */
-export function Magnetic({ children, strength = 0.22 }: { children: ReactNode; strength?: number }) {
+export function Magnetic({
+  children,
+  strength = 0.22,
+}: {
+  children: ReactNode;
+  strength?: number;
+}) {
   const ref = useRef<HTMLSpanElement>(null);
   useEffect(() => {
     if (coarse()) return;
@@ -70,7 +90,10 @@ export function Magnetic({ children, strength = 0.22 }: { children: ReactNode; s
     };
   }, [strength]);
   return (
-    <span ref={ref} className="inline-block transition-transform duration-300 ease-out will-change-transform">
+    <span
+      ref={ref}
+      className="inline-block transition-transform duration-300 ease-out will-change-transform"
+    >
       {children}
     </span>
   );

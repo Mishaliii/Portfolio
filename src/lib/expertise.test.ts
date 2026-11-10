@@ -27,8 +27,14 @@ describe("Expertise evidence rules", () => {
   });
 
   it("has the requested 5, 5, 5, 5 skills and no HTMX, Supabase or BGE-M3", () => {
-    expect(expertise.clusters.map((_, i) => expertise.skills.filter((s) => s.cluster === i).length)).toEqual([5, 5, 5, 5]);
-    expect(expertise.skills.some((s) => s.name === "HTMX" || s.name === "Supabase" || s.name === "BGE-M3")).toBe(false);
+    expect(
+      expertise.clusters.map((_, i) => expertise.skills.filter((s) => s.cluster === i).length),
+    ).toEqual([5, 5, 5, 5]);
+    expect(
+      expertise.skills.some(
+        (s) => s.name === "HTMX" || s.name === "Supabase" || s.name === "BGE-M3",
+      ),
+    ).toBe(false);
   });
 
   it("shows the two supplied FastAPI projects, with CareerLens backend built", () => {

@@ -149,7 +149,7 @@ export function useScrollSpy({
       if (!el) return;
       el.scrollIntoView({ behavior: "smooth", block: "start" });
     },
-    [updateSpy]
+    [updateSpy],
   );
 
   return { activeSection, setActiveSection, scrollTo, updateSpy };

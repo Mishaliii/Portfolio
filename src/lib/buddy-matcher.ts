@@ -137,7 +137,7 @@ export function normalizeQuery(raw: string): string {
 
 export function matchBuddyIntent(
   rawInput: string,
-  gameContextOrOptions?: number | MatchBuddyOptions
+  gameContextOrOptions?: number | MatchBuddyOptions,
 ): BuddyAnswer | null {
   if (!rawInput || !rawInput.trim()) {
     return null;
@@ -213,9 +213,10 @@ export function matchBuddyIntent(
   // If Sprout was awaiting visitor's name and user enters a short name (not a command/keyword)
   if (options.awaitingName) {
     const isSingleOrPairName = /^[a-zA-Z'-]{2,20}(?:\s+[a-zA-Z'-]{2,20})?$/.test(query);
-    const isSystemKeyword = /\b(what|who|why|where|how|projects?|stack|skills?|cv|resume|ddss|contact|email|hello|hi|bye|help|joke|no|yes)\b/i.test(
-      query
-    );
+    const isSystemKeyword =
+      /\b(what|who|why|where|how|projects?|stack|skills?|cv|resume|ddss|contact|email|hello|hi|bye|help|joke|no|yes)\b/i.test(
+        query,
+      );
     if (isSingleOrPairName && !isSystemKeyword) {
       const formattedName = query
         .split(/\s+/)
@@ -236,7 +237,7 @@ export function matchBuddyIntent(
   // A) VISITOR NAME: "my name", "who am I", "do you know me"
   const isVisitorNameQuery =
     /\b(my name|who am i|do you know me|tell me my name|do you remember me|what is my name)\b/i.test(
-      normalized
+      normalized,
     ) || /\b(whats my name|what's my name)\b/i.test(query);
 
   if (isVisitorNameQuery) {
@@ -262,7 +263,7 @@ export function matchBuddyIntent(
   // B) SPROUT'S IDENTITY: "your name", "who are you", "what are you"
   const isSproutIdentity =
     /\b(your name|who are you|what are you|what is your name|are you sprout|are you a bot|are you ai)\b/i.test(
-      normalized
+      normalized,
     ) && !/\b(mishal|his|creator|owner|author|built)\b/i.test(normalized);
 
   if (isSproutIdentity) {
@@ -278,9 +279,8 @@ export function matchBuddyIntent(
   // C) CREATOR / OWNER / MISHAL'S NAME: "his name", "Mishal's name", "owner", "user's name", "who made this", "who is mishal"
   const isCreatorNameQuery =
     /\b((his|mishals?|users?|creators?|authors?)\s+name|owner|who is the owner|portfolio owner|who made this|who built this|who created this|who is mishal|who is muhammed mishal)\b/i.test(
-      normalized
-    ) ||
-    /\b(user's name|mishal's name|who's mishal|who made)\b/i.test(query);
+      normalized,
+    ) || /\b(user's name|mishal's name|who's mishal|who made)\b/i.test(query);
 
   if (isCreatorNameQuery) {
     return {
@@ -318,8 +318,12 @@ export function matchBuddyIntent(
   // Out of scope (weather, politics, generic coding help, crypto)
   if (
     /\b(weather|temperature|forecast|rain|sunny|hot outside|cold outside)\b/i.test(normalized) ||
-    /\b(politics|election|president|prime minister|government|trump|biden|modi)\b/i.test(normalized) ||
-    /\b(write (python |any |a )?code|debug (my |this )?code|solve this|help me code|fix my code|code for me|python homework|write a script|leetcode)\b/i.test(normalized) ||
+    /\b(politics|election|president|prime minister|government|trump|biden|modi)\b/i.test(
+      normalized,
+    ) ||
+    /\b(write (python |any |a )?code|debug (my |this )?code|solve this|help me code|fix my code|code for me|python homework|write a script|leetcode)\b/i.test(
+      normalized,
+    ) ||
     /\b(bitcoin|crypto|stock price|recipe|movie review)\b/i.test(normalized)
   ) {
     return {
@@ -402,7 +406,9 @@ export function matchBuddyIntent(
   }
 
   // Thanks
-  if (/\b(thank|thanks|thx|hug|appreciate|cute|love you|awesome|sweet|good bot)\b/i.test(normalized)) {
+  if (
+    /\b(thank|thanks|thx|hug|appreciate|cute|love you|awesome|sweet|good bot)\b/i.test(normalized)
+  ) {
     return {
       intent: "thanks",
       text: `You're very welcome! ${site.name} and I appreciate you visiting.`,
@@ -426,7 +432,7 @@ export function matchBuddyIntent(
   // What is he looking for / Seeking
   if (
     /\b(what (role|job) is he looking for|what is he looking for|what are you looking for|what (role|job) are you looking for|looking for (a |work|roles?)|target roles?|job preferences?|career goals?)\b/i.test(
-      normalized
+      normalized,
     )
   ) {
     return {
@@ -452,7 +458,11 @@ export function matchBuddyIntent(
   }
 
   // DDSS How it works
-  if (/\b(how does ddss work|ddss (how|pipeline|architecture)|how does (the )?case retrieval work)\b/i.test(normalized)) {
+  if (
+    /\b(how does ddss work|ddss (how|pipeline|architecture)|how does (the )?case retrieval work)\b/i.test(
+      normalized,
+    )
+  ) {
     return {
       intent: "ddss_how",
       text: "A clinician uploads a lesion photo, **DINOv2 (ViT-Base)** extracts a 768-dimensional dense embedding, and **FAISS** with **Supabase PostgreSQL/pgvector** retrieves the most similar cases across 198 SD-198 disease classes with High/Moderate/Low confidence indicators, served via **FastAPI**.",
@@ -487,7 +497,11 @@ export function matchBuddyIntent(
   }
 
   // Productivity How it works
-  if (/\b(how does (the )?productivity|productivity (how|pipeline|model)|how does (the )?role prediction work)\b/i.test(normalized)) {
+  if (
+    /\b(how does (the )?productivity|productivity (how|pipeline|model)|how does (the )?role prediction work)\b/i.test(
+      normalized,
+    )
+  ) {
     return {
       intent: "productivity_how",
       text: "The pipeline performs EDA and feature engineering across session activity metrics (typing intensity, idle intervals, application usage), training **Random Forest** and **Logistic Regression** models saved with **joblib** and served through an interactive **Streamlit** app with ~87% classification accuracy.",
@@ -498,7 +512,11 @@ export function matchBuddyIntent(
   }
 
   // Productivity Overview
-  if (/\b(productivity|role prediction|worker|random forest|logistic regression|streamlit)\b/i.test(normalized)) {
+  if (
+    /\b(productivity|role prediction|worker|random forest|logistic regression|streamlit)\b/i.test(
+      normalized,
+    )
+  ) {
     const role = works.projects.find((p) => p.id === "role") || works.projects[1];
     return {
       intent: "productivity",
@@ -533,7 +551,11 @@ export function matchBuddyIntent(
   }
 
   // Additional projects
-  if (/\b(additional projects?|other projects?|build track pro|fresh cart|drop for life)\b/i.test(normalized)) {
+  if (
+    /\b(additional projects?|other projects?|build track pro|fresh cart|drop for life)\b/i.test(
+      normalized,
+    )
+  ) {
     return {
       intent: "additional_projects",
       text: `Besides his flagship AI/ML systems, ${site.name} has built: **Build Track Pro** (Django, MySQL contractor management), **Fresh Cart** (PHP, JavaScript, MySQL e-commerce), and **Drop for Life** (blood donation coordination platform).`,
@@ -544,7 +566,9 @@ export function matchBuddyIntent(
   }
 
   // Projects Overview
-  if (/\b(projects?|portfolio|built|works|case stud(y|ies)|showcase|work samples)\b/i.test(normalized)) {
+  if (
+    /\b(projects?|portfolio|built|works|case stud(y|ies)|showcase|work samples)\b/i.test(normalized)
+  ) {
     const projectNames = Object.keys(PROJECTS);
     return {
       intent: "projects",
@@ -572,7 +596,7 @@ export function matchBuddyIntent(
   // Tech Stack / Technologies
   if (
     /\b(stack|tech|technolog(y|ies)|tools?|skills?|programming languages?|libraries|frameworks?|python|fastapi|pytorch|faiss|postgresql|django)\b/i.test(
-      normalized
+      normalized,
     )
   ) {
     const stackFact = about.facts.find((f) => f.label === "STACK");
@@ -608,7 +632,11 @@ export function matchBuddyIntent(
   }
 
   // Education / Degree
-  if (/\b(education|college|degree|mca|bca|tkm|musaliar|studies|study|gpa|cgpa|university)\b/i.test(normalized)) {
+  if (
+    /\b(education|college|degree|mca|bca|tkm|musaliar|studies|study|gpa|cgpa|university)\b/i.test(
+      normalized,
+    )
+  ) {
     const edu = about.facts.find((f) => f.label === "EDUCATION");
     return {
       intent: "education",
@@ -620,7 +648,11 @@ export function matchBuddyIntent(
   }
 
   // Experience / Internship
-  if (/\b(experience|intern|internship|blue cast|bluecast|career|background|work history)\b/i.test(normalized)) {
+  if (
+    /\b(experience|intern|internship|blue cast|bluecast|career|background|work history)\b/i.test(
+      normalized,
+    )
+  ) {
     const exp = about.facts.find((f) => f.label === "EXPERIENCE");
     return {
       intent: "experience",
@@ -643,7 +675,11 @@ export function matchBuddyIntent(
   }
 
   // Hiring / Availability
-  if (/\b(hire|hiring|available|availability|open to (work|roles)|relocate|remote|contract|full-?time|job)\b/i.test(normalized)) {
+  if (
+    /\b(hire|hiring|available|availability|open to (work|roles)|relocate|remote|contract|full-?time|job)\b/i.test(
+      normalized,
+    )
+  ) {
     return {
       intent: "hiring",
       text: `Status: **${site.availability}**! ${site.name} is ready for AI/ML engineering roles across Kerala, UAE, or remote worldwide.`,
@@ -687,7 +723,9 @@ export function matchBuddyIntent(
   }
 
   // About Mishal / Bio
-  if (/\b(who (is|are)|about (mishal|you)|tell me about mishal|introduce|bio)\b/i.test(normalized)) {
+  if (
+    /\b(who (is|are)|about (mishal|you)|tell me about mishal|introduce|bio)\b/i.test(normalized)
+  ) {
     return {
       intent: "about",
       text: `${about.bio} Based in **${site.location.split(" [")[0]}**.`,

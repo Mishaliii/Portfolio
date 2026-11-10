@@ -59,7 +59,7 @@ describe("liquid loader screen rules", () => {
         projectStills: 1,
         headlineCanvases: 1,
         sprout: 1,
-      })
+      }),
     ).toBe(100);
   });
 

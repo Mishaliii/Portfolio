@@ -2,7 +2,16 @@ import { useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { performanceLayers } from "@/lib/performance";
 import { coarse, reduced } from "@/lib/motion";
-import { boot, coverFit, markBoot, markSceneReady, stage, videoBlob, videoSrc, type SceneData } from "@/lib/stage";
+import {
+  boot,
+  coverFit,
+  markBoot,
+  markSceneReady,
+  stage,
+  videoBlob,
+  videoSrc,
+  type SceneData,
+} from "@/lib/stage";
 
 /**
  * One shared full-bleed scene behind the whole site.
@@ -16,9 +25,13 @@ export function SceneStage() {
   const dimEl = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const el = box.current, vid = vidRef.current, mv = mover.current, dm = dimEl.current;
+    const el = box.current,
+      vid = vidRef.current,
+      mv = mover.current,
+      dm = dimEl.current;
     if (!el || !vid || !mv || !dm) return;
-    let dead = false, onScreen = true;
+    let dead = false,
+      onScreen = true;
     let frameId = 0;
     const cleanups: (() => void)[] = [];
 
@@ -66,7 +79,8 @@ export function SceneStage() {
     };
     stage.scene = sceneData;
 
-    let W = window.innerWidth, H = window.innerHeight;
+    let W = window.innerWidth,
+      H = window.innerHeight;
     const size = () => {
       W = window.innerWidth;
       H = window.innerHeight;
@@ -77,11 +91,14 @@ export function SceneStage() {
     };
     size();
     window.addEventListener("resize", size);
-    fetch("/hero/scene.json").then((r) => r.json()).then((s: SceneData) => {
-      sceneData = s;
-      stage.scene = s;
-      size();
-    }).catch(() => {});
+    fetch("/hero/scene.json")
+      .then((r) => r.json())
+      .then((s: SceneData) => {
+        sceneData = s;
+        stage.scene = s;
+        size();
+      })
+      .catch(() => {});
 
     const vfc = vid.requestVideoFrameCallback?.bind(vid);
     const onFrame = () => {
@@ -90,8 +107,10 @@ export function SceneStage() {
     if (vfc) frameId = vfc(onFrame);
 
     // pointer parallax state: max 14px movement, frame-rate independent lerp
-    let targetX = 0, targetY = 0;
-    let currentX = 0, currentY = 0;
+    let targetX = 0,
+      targetY = 0;
+    let currentX = 0,
+      currentY = 0;
     let parallaxActive = false;
     let lastParallaxTime = performance.now();
 
@@ -101,7 +120,8 @@ export function SceneStage() {
       (typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches);
 
     const isReduced = () =>
-      typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     const applyTransform = (x: number, y: number) => {
       mv.style.transform = `translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, 0)`;
@@ -142,7 +162,8 @@ export function SceneStage() {
 
     const onMove = (e: PointerEvent) => {
       if (isTouch(e) || isReduced()) return;
-      const w = window.innerWidth, h = window.innerHeight;
+      const w = window.innerWidth,
+        h = window.innerHeight;
       const nx = (e.clientX / w - 0.5) * 2;
       const ny = (e.clientY / h - 0.5) * 2;
       targetX = -nx * 14;
@@ -175,7 +196,8 @@ export function SceneStage() {
     cleanups.push(() => window.removeEventListener("stage-dim", onDim));
 
     const syncPlayback = () => {
-      const active = onScreen && stage.heroOn && !stage.covered && performanceLayers.video && !document.hidden;
+      const active =
+        onScreen && stage.heroOn && !stage.covered && performanceLayers.video && !document.hidden;
       if (!active || !sourceReady) {
         if (playing) {
           vid.pause();
@@ -234,7 +256,15 @@ export function SceneStage() {
     <div ref={box} aria-hidden className="scene-stage is-native">
       <img src="/hero/poster.webp" alt="" className="scene-poster" draggable={false} />
       <div ref={mover} className="scene-move">
-        <video ref={vidRef} className="scene-video" loop muted playsInline preload="auto" disableRemotePlayback />
+        <video
+          ref={vidRef}
+          className="scene-video"
+          loop
+          muted
+          playsInline
+          preload="auto"
+          disableRemotePlayback
+        />
       </div>
       <div ref={dimEl} className="scene-dim" />
     </div>

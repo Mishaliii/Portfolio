@@ -45,10 +45,10 @@ export const BendList = forwardRef<BendListHandle, BendListProps>(function BendL
     active = true,
     showHint: enableHint = false,
   },
-  ref
+  ref,
 ) {
   const [activeIndex, setActiveIndex] = useState(
-    Math.max(0, Math.min(items.length - 1, initialIndex))
+    Math.max(0, Math.min(items.length - 1, initialIndex)),
   );
   const [hintVisible, setHintVisible] = useState(enableHint);
   const [boundaryHint, setBoundaryHint] = useState<"top" | "bottom" | null>(null);
@@ -88,10 +88,7 @@ export const BendList = forwardRef<BendListHandle, BendListProps>(function BendL
       if (!containerRef.current) return;
       const r = containerRef.current.getBoundingClientRect();
       const inside =
-        e.clientX >= r.left &&
-        e.clientX <= r.right &&
-        e.clientY >= r.top &&
-        e.clientY <= r.bottom;
+        e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
       isPointerOverRef.current = inside;
     };
     window.addEventListener("pointermove", updatePointer, { passive: true });
@@ -139,7 +136,8 @@ export const BendList = forwardRef<BendListHandle, BendListProps>(function BendL
         return;
       }
       const focusedIdx = Math.max(0, Math.min(items.length - 1, Math.round(p)));
-      const focusedHeight = cachedHeights.current[focusedIdx] || itemEls.current[focusedIdx]?.offsetHeight || 100;
+      const focusedHeight =
+        cachedHeights.current[focusedIdx] || itemEls.current[focusedIdx]?.offsetHeight || 100;
       const gap = focusedHeight + 16;
 
       for (let i = 0; i < items.length; i++) {
@@ -163,7 +161,7 @@ export const BendList = forwardRef<BendListHandle, BendListProps>(function BendL
         el.style.zIndex = String(100 - Math.round(absD * 10));
       }
     },
-    [active, items.length]
+    [active, items.length],
   );
 
   // Trigger a small 12px elastic push at boundary
@@ -252,7 +250,10 @@ export const BendList = forwardRef<BendListHandle, BendListProps>(function BendL
         ease: "power3.out",
         onUpdate: () => {
           renderTransforms(stateRef.current.p);
-          const curFocused = Math.max(0, Math.min(items.length - 1, Math.round(stateRef.current.p)));
+          const curFocused = Math.max(
+            0,
+            Math.min(items.length - 1, Math.round(stateRef.current.p)),
+          );
           if (curFocused !== focusedIndexRef.current) {
             focusedIndexRef.current = curFocused;
             setActiveIndex(curFocused);
@@ -270,7 +271,7 @@ export const BendList = forwardRef<BendListHandle, BendListProps>(function BendL
         },
       });
     },
-    [dismissHint, items.length, onActive, renderTransforms]
+    [dismissHint, items.length, onActive, renderTransforms],
   );
 
   // Instant reset on page entry/leave (no animation, starts at 0)
@@ -311,146 +312,156 @@ export const BendList = forwardRef<BendListHandle, BendListProps>(function BendL
       goTo,
       getIndex: () => focusedIndexRef.current,
     }),
-    [reset, goTo]
+    [reset, goTo],
   );
 
   // Wheel capture registration with Site.tsx
   const wheelCaptureHandler = useRef<WheelCaptureHandler | null>(null);
-  wheelCaptureHandler.current = wheelCapture && pageId && active
-    ? {
-        isPointerOver: () => isPointerOver(),
-        canConsume: (dir: 1 | -1) => {
-          // Only capture wheel when pointer is over list column
-          if (!isPointerOver()) return false;
+  wheelCaptureHandler.current =
+    wheelCapture && pageId && active
+      ? {
+          isPointerOver: () => isPointerOver(),
+          canConsume: (dir: 1 | -1) => {
+            // Only capture wheel when pointer is over list column
+            if (!isPointerOver()) return false;
 
-          const atTop = focusedIndexRef.current === 0 && dir === -1;
-          const atBottom = focusedIndexRef.current === items.length - 1 && dir === 1;
+            const atTop = focusedIndexRef.current === 0 && dir === -1;
+            const atBottom = focusedIndexRef.current === items.length - 1 && dir === 1;
 
-          if (atTop || atBottom) {
-            const now = Date.now();
-            if (boundaryState.current && boundaryState.current.dir === dir) {
-              const elapsed = now - boundaryState.current.time;
-              if (elapsed >= 250) {
-                // Next gesture after 250ms: do NOT consume wheel! Move to next/previous page!
-                boundaryState.current = null;
-                return false;
+            if (atTop || atBottom) {
+              const now = Date.now();
+              if (boundaryState.current && boundaryState.current.dir === dir) {
+                const elapsed = now - boundaryState.current.time;
+                if (elapsed >= 250) {
+                  // Next gesture after 250ms: do NOT consume wheel! Move to next/previous page!
+                  boundaryState.current = null;
+                  return false;
+                }
+                // Within 250ms, consume inertia tail
+                return true;
               }
-              // Within 250ms, consume inertia tail
+              // First extra gesture at boundary: consumed for elastic push + micro-hint
               return true;
             }
-            // First extra gesture at boundary: consumed for elastic push + micro-hint
-            return true;
-          }
 
-          // In middle of list: can consume
-          return true;
-        },
-        consume: (dir: 1 | -1, deltaY?: number) => {
-          dismissHint();
-          const atTop = focusedIndexRef.current === 0 && dir === -1;
-          const atBottom = focusedIndexRef.current === items.length - 1 && dir === 1;
-          if (atTop || atBottom) {
-            const now = Date.now();
-            if (!boundaryState.current || boundaryState.current.dir !== dir) {
-              boundaryState.current = { dir, time: now };
-              triggerBoundaryPush(dir);
+            // In middle of list: can consume
+            return true;
+          },
+          consume: (dir: 1 | -1, deltaY?: number) => {
+            dismissHint();
+            const atTop = focusedIndexRef.current === 0 && dir === -1;
+            const atBottom = focusedIndexRef.current === items.length - 1 && dir === 1;
+            if (atTop || atBottom) {
+              const now = Date.now();
+              if (!boundaryState.current || boundaryState.current.dir !== dir) {
+                boundaryState.current = { dir, time: now };
+                triggerBoundaryPush(dir);
+              }
+            } else {
+              const dy = deltaY || dir * 110;
+              const deltaItems = Math.abs(dy) >= 200 ? Math.round(dy / 110) : dir;
+              const cappedDelta = Math.max(-3, Math.min(3, deltaItems));
+              const nextTarget = Math.max(
+                0,
+                Math.min(items.length - 1, focusedIndexRef.current + cappedDelta),
+              );
+              goTo(nextTarget);
             }
-          } else {
-            const dy = deltaY || (dir * 110);
-            const deltaItems = Math.abs(dy) >= 200 ? Math.round(dy / 110) : dir;
-            const cappedDelta = Math.max(-3, Math.min(3, deltaItems));
-            const nextTarget = Math.max(0, Math.min(items.length - 1, focusedIndexRef.current + cappedDelta));
-            goTo(nextTarget);
-          }
-        },
-      }
-    : null;
+          },
+        }
+      : null;
 
   useWheelCapture(pageId || "", wheelCaptureHandler.current);
 
   // Handle local wheel on the list column with continuous physics
-  const handleWheel = useCallback((e: ReactWheelEvent | WheelEvent) => {
-    if (reduced()) return;
-    dismissHint();
-    isPointerOverRef.current = true;
+  const handleWheel = useCallback(
+    (e: ReactWheelEvent | WheelEvent) => {
+      if (reduced()) return;
+      dismissHint();
+      isPointerOverRef.current = true;
 
-    const dy = normalizeWheelDelta(e);
-    if (Math.abs(dy) < 0.5) return;
+      const dy = normalizeWheelDelta(e);
+      if (Math.abs(dy) < 0.5) return;
 
-    const now = Date.now();
-    const deltaItems = dy / 110; // ~1 item per 110px of delta
-    const dir: 1 | -1 = dy > 0 ? 1 : -1;
+      const now = Date.now();
+      const deltaItems = dy / 110; // ~1 item per 110px of delta
+      const dir: 1 | -1 = dy > 0 ? 1 : -1;
 
-    // Check if at boundary
-    const atTop = focusedIndexRef.current === 0 && dir === -1;
-    const atBottom = focusedIndexRef.current === items.length - 1 && dir === 1;
+      // Check if at boundary
+      const atTop = focusedIndexRef.current === 0 && dir === -1;
+      const atBottom = focusedIndexRef.current === items.length - 1 && dir === 1;
 
-    if (atTop || atBottom) {
-      if (boundaryState.current && boundaryState.current.dir === dir) {
-        const elapsed = now - boundaryState.current.time;
-        if (elapsed >= 250) {
-          // Next gesture after 250ms: do not consume, allow bubble to page nav
+      if (atTop || atBottom) {
+        if (boundaryState.current && boundaryState.current.dir === dir) {
+          const elapsed = now - boundaryState.current.time;
+          if (elapsed >= 250) {
+            // Next gesture after 250ms: do not consume, allow bubble to page nav
+            return;
+          }
           return;
         }
+
+        // First extra gesture at boundary: show 12px elastic push + micro-hint
+        boundaryState.current = { dir, time: now };
+        triggerBoundaryPush(dir);
         return;
       }
 
-      // First extra gesture at boundary: show 12px elastic push + micro-hint
-      boundaryState.current = { dir, time: now };
-      triggerBoundaryPush(dir);
-      return;
-    }
+      // Scrolling in normal valid direction
+      boundaryState.current = null;
+      setBoundaryHint(null);
 
-    // Scrolling in normal valid direction
-    boundaryState.current = null;
-    setBoundaryHint(null);
+      // Group flicks: a new flick begins after 140ms quiet
+      if (now - lastWheelTimeRef.current > 140) {
+        flickAccumulatedRef.current = 0;
+        flickStartPosRef.current = targetPosRef.current;
+      }
+      lastWheelTimeRef.current = now;
 
-    // Group flicks: a new flick begins after 140ms quiet
-    if (now - lastWheelTimeRef.current > 140) {
-      flickAccumulatedRef.current = 0;
-      flickStartPosRef.current = targetPosRef.current;
-    }
-    lastWheelTimeRef.current = now;
+      flickAccumulatedRef.current += deltaItems;
+      // Capped at 3 items per flick
+      flickAccumulatedRef.current = Math.max(-3, Math.min(3, flickAccumulatedRef.current));
 
-    flickAccumulatedRef.current += deltaItems;
-    // Capped at 3 items per flick
-    flickAccumulatedRef.current = Math.max(-3, Math.min(3, flickAccumulatedRef.current));
+      const newTarget = Math.max(
+        0,
+        Math.min(items.length - 1, flickStartPosRef.current + flickAccumulatedRef.current),
+      );
+      targetPosRef.current = newTarget;
 
-    const newTarget = Math.max(
-      0,
-      Math.min(items.length - 1, flickStartPosRef.current + flickAccumulatedRef.current)
-    );
-    targetPosRef.current = newTarget;
+      // Promote layers while moving
+      itemEls.current.forEach((el) => {
+        if (el) el.style.willChange = "transform, opacity";
+      });
 
-    // Promote layers while moving
-    itemEls.current.forEach((el) => {
-      if (el) el.style.willChange = "transform, opacity";
-    });
+      // GSAP tween eases displayed position toward target (0.55s power3.out)
+      if (tweenRef.current) tweenRef.current.kill();
+      tweenRef.current = gsap.to(stateRef.current, {
+        p: newTarget,
+        duration: 0.55,
+        ease: "power3.out",
+        overwrite: "auto",
+        onUpdate: () => {
+          renderTransforms(stateRef.current.p);
+          const curFocused = Math.max(
+            0,
+            Math.min(items.length - 1, Math.round(stateRef.current.p)),
+          );
+          if (curFocused !== focusedIndexRef.current) {
+            focusedIndexRef.current = curFocused;
+            setActiveIndex(curFocused);
+            onActive?.(curFocused);
+          }
+        },
+      });
 
-    // GSAP tween eases displayed position toward target (0.55s power3.out)
-    if (tweenRef.current) tweenRef.current.kill();
-    tweenRef.current = gsap.to(stateRef.current, {
-      p: newTarget,
-      duration: 0.55,
-      ease: "power3.out",
-      overwrite: "auto",
-      onUpdate: () => {
-        renderTransforms(stateRef.current.p);
-        const curFocused = Math.max(0, Math.min(items.length - 1, Math.round(stateRef.current.p)));
-        if (curFocused !== focusedIndexRef.current) {
-          focusedIndexRef.current = curFocused;
-          setActiveIndex(curFocused);
-          onActive?.(curFocused);
-        }
-      },
-    });
-
-    // After 140ms without wheel input, settle to nearest item (0.35s power2.out)
-    if (settleTimer.current) clearTimeout(settleTimer.current);
-    settleTimer.current = setTimeout(() => {
-      settleToNearest();
-    }, 140);
-  }, [items.length, settleToNearest, triggerBoundaryPush, renderTransforms, onActive, dismissHint]);
+      // After 140ms without wheel input, settle to nearest item (0.35s power2.out)
+      if (settleTimer.current) clearTimeout(settleTimer.current);
+      settleTimer.current = setTimeout(() => {
+        settleToNearest();
+      }, 140);
+    },
+    [items.length, settleToNearest, triggerBoundaryPush, renderTransforms, onActive, dismissHint],
+  );
 
   // Bind native wheel directly to container to ensure reliable wheel events
   useEffect(() => {
@@ -499,7 +510,9 @@ export const BendList = forwardRef<BendListHandle, BendListProps>(function BendL
     if (tweenRef.current) tweenRef.current.kill();
     try {
       containerRef.current?.setPointerCapture(e.pointerId);
-    } catch {}
+    } catch {
+      /* ignore */
+    }
   };
 
   const handlePointerMove = (e: ReactPointerEvent) => {
@@ -543,7 +556,9 @@ export const BendList = forwardRef<BendListHandle, BendListProps>(function BendL
     pointerState.current.isDragging = false;
     try {
       containerRef.current?.releasePointerCapture(e.pointerId);
-    } catch {}
+    } catch {
+      /* ignore */
+    }
 
     const dy = pointerState.current.startY - e.clientY;
     const vel = pointerState.current.velocity;

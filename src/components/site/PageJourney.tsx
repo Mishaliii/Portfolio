@@ -30,13 +30,7 @@ export function getShortestPath(from: number, to: number): number[] {
  * Single Year Digit Column: rolls ONLY if this specific digit differs between years,
  * moving in the shortest direction with 0.6s power3.out.
  */
-export function YearDigitColumn({
-  targetDigit,
-  active,
-}: {
-  targetDigit: number;
-  active: boolean;
-}) {
+export function YearDigitColumn({ targetDigit, active }: { targetDigit: number; active: boolean }) {
   const [displayDigits, setDisplayDigits] = useState<number[]>([targetDigit]);
   const stripRef = useRef<HTMLSpanElement>(null);
   const prevDigitRef = useRef<number>(targetDigit);
@@ -174,7 +168,7 @@ export function StopCard({
       gsap.fromTo(
         el,
         { opacity: 0.5, y: 12 },
-        { opacity: 1, y: 0, duration: 0.35, ease: "power2.out" }
+        { opacity: 1, y: 0, duration: 0.35, ease: "power2.out" },
       );
     } else {
       gsap.killTweensOf(el);
@@ -190,10 +184,7 @@ export function StopCard({
   return (
     <div className="journey-stop-card flex flex-col justify-center w-full max-w-[500px] pr-8 box-border select-none">
       {/* Gold hairline accent line */}
-      <div
-        className="w-14 h-px mb-4 sm:mb-6"
-        style={{ background: "rgba(200, 170, 110, 0.7)" }}
-      />
+      <div className="w-14 h-px mb-4 sm:mb-6" style={{ background: "rgba(200, 170, 110, 0.7)" }} />
 
       {/* Place */}
       <div className="journey-stop-place font-mono text-[11px] sm:text-[13px] text-[#6B645A] tracking-wider uppercase mb-1.5">
@@ -212,10 +203,7 @@ export function StopCard({
       </h3>
 
       {/* Details container that crossfades on focus changes */}
-      <div
-        ref={detailsRef}
-        className="journey-stop-details flex flex-col will-change-transform"
-      >
+      <div ref={detailsRef} className="journey-stop-details flex flex-col will-change-transform">
         {/* One line of what I did */}
         <p className="journey-stop-line text-[clamp(13px,1.05vw,16px)] text-[#0B0B0B]/80 leading-relaxed font-sans max-w-[46ch]">
           {stop.line}
@@ -282,14 +270,9 @@ export function PageJourney({
   const stopItems = useMemo(
     () =>
       stops.map((s, idx) => (
-        <StopCard
-          key={idx}
-          stop={s}
-          focused={idx === activeStop}
-          active={active}
-        />
+        <StopCard key={idx} stop={s} focused={idx === activeStop} active={active} />
       )),
-    [stops, activeStop, active]
+    [stops, activeStop, active],
   );
 
   const currentYear = stops[activeStop]?.year ?? "2021";

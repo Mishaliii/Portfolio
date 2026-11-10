@@ -109,12 +109,17 @@ export function Intro({
       stage.controls = true;
       try {
         sessionStorage.setItem(INTRO_KEY, "1");
-      } catch {}
+      } catch {
+        /* ignore */
+      }
       onDone();
     };
 
     // Prefers reduced motion: plain 0.3s fade
-    const isReduced = reduced() || (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    const isReduced =
+      reduced() ||
+      (typeof window !== "undefined" &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches);
     if (isReduced) {
       onReveal();
       window.dispatchEvent(new CustomEvent("intro-end"));
@@ -149,7 +154,7 @@ export function Intro({
         gsap.fromTo(
           wordmarkWrapRef.current,
           { opacity: 0, y: 36 },
-          { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" }
+          { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" },
         );
       }
     }
@@ -159,7 +164,7 @@ export function Intro({
       gsap.fromTo(
         skipBtnRef.current,
         { opacity: 0, y: 10 },
-        { opacity: 1, y: 0, duration: 0.35, ease: "power2.out", delay: 1.2 }
+        { opacity: 1, y: 0, duration: 0.35, ease: "power2.out", delay: 1.2 },
       );
     }
 
@@ -219,7 +224,8 @@ export function Intro({
     Promise.all([decodeImg(sideImg), decodeImg(frontImg)]).then(() => markPart("aboutPortraits"));
 
     // D. Project stills 15%
-    const ddssFirst = ddssImages["ddss"] || ddssImages["ddss-screen"] || Object.values(ddssImages)[0];
+    const ddssFirst =
+      ddssImages["ddss"] || ddssImages["ddss-screen"] || Object.values(ddssImages)[0];
     const projectStills = [
       ddssFirst,
       "/hero/poster.webp",
@@ -277,14 +283,16 @@ export function Intro({
         gsap.fromTo(
           headerEl,
           { opacity: 0, y: 0, visibility: "visible" },
-          { opacity: 1, duration: 0.65, ease: "power2.out" }
+          { opacity: 1, duration: 0.65, ease: "power2.out" },
         );
       }
 
       const flightDuration = mode === "short" ? 0.45 : 1.25;
 
       // A. Wordmark FLIP flight to top-left nav logo
-      const targetNavBrand = document.querySelector('[data-brand="wordmark"], header a[href="#overview"] .display') as HTMLElement | null;
+      const targetNavBrand = document.querySelector(
+        '[data-brand="wordmark"], header a[href="#overview"] .display',
+      ) as HTMLElement | null;
       if (wordmarkWrapRef.current && targetNavBrand) {
         const startR = wordmarkWrapRef.current.getBoundingClientRect();
         const targetR = targetNavBrand.getBoundingClientRect();
@@ -318,14 +326,15 @@ export function Intro({
       }
 
       // B. Expanding circular hero reveal from center
-      const w = window.innerWidth, h = window.innerHeight;
+      const w = window.innerWidth,
+        h = window.innerHeight;
       const maxR = Math.ceil(Math.hypot(w, h));
 
       if (maskCircleRef.current) {
         gsap.fromTo(
           maskCircleRef.current,
           { attr: { r: 0 } },
-          { attr: { r: maxR }, duration: mode === "short" ? 0.45 : 1.25, ease: "power2.inOut" }
+          { attr: { r: maxR }, duration: mode === "short" ? 0.45 : 1.25, ease: "power2.inOut" },
         );
       }
 
@@ -342,7 +351,7 @@ export function Intro({
           ease: "power3.out",
           delay: 0.62,
           clearProps: "transform",
-        }
+        },
       );
     };
 
@@ -379,7 +388,8 @@ export function Intro({
 
         const isManual =
           typeof window !== "undefined" &&
-          typeof (window as unknown as { __loaderManualProgress?: number }).__loaderManualProgress === "number";
+          typeof (window as unknown as { __loaderManualProgress?: number })
+            .__loaderManualProgress === "number";
 
         if (!isManual) {
           // Force 100% if hard ceiling reached or all assets ready past min hold
@@ -399,16 +409,22 @@ export function Intro({
           if (step > (win.__loaderMaxStep || 0)) win.__loaderMaxStep = step;
         }
         displayProgress += step;
-        if (targetProgress >= 100 && 100 - displayProgress < 0.25 && (elapsed >= MIN_HOLD_MS || mode === "short" || isSkipped)) {
+        if (
+          targetProgress >= 100 &&
+          100 - displayProgress < 0.25 &&
+          (elapsed >= MIN_HOLD_MS || mode === "short" || isSkipped)
+        ) {
           displayProgress = 100;
         }
       }
 
       const isManual =
         typeof window !== "undefined" &&
-        typeof (window as unknown as { __loaderManualProgress?: number }).__loaderManualProgress === "number";
+        typeof (window as unknown as { __loaderManualProgress?: number }).__loaderManualProgress ===
+          "number";
       if (isManual) {
-        displayProgress = (window as unknown as { __loaderManualProgress: number }).__loaderManualProgress;
+        displayProgress = (window as unknown as { __loaderManualProgress: number })
+          .__loaderManualProgress;
         if (displayProgress < 100) {
           holdStartTime = 0;
         }
@@ -514,7 +530,14 @@ export function Intro({
         <defs>
           <mask id="hero-circle-mask">
             <rect width="100%" height="100%" fill="white" />
-            <circle ref={maskCircleRef} data-loader="circle-mask" cx="50%" cy="50%" r="0" fill="black" />
+            <circle
+              ref={maskCircleRef}
+              data-loader="circle-mask"
+              cx="50%"
+              cy="50%"
+              r="0"
+              fill="black"
+            />
           </mask>
         </defs>
         <rect width="100%" height="100%" fill="#0B0B0B" mask="url(#hero-circle-mask)" />

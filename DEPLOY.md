@@ -9,6 +9,7 @@ This portfolio is built with **TanStack Start** and bundled via **Nitro**. It ca
 Cloudflare Pages provides free hosting with unlimited bandwidth, custom domains, and automatic branch previews.
 
 ### Step 1: Install Wrangler CLI (if not already installed)
+
 ```bash
 bun add -d wrangler
 # or run on demand with npx:
@@ -16,15 +17,19 @@ npx wrangler --version
 ```
 
 ### Step 2: Build for Cloudflare Pages
+
 ```bash
 # Set NITRO_PRESET to cloudflare-pages and run the build:
 NITRO_PRESET=cloudflare-pages bun run build
 ```
+
 This generates:
+
 - `.output/public` (all static assets, images, videos, `_headers`, and client bundles)
 - `.output/server/_routes.json` (routing rules for Pages functions)
 
 ### Step 3: Deploy to Cloudflare Pages
+
 ```bash
 # First login to Cloudflare (one-time interactive login):
 npx wrangler login
@@ -34,6 +39,7 @@ npx wrangler pages deploy .output/public --project-name=mishal-portfolio
 ```
 
 ### Alternative Step 3: Git-Integrated Deployment (Continuous Delivery)
+
 1. Go to [Cloudflare Dashboard](https://dash.cloudflare.com/) > **Workers & Pages** > **Create application** > **Pages** > **Connect to Git**.
 2. Select your repository (`mishal-intelligence-portfolio`).
 3. Set the build settings:
@@ -51,11 +57,13 @@ npx wrangler pages deploy .output/public --project-name=mishal-portfolio
 If deploying as a standalone edge Worker:
 
 ### Step 1: Build for Cloudflare Module
+
 ```bash
 NITRO_PRESET=cloudflare-module bun run build
 ```
 
 ### Step 2: Deploy with Wrangler
+
 ```bash
 npx wrangler deploy
 ```
@@ -83,6 +91,7 @@ npx wrangler deploy
 ## Asset Caching & Range Requests Verification
 
 The repository includes `public/_headers` which Cloudflare Pages reads automatically on every deployment:
+
 - `/assets/*`: `Cache-Control: public, max-age=31536000, immutable` (hashed chunks are permanently cached on the edge and browser).
 - `/hero/*.mp4` and `/media/*`: `Accept-Ranges: bytes` (enables browser video scrubbing and instant streaming).
 - `cv.pdf`: `Cache-Control: public, max-age=3600, must-revalidate` (ensures visitors always get updated resumes).
@@ -94,10 +103,13 @@ The repository includes `public/_headers` which Cloudflare Pages reads automatic
 Run these commands immediately after deployment to verify live edge security and routing:
 
 ### 1. Verify Security Headers
+
 ```bash
 curl -I https://mishal.dev/
 ```
+
 Expected response headers:
+
 - `HTTP/2 200`
 - `content-security-policy: default-src 'self'; script-src 'self' 'unsafe-inline'; ... connect-src 'self'; ...`
 - `x-content-type-options: nosniff`
@@ -106,7 +118,9 @@ Expected response headers:
 - `permissions-policy: camera=(), microphone=(), geolocation=()`
 
 ### 2. Verify Sensitive Files Are Inaccessible (404 Not Found)
+
 Ensure no environment files, git configurations, or hidden files leak to the public web:
+
 ```bash
 # Must return 404
 curl -I -s -o /dev/null -w "%{http_code}\n" https://mishal.dev/.env
@@ -117,7 +131,9 @@ curl -I -s -o /dev/null -w "%{http_code}\n" https://mishal.dev/.env.production
 ```
 
 ### 3. Verify Automatic HTTPS Redirection
+
 Ensure plain HTTP traffic is forced to HTTPS:
+
 ```bash
 curl -I http://mishal.dev/
 # Expect 301 Moved Permanently or 308 Permanent Redirect to https://mishal.dev/

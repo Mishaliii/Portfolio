@@ -54,7 +54,7 @@ function MaskedParagraph({
         duration: 0.65,
         delay,
         ease: "power3.out",
-      }
+      },
     );
   }, [active, delay]);
 
@@ -166,7 +166,7 @@ export function WorkCardShell({
       gsap.fromTo(
         chars,
         { yPercent: 120, scale: 1.04 },
-        { yPercent: 0, scale: 1, duration: 1.0, ease: EASE.in, stagger: 0.015, overwrite: "auto" }
+        { yPercent: 0, scale: 1, duration: 1.0, ease: EASE.in, stagger: 0.015, overwrite: "auto" },
       );
     }
   }, [active]);
@@ -184,7 +184,12 @@ export function WorkCardShell({
       {/* Left text column */}
       <div className="min-w-0 flex flex-col justify-center max-[899px]:order-2">
         <div ref={titleWrapRef}>
-          <HeadlineDissolve active={active} bg="var(--cream)" ink="var(--ink)" className="works-title-dissolve">
+          <HeadlineDissolve
+            active={active}
+            bg="var(--cream)"
+            ink="var(--ink)"
+            className="works-title-dissolve"
+          >
             <h3
               className="display text-[#0B0B0B] tracking-tight"
               style={{ fontSize: "clamp(40px, 5.2vw, 76px)", lineHeight: 0.95 }}
@@ -210,9 +215,7 @@ export function WorkCardShell({
           />
         )}
 
-        {statusLine && (
-          <TypewriterStatus text={statusLine} active={active} delay={0.35} />
-        )}
+        {statusLine && <TypewriterStatus text={statusLine} active={active} delay={0.35} />}
 
         <div className="mt-6" data-fade>
           <button
@@ -291,8 +294,12 @@ function DDSSCard({ p, active }: { p: Project; active: boolean }) {
 
   const titleNode = (
     <>
-      <span className="block"><SplitReveal text="Dermatology" /></span>
-      <span className="block"><SplitReveal text="Decision Support" /></span>
+      <span className="block">
+        <SplitReveal text="Dermatology" />
+      </span>
+      <span className="block">
+        <SplitReveal text="Decision Support" />
+      </span>
     </>
   );
 
@@ -308,7 +315,8 @@ function DDSSCard({ p, active }: { p: Project; active: boolean }) {
       aria-label="Pipeline steps"
     >
       {pipelineRows.map((step, idx) => {
-        const isStepActive = !showVideo && selectedShot === step.shot && (step.zoom ? isZoomed : !isZoomed);
+        const isStepActive =
+          !showVideo && selectedShot === step.shot && (step.zoom ? isZoomed : !isZoomed);
         return (
           <div
             key={step.label}
@@ -327,7 +335,9 @@ function DDSSCard({ p, active }: { p: Project; active: boolean }) {
           >
             <div className="flex flex-col items-center justify-center relative w-2.5 shrink-0">
               {idx > 0 && <span className="absolute -top-3 bottom-1/2 w-px bg-[#0B0B0B]/25" />}
-              {idx < pipelineRows.length - 1 && <span className="absolute top-1/2 -bottom-3 w-px bg-[#0B0B0B]/25" />}
+              {idx < pipelineRows.length - 1 && (
+                <span className="absolute top-1/2 -bottom-3 w-px bg-[#0B0B0B]/25" />
+              )}
               <span
                 className={`w-2 h-2 rounded-full transition-all relative z-10 ${
                   isStepActive
@@ -339,7 +349,9 @@ function DDSSCard({ p, active }: { p: Project; active: boolean }) {
             <div className="relative inline-block transition-transform duration-200 ease-out group-hover:translate-x-[6px]">
               <span
                 className={`font-mono text-[13px] tracking-wide transition-colors ${
-                  isStepActive ? "text-[#1F5A3A] font-semibold" : "text-[#0B0B0B] group-hover:text-[#1F5A3A]"
+                  isStepActive
+                    ? "text-[#1F5A3A] font-semibold"
+                    : "text-[#0B0B0B] group-hover:text-[#1F5A3A]"
                 }`}
               >
                 {step.label}
@@ -411,7 +423,12 @@ function DDSSCard({ p, active }: { p: Project; active: boolean }) {
                   title={s.t}
                   aria-label={s.t}
                 >
-                  <img src={ddssImages[s.k]} alt="" className="h-full w-full object-cover" loading="lazy" />
+                  <img
+                    src={ddssImages[s.k]}
+                    alt=""
+                    className="h-full w-full object-cover"
+                    loading="lazy"
+                  />
                 </button>
               );
             })}
@@ -603,33 +620,36 @@ function ProductivityExplorer({
       gsap.fromTo(
         barsContainerRef.current,
         { scale: 1 },
-        { scale: 1.015, duration: 0.25, yoyo: true, repeat: 1, ease: "power2.out" }
+        { scale: 1.015, duration: 0.25, yoyo: true, repeat: 1, ease: "power2.out" },
       );
     } else if ((pulseTarget === "models" || pulseTarget === "regression") && scoreBoxRef.current) {
       gsap.fromTo(
         scoreBoxRef.current,
         { scale: 1 },
-        { scale: 1.05, duration: 0.25, yoyo: true, repeat: 1, ease: "power2.out" }
+        { scale: 1.05, duration: 0.25, yoyo: true, repeat: 1, ease: "power2.out" },
       );
-    } else if ((pulseTarget === "accuracy" || pulseTarget === "clustering") && roleChipRef.current) {
+    } else if (
+      (pulseTarget === "accuracy" || pulseTarget === "clustering") &&
+      roleChipRef.current
+    ) {
       gsap.fromTo(
         roleChipRef.current,
         { scale: 1 },
-        { scale: 1.08, duration: 0.25, yoyo: true, repeat: 1, ease: "power2.out" }
+        { scale: 1.08, duration: 0.25, yoyo: true, repeat: 1, ease: "power2.out" },
       );
     } else if (pulseTarget === "score-role") {
       if (scoreBoxRef.current) {
         gsap.fromTo(
           scoreBoxRef.current,
           { scale: 1 },
-          { scale: 1.04, duration: 0.25, yoyo: true, repeat: 1, ease: "power2.out" }
+          { scale: 1.04, duration: 0.25, yoyo: true, repeat: 1, ease: "power2.out" },
         );
       }
       if (roleChipRef.current) {
         gsap.fromTo(
           roleChipRef.current,
           { scale: 1 },
-          { scale: 1.06, duration: 0.25, yoyo: true, repeat: 1, ease: "power2.out" }
+          { scale: 1.06, duration: 0.25, yoyo: true, repeat: 1, ease: "power2.out" },
         );
       }
     }
@@ -677,7 +697,10 @@ function ProductivityExplorer({
           const val = subjectData.vals[idx];
           const initialPct = (val / feat.max) * 100;
           return (
-            <div key={feat.key} className="flex items-center text-[11px] sm:text-[12px] mono leading-tight">
+            <div
+              key={feat.key}
+              className="flex items-center text-[11px] sm:text-[12px] mono leading-tight"
+            >
               <span className="w-[125px] sm:w-[155px] truncate text-[#0B0B0B]/80 font-medium">
                 {feat.label}
               </span>
@@ -748,8 +771,12 @@ function RoleCard({ p, active }: { p: Project; active: boolean }) {
 
   const titleNode = (
     <>
-      <span className="block"><SplitReveal text="Productivity and" /></span>
-      <span className="block"><SplitReveal text="Role Prediction" /></span>
+      <span className="block">
+        <SplitReveal text="Productivity and" />
+      </span>
+      <span className="block">
+        <SplitReveal text="Role Prediction" />
+      </span>
     </>
   );
 
@@ -772,7 +799,9 @@ function RoleCard({ p, active }: { p: Project; active: boolean }) {
           >
             <div className="flex flex-col items-center justify-center relative w-2.5 shrink-0">
               {idx > 0 && <span className="absolute -top-3 bottom-1/2 w-px bg-[#0B0B0B]/25" />}
-              {idx < pipelineSteps.length - 1 && <span className="absolute top-1/2 -bottom-3 w-px bg-[#0B0B0B]/25" />}
+              {idx < pipelineSteps.length - 1 && (
+                <span className="absolute top-1/2 -bottom-3 w-px bg-[#0B0B0B]/25" />
+              )}
               <span
                 className={`w-2 h-2 rounded-full transition-all relative z-10 ${
                   isHovered
@@ -784,7 +813,9 @@ function RoleCard({ p, active }: { p: Project; active: boolean }) {
             <div className="relative inline-block transition-transform duration-200 ease-out group-hover:translate-x-[6px]">
               <span
                 className={`font-mono text-[13px] tracking-wide transition-colors ${
-                  isHovered ? "text-[#1F5A3A] font-semibold" : "text-[#0B0B0B] group-hover:text-[#1F5A3A]"
+                  isHovered
+                    ? "text-[#1F5A3A] font-semibold"
+                    : "text-[#0B0B0B] group-hover:text-[#1F5A3A]"
                 }`}
               >
                 {step.label}
@@ -866,7 +897,7 @@ function CareerLensPipeline({ active }: { active: boolean }) {
         duration: 1.4,
         ease: "power2.out",
       },
-      0
+      0,
     );
 
     // 2. Nodes fade up in order (stagger 0.07s)
@@ -879,7 +910,7 @@ function CareerLensPipeline({ active }: { active: boolean }) {
         stagger: 0.07,
         ease: "power2.out",
       },
-      0.25
+      0.25,
     );
 
     return () => {
@@ -1029,8 +1060,8 @@ function CareerLensPipeline({ active }: { active: boolean }) {
                       node.built
                         ? "text-[#1F5A3A] bg-[#1F5A3A]/10"
                         : node.label === "Front end"
-                        ? "text-[#92400E] bg-[#92400E]/10"
-                        : "text-[#6B645A] bg-[#0B0B0B]/5"
+                          ? "text-[#92400E] bg-[#92400E]/10"
+                          : "text-[#6B645A] bg-[#0B0B0B]/5"
                     }`}
                   >
                     {node.built ? "Built" : node.caption}
@@ -1054,9 +1085,7 @@ function CareerLensPipeline({ active }: { active: boolean }) {
           <span className="font-semibold text-[#1F5A3A] shrink-0">
             {activeNode.num} / {activeNode.label.toUpperCase()}:
           </span>
-          <span className="text-[#0B0B0B] truncate text-[11px]">
-            {activeNode.desc}
-          </span>
+          <span className="text-[#0B0B0B] truncate text-[11px]">{activeNode.desc}</span>
         </div>
         <span className="shrink-0 text-[9px] sm:text-[10px] uppercase font-mono px-2 py-0.5 rounded border border-[#0B0B0B]/15 bg-[#E8DED0] text-[#6B645A] ml-2 hidden sm:inline-block">
           {activeNode.caption}
@@ -1073,7 +1102,9 @@ function CareerLensCard({ p, active }: { p: Project; active: boolean }) {
   const pipelineSteps = careerlensStages.map((s) => ({ label: s.label }));
 
   const titleNode = (
-    <span className="block"><SplitReveal text="CareerLens AI" /></span>
+    <span className="block">
+      <SplitReveal text="CareerLens AI" />
+    </span>
   );
 
   const pipelineNode = (
@@ -1086,7 +1117,9 @@ function CareerLensCard({ p, active }: { p: Project; active: boolean }) {
         >
           <div className="flex flex-col items-center justify-center relative w-2.5 shrink-0">
             {idx > 0 && <span className="absolute -top-3 bottom-1/2 w-px bg-[#0B0B0B]/25" />}
-            {idx < pipelineSteps.length - 1 && <span className="absolute top-1/2 -bottom-3 w-px bg-[#0B0B0B]/25" />}
+            {idx < pipelineSteps.length - 1 && (
+              <span className="absolute top-1/2 -bottom-3 w-px bg-[#0B0B0B]/25" />
+            )}
             <span className="w-2 h-2 rounded-full transition-all relative z-10 bg-[#0B0B0B] group-hover:bg-[#1F5A3A]" />
           </div>
           <div className="relative inline-block transition-transform duration-200 ease-out group-hover:translate-x-[6px]">
@@ -1273,7 +1306,7 @@ export function PageWorks({
             c,
             { yPercent: 100, scale: 1 },
             { yPercent: 0, scale: 1, duration: 0.7, ease: "power3.inOut" },
-            0
+            0,
           );
           if (dim) {
             tl.fromTo(dim, { opacity: 0 }, { opacity: 0, duration: 0.7, ease: "power3.inOut" }, 0);
@@ -1292,7 +1325,7 @@ export function PageWorks({
               duration: 0.7,
               ease: "power3.inOut",
             },
-            0
+            0,
           );
           if (dim) {
             tl.to(
@@ -1302,7 +1335,7 @@ export function PageWorks({
                 duration: 0.7,
                 ease: "power3.inOut",
               },
-              0
+              0,
             );
           }
         } else {
@@ -1326,7 +1359,7 @@ export function PageWorks({
               duration: 0.7,
               ease: "power3.inOut",
             },
-            0
+            0,
           );
           if (dim) {
             tl.to(
@@ -1336,7 +1369,7 @@ export function PageWorks({
                 duration: 0.7,
                 ease: "power3.inOut",
               },
-              0
+              0,
             );
           }
         } else if (i === to) {
@@ -1348,7 +1381,7 @@ export function PageWorks({
               duration: 0.7,
               ease: "power3.inOut",
             },
-            0
+            0,
           );
           if (dim) {
             tl.to(
@@ -1358,7 +1391,7 @@ export function PageWorks({
                 duration: 0.7,
                 ease: "power3.inOut",
               },
-              0
+              0,
             );
           }
         } else {
@@ -1375,7 +1408,7 @@ export function PageWorks({
               duration: 0.7,
               ease: "power3.inOut",
             },
-            0
+            0,
           );
           if (dim) {
             tl.to(
@@ -1385,7 +1418,7 @@ export function PageWorks({
                 duration: 0.7,
                 ease: "power3.inOut",
               },
-              0
+              0,
             );
           }
         }
@@ -1451,7 +1484,7 @@ export function PageWorks({
               contain: paged ? "layout" : undefined,
               borderTop: paged ? "1px solid rgba(11, 11, 11, 0.12)" : undefined,
               boxShadow: paged ? "0 -8px 24px rgba(11, 11, 11, 0.08)" : undefined,
-              visibility: !active ? "hidden" : (paged && i > sub ? "hidden" : undefined),
+              visibility: !active ? "hidden" : paged && i > sub ? "hidden" : undefined,
             }}
             aria-hidden={paged && i !== sub}
             inert={paged && i !== sub ? true : undefined}

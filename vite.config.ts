@@ -42,14 +42,8 @@ export default defineConfig({
         "clsx",
         "tailwind-merge",
       ],
-      exclude: [
-        "@tanstack/react-start",
-        "@tanstack/start-storage-context",
-      ],
-      entries: [
-        "src/routes/**",
-        "src/components/**",
-      ],
+      exclude: ["@tanstack/react-start", "@tanstack/start-storage-context"],
+      entries: ["src/routes/**", "src/components/**"],
     },
   },
 });
