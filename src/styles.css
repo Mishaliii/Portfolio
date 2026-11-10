@@ -2268,6 +2268,12 @@ html.paged .page:not(.is-active) [data-card] {
   line-height: 1;
 }
 
+.odometer-reels {
+  display: inline-flex;
+  align-items: baseline;
+  vertical-align: baseline;
+}
+
 .odometer-digit-col {
   display: inline-block;
   height: 1em;

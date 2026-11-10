@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { parseOdometerValue } from "./Odometer";
+import React from "react";
+import { renderToString } from "react-dom/server";
+import { Odometer, parseOdometerValue } from "./Odometer";
 
 describe("parseOdometerValue", () => {
   it("parses percentage strings with decimals correctly (e.g. 92.4%)", () => {
@@ -67,5 +69,30 @@ describe("parseOdometerValue", () => {
       { type: "digit", value: 4 },
       { type: "digit", value: 2 },
     ]);
+  });
+});
+
+describe("Odometer accessible rendering", () => {
+  it("renders plain number text without digit strips in server HTML and preserves textContent", () => {
+    const html = renderToString(<Odometer value="8.33/10" />);
+    expect(html).toContain("8.33/10");
+    expect(html).toContain('aria-label="8.33/10"');
+    expect(html).not.toContain("odometer-digit-strip");
+    expect(html).not.toContain("odometer-num");
+
+    const container = document.createElement("div");
+    container.innerHTML = html;
+    expect(container.textContent).toBe("8.33/10");
+  });
+
+  it("renders percentages with plain text in server HTML", () => {
+    const html = renderToString(<Odometer value="87%" />);
+    expect(html).toContain("87%");
+    expect(html).toContain('aria-label="87%"');
+    expect(html).not.toContain("odometer-digit-strip");
+
+    const container = document.createElement("div");
+    container.innerHTML = html;
+    expect(container.textContent).toBe("87%");
   });
 });

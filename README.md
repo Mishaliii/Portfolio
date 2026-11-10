@@ -2,7 +2,7 @@
 
 Interactive, performance-tuned engineering portfolio of **Muhammed Mishal**, AI / ML Engineer specializing in Computer Vision, Vector Retrieval, and production Machine Learning systems.
 
-Live Site: **[https://mishal-portfolio.pages.dev](https://mishal-portfolio.pages.dev)**
+Live Site: **[https://portfolio-30x.pages.dev](https://portfolio-30x.pages.dev)**
 
 ---
 

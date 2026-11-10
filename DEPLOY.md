@@ -27,8 +27,8 @@ Continuous delivery automatically builds and deploys on every push to your GitHu
    - **Environment variables**:
      - `NITRO_PRESET`: `cloudflare-pages`
      - `NODE_VERSION`: `20`
-     - `VITE_SITE_URL`: `https://mishal-portfolio.pages.dev` (or your chosen Pages URL)
-5. Click **Save and Deploy**. Cloudflare will build and publish your site at `https://mishal-portfolio.pages.dev` (or your assigned subdomain).
+     - `VITE_SITE_URL`: `https://portfolio-30x.pages.dev` (or your chosen Pages URL)
+5. Click **Save and Deploy**. Cloudflare will build and publish your site at `https://portfolio-30x.pages.dev` (or your assigned subdomain).
 
 ---
 
@@ -87,10 +87,10 @@ Verify edge security headers and health on your deployed URL:
 
 ```bash
 # 1. Check security headers & HTTP 200 response
-curl -I https://mishal-portfolio.pages.dev/
+curl -I https://portfolio-30x.pages.dev/
 
 # 2. Verify sensitive files return 404 (not accessible)
-curl -I -s -o /dev/null -w "%{http_code}\n" https://mishal-portfolio.pages.dev/.env
-curl -I -s -o /dev/null -w "%{http_code}\n" https://mishal-portfolio.pages.dev/.git/config
-curl -I -s -o /dev/null -w "%{http_code}\n" https://mishal-portfolio.pages.dev/.env.production
+curl -I -s -o /dev/null -w "%{http_code}\n" https://portfolio-30x.pages.dev/.env
+curl -I -s -o /dev/null -w "%{http_code}\n" https://portfolio-30x.pages.dev/.git/config
+curl -I -s -o /dev/null -w "%{http_code}\n" https://portfolio-30x.pages.dev/.env.production
 ```

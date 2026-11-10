@@ -51,6 +51,11 @@ export function Odometer({
   const prevValueRef = useRef(value);
   const lastReplayRef = useRef(0);
   const [inView, setInView] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const segments = parseOdometerValue(value);
   const totalDigits = segments.filter((s) => s.type === "digit").length;
@@ -145,6 +150,7 @@ export function Odometer({
 
   // Handle page active state and trigger condition
   useEffect(() => {
+    if (!mounted) return;
     const el = containerRef.current;
     if (!el) return;
 
@@ -155,7 +161,7 @@ export function Odometer({
         triggerRoll(false);
       }
     }
-  }, [active, inView, triggerRoll]);
+  }, [mounted, active, inView, triggerRoll]);
 
   // Roll when value updates after initial animation
   useEffect(() => {
@@ -176,6 +182,19 @@ export function Odometer({
     triggerRoll(true);
   }, [triggerRoll]);
 
+  if (!mounted) {
+    return (
+      <span
+        ref={containerRef}
+        className={`odometer tabular-nums ${className}`}
+        role="img"
+        aria-label={String(value)}
+      >
+        {String(value)}
+      </span>
+    );
+  }
+
   let currentDigitCounter = 0;
 
   return (
@@ -186,41 +205,45 @@ export function Odometer({
       aria-label={String(value)}
       onMouseEnter={handleMouseEnter}
     >
-      {segments.map((seg, sIdx) => {
-        if (seg.type === "static") {
+      <span className="sr-only">{String(value)}</span>
+      <span aria-hidden="true" className="odometer-reels inline-flex items-baseline">
+        {segments.map((seg, sIdx) => {
+          if (seg.type === "static") {
+            return (
+              <span key={sIdx} className="odometer-static" aria-hidden="true">
+                {seg.value}
+              </span>
+            );
+          }
+
+          const digitIdx = currentDigitCounter++;
+          const target = seg.value;
+
           return (
-            <span key={sIdx} className="odometer-static" aria-hidden="true">
-              {seg.value}
+            <span key={sIdx} className="odometer-digit-col" aria-hidden="true">
+              <span
+                ref={(el) => {
+                  stripsRef.current[digitIdx] = el;
+                }}
+                data-digit-idx={digitIdx}
+                data-target={target}
+                className="odometer-digit-strip"
+                aria-hidden="true"
+                style={{
+                  // Server render & initial state: shows target immediately
+                  transform: `translate3d(0, -${10 + target}em, 0)`,
+                }}
+              >
+                {DIGITS_ARRAY.map((digit, dIdx) => (
+                  <span key={dIdx} className="odometer-num" aria-hidden="true">
+                    {digit}
+                  </span>
+                ))}
+              </span>
             </span>
           );
-        }
-
-        const digitIdx = currentDigitCounter++;
-        const target = seg.value;
-
-        return (
-          <span key={sIdx} className="odometer-digit-col" aria-hidden="true">
-            <span
-              ref={(el) => {
-                stripsRef.current[digitIdx] = el;
-              }}
-              data-digit-idx={digitIdx}
-              data-target={target}
-              className="odometer-digit-strip"
-              style={{
-                // Server render & initial state: shows target immediately
-                transform: `translate3d(0, -${10 + target}em, 0)`,
-              }}
-            >
-              {DIGITS_ARRAY.map((digit, dIdx) => (
-                <span key={dIdx} className="odometer-num">
-                  {digit}
-                </span>
-              ))}
-            </span>
-          </span>
-        );
-      })}
+        })}
+      </span>
     </span>
   );
 }

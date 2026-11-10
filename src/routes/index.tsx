@@ -10,7 +10,8 @@ export const Route = createFileRoute("/")({
         content:
           "AI/ML engineer and backend developer from Kerala building vision and retrieval systems that run in production.",
       },
-      { property: "og:title", content: "Muhammed Mishal: AI / ML Engineer" },
+      { property: "og:title", content: "Muhammed Mishal: AI / ML Engineer, Kollam" },
+      { name: "twitter:title", content: "Muhammed Mishal: AI / ML Engineer, Kollam" },
       {
         property: "og:description",
         content: "Vision, RAG and backend systems that run in production.",
