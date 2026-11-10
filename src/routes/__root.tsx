@@ -8,11 +8,16 @@ import {
   Scripts,
   type ErrorComponentProps,
 } from "@tanstack/react-router";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, lazy, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
-import { reportError } from "../lib/error-reporting";
-import { DevPerfOverlay } from "@/components/site/DevPerfOverlay";
+import { reportError } from "../lib/error";
+
+const DevPerfOverlay = import.meta.env.DEV
+  ? lazy(() =>
+      import("@/components/site/DevPerfOverlay").then((m) => ({ default: m.DevPerfOverlay })),
+    )
+  : null;
 
 function NotFoundComponent() {
   return (
@@ -79,21 +84,54 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Muhammed Mishal: AI / ML Engineer" },
-      { name: "description", content: "Portfolio of Muhammed Mishal, AI/ML engineer and backend developer." },
+      { title: "Muhammed Mishal — AI / ML Engineer" },
+      {
+        name: "description",
+        content:
+          "Portfolio of Muhammed Mishal, AI/ML engineer building computer vision diagnostics, multimodal systems, and agent pipelines.",
+      },
       { name: "author", content: "Muhammed Mishal" },
+      // Open Graph
+      { property: "og:type", content: "website" },
+      { property: "og:site_name", content: "Muhammed Mishal" },
+      { property: "og:url", content: "https://mishal.dev/" },
+      { property: "og:title", content: "Muhammed Mishal — AI / ML Engineer" },
+      {
+        property: "og:description",
+        content:
+          "Portfolio of Muhammed Mishal, AI/ML engineer building computer vision diagnostics, multimodal systems, and agent pipelines.",
+      },
+      { property: "og:image", content: "https://mishal.dev/og-image.png" },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      { property: "og:image:alt", content: "Muhammed Mishal — AI / ML Engineer" },
+      // Twitter Card
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Muhammed Mishal — AI / ML Engineer" },
+      {
+        name: "twitter:description",
+        content:
+          "Portfolio of Muhammed Mishal, AI/ML engineer building computer vision diagnostics, multimodal systems, and agent pipelines.",
+      },
+      { name: "twitter:image", content: "https://mishal.dev/og-image.png" },
+      { name: "twitter:image:alt", content: "Muhammed Mishal — AI / ML Engineer" },
     ],
     links: [
+      { rel: "canonical", href: "https://mishal.dev/" },
       { rel: "preload", as: "image", href: "/hero/poster.webp", type: "image/webp" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Anton&family=JetBrains+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap" },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Anton&family=JetBrains+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap",
+      },
       {
         rel: "stylesheet",
         href: appCss,
       },
       { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
       { rel: "icon", href: "/favicon.ico", sizes: "any" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
     ],
   }),
   shellComponent: RootShell,
@@ -102,14 +140,75 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   errorComponent: ErrorComponent,
 });
 
+const personJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Person",
+  name: "Muhammed Mishal",
+  jobTitle: "AI / ML Engineer",
+  url: "https://mishal.dev/",
+  image: "https://mishal.dev/og-image.png",
+  sameAs: ["https://github.com/Mishaliii", "https://www.linkedin.com/in/muhammedmishal13/"],
+  knowsAbout: [
+    "Artificial Intelligence",
+    "Machine Learning",
+    "Computer Vision",
+    "Multimodal Pipelines",
+    "FastAPI",
+    "PyTorch",
+  ],
+};
+
 function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <head>
         <HeadContent />
-        <script dangerouslySetInnerHTML={{ __html: `if(!window.__heroFetch){var v=document.createElement('video');var small=innerWidth<1500;var mp4=v.canPlayType('video/mp4; codecs="avc1.64001f"');var src='/hero/hero'+(small?'-sm':'')+(mp4?'.mp4':'.webm');window.__heroFetch=fetch(src).catch(function(){return null;});}` }} />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(personJsonLd) }}
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `if(!window.__heroFetch){var small=innerWidth<=900;var src='/hero/hero'+(small?'-sm':'')+'.mp4';window.__heroSrc=src;window.__heroFetch=fetch(src).catch(function(){return null;});}`,
+          }}
+        />
       </head>
       <body>
+        <noscript>
+          <div
+            style={{
+              padding: "24px",
+              background: "#0B0B0B",
+              color: "#E8DED0",
+              fontFamily: "sans-serif",
+              textAlign: "center",
+            }}
+          >
+            <h1 style={{ fontSize: "28px", fontWeight: "bold" }}>
+              Muhammed Mishal — AI / ML Engineer
+            </h1>
+            <p style={{ marginTop: "12px", color: "#D3C6B5" }}>
+              Please enable JavaScript for the full interactive portfolio experience, or download my
+              CV below:
+            </p>
+            <a
+              href="/cv.pdf"
+              download
+              style={{
+                display: "inline-block",
+                marginTop: "16px",
+                padding: "10px 22px",
+                background: "#E8DED0",
+                color: "#0B0B0B",
+                textDecoration: "none",
+                borderRadius: "4px",
+                fontWeight: "600",
+              }}
+            >
+              Download CV
+            </a>
+          </div>
+        </noscript>
         {children}
         <Scripts />
       </body>
@@ -175,7 +274,7 @@ function RootComponent() {
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
       <RootBuddy />
-      <DevPerfOverlay />
+      {import.meta.env.DEV && DevPerfOverlay && <DevPerfOverlay />}
     </QueryClientProvider>
   );
 }

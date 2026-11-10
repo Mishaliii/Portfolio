@@ -139,7 +139,11 @@ export function DevPerfOverlay() {
         Worst Frame: <b>{metrics.worstFrame} ms</b>
       </div>
       <div>
-        Video Dropped: <b>{metrics.droppedFrames} / {metrics.totalFrames}</b> ({dropPct}%)
+        Video Dropped:{" "}
+        <b>
+          {metrics.droppedFrames} / {metrics.totalFrames}
+        </b>{" "}
+        ({dropPct}%)
       </div>
       <div>
         Loop Gap: <b>{metrics.loopGapMs > 0 ? `${metrics.loopGapMs} ms` : "seamless"}</b>
@@ -147,4 +151,3 @@ export function DevPerfOverlay() {
     </div>
   );
 }
-

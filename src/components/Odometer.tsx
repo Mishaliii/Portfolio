@@ -2,9 +2,7 @@ import React, { useEffect, useRef, useCallback, useState } from "react";
 import { gsap } from "gsap";
 import { onPage, reduced } from "@/lib/motion";
 
-export type OdometerSegment =
-  | { type: "digit"; value: number }
-  | { type: "static"; value: string };
+export type OdometerSegment = { type: "digit"; value: number } | { type: "static"; value: string };
 
 /**
  * Pure parser that splits a value into digit reels and static non-digit segments.
@@ -25,9 +23,7 @@ export function parseOdometerValue(raw: string | number): OdometerSegment[] {
 
 // 3 full cycles of 0-9 so start, target, and overshoot all land safely on real numbers
 const DIGITS_ARRAY = [
-  0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
-  0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
-  0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
 ];
 
 export interface OdometerProps {
@@ -124,7 +120,7 @@ export function Odometer({
         hasAnimatedRef.current = true;
       }
     },
-    [delay, duration, onComplete, totalDigits]
+    [delay, duration, onComplete, totalDigits],
   );
 
   // IntersectionObserver for 60% visibility
@@ -140,7 +136,7 @@ export function Odometer({
           setInView(false);
         }
       },
-      { threshold: [0.58, 0.6] }
+      { threshold: [0.58, 0.6] },
     );
 
     io.observe(el);
@@ -203,11 +199,7 @@ export function Odometer({
         const target = seg.value;
 
         return (
-          <span
-            key={sIdx}
-            className="odometer-digit-col"
-            aria-hidden="true"
-          >
+          <span key={sIdx} className="odometer-digit-col" aria-hidden="true">
             <span
               ref={(el) => {
                 stripsRef.current[digitIdx] = el;

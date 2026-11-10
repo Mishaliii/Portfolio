@@ -6,7 +6,8 @@ import { SplitReveal } from "./Split";
 import { Odometer } from "@/components/Odometer";
 import { HeadlineDissolve } from "./HeadlineDissolve";
 import { onPage } from "@/lib/motion";
-import { BendList } from "./BendList";
+import { BendList, type BendListHandle } from "./BendList";
+import { ABOUT_IMAGE_INTERVAL_MS, ABOUT_IMAGE_FADE_MS } from "@/lib/about-portrait";
 import sideImg from "@/assets/portrait-side-composited.webp";
 import frontImg from "@/assets/portrait-front-composited.webp";
 
@@ -16,9 +17,32 @@ export function PageAbout({ go, active = true }: { go: (id: string) => void; act
   const front = useRef<HTMLImageElement>(null);
   const portrait = useRef<HTMLDivElement>(null);
   const tlRef = useRef<gsap.core.Timeline | null>(null);
+  const bendListRef = useRef<BendListHandle>(null);
+
+  // Reset BendList on page enter from another page (and page leave)
+  const prevActive = useRef(active);
+  useEffect(() => {
+    if (prevActive.current !== active) {
+      bendListRef.current?.reset();
+      prevActive.current = active;
+    }
+  }, [active]);
 
   useEffect(() => {
-    const root = section.current, a = up.current, b = front.current;
+    const onPageChange = (e: any) => {
+      if (e.detail?.page === 1) {
+        bendListRef.current?.reset();
+        window.dispatchEvent(new CustomEvent("about-portrait-reset"));
+      }
+    };
+    window.addEventListener("page-change", onPageChange);
+    return () => window.removeEventListener("page-change", onPageChange);
+  }, []);
+
+  useEffect(() => {
+    const root = section.current,
+      a = up.current,
+      b = front.current;
     if (!root || !a || !b) return;
 
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -28,22 +52,78 @@ export function PageAbout({ go, active = true }: { go: (id: string) => void; act
       return;
     }
 
-    // Initial state: A is visible, B is hidden
-    gsap.set(a, { opacity: 1 });
-    gsap.set(b, { opacity: 0 });
+    const intervalS = ABOUT_IMAGE_INTERVAL_MS / 1000;
+    const fadeS = ABOUT_IMAGE_FADE_MS / 1000;
 
-    // Image A holds 4s, fades to B over 1.2s, holds 4s, fades to A over 1.2s, loops
+    const resetPortrait = () => {
+      if (tlRef.current) {
+        tlRef.current.seek(0);
+      }
+      gsap.killTweensOf([a, b]);
+      gsap.set(a, { opacity: 1 });
+      gsap.set(b, { opacity: 0 });
+      if (portrait.current) {
+        portrait.current.dataset.portraitIndex = "0";
+      }
+      if (typeof window !== "undefined") {
+        (window as any).__aboutImageIndex = 0;
+        (window as any).__aboutImageStartTime = 0;
+      }
+    };
+
+    // Initial state: A is visible, B is hidden (index 0)
+    resetPortrait();
+
+    // Image A holds 2.5s (ABOUT_IMAGE_INTERVAL_MS), fades to B over 0.7s (ABOUT_IMAGE_FADE_MS), holds 2.5s, fades to A over 0.7s, loops
     const tl = gsap.timeline({ repeat: -1, paused: true });
     tlRef.current = tl;
-    tl.to(b, { opacity: 1, duration: 1.2, ease: "power2.inOut" }, "+=4")
-      .to(a, { opacity: 0, duration: 1.2, ease: "power2.inOut" }, "<")
-      .to(a, { opacity: 1, duration: 1.2, ease: "power2.inOut" }, "+=4")
-      .to(b, { opacity: 0, duration: 1.2, ease: "power2.inOut" }, "<");
+    tl.to(
+      b,
+      {
+        opacity: 1,
+        duration: fadeS,
+        ease: "power2.inOut",
+        onStart: () => {
+          if (portrait.current) portrait.current.dataset.portraitIndex = "1";
+          if (typeof window !== "undefined") {
+            (window as any).__aboutImageIndex = 1;
+            (window as any).__aboutImageSwitchTime = performance.now();
+          }
+        },
+      },
+      `+=${intervalS}`,
+    )
+      .to(a, { opacity: 0, duration: fadeS, ease: "power2.inOut" }, "<")
+      .to(
+        a,
+        {
+          opacity: 1,
+          duration: fadeS,
+          ease: "power2.inOut",
+          onStart: () => {
+            if (portrait.current) portrait.current.dataset.portraitIndex = "0";
+            if (typeof window !== "undefined") {
+              (window as any).__aboutImageIndex = 0;
+              (window as any).__aboutImageSwitchTime = performance.now();
+            }
+          },
+        },
+        `+=${intervalS}`,
+      )
+      .to(b, { opacity: 0, duration: fadeS, ease: "power2.inOut" }, "<");
 
     const syncPlayback = () => {
       const isPlayable = active && onPage(root) && !document.hidden;
       if (isPlayable) {
-        if (tl.paused()) tl.play();
+        if (tl.paused()) {
+          if (typeof window !== "undefined") {
+            const win = window as any;
+            if (!win.__aboutImageStartTime || win.__aboutImageIndex === 0) {
+              win.__aboutImageStartTime = performance.now();
+            }
+          }
+          tl.play();
+        }
       } else {
         if (!tl.paused()) tl.pause();
       }
@@ -59,8 +139,13 @@ export function PageAbout({ go, active = true }: { go: (id: string) => void; act
     io.observe(root);
 
     const onVis = () => syncPlayback();
+    const onReset = () => {
+      resetPortrait();
+      syncPlayback();
+    };
     document.addEventListener("visibilitychange", onVis);
     window.addEventListener("page-motion-resume", syncPlayback);
+    window.addEventListener("about-portrait-reset", onReset);
 
     syncPlayback();
 
@@ -68,6 +153,7 @@ export function PageAbout({ go, active = true }: { go: (id: string) => void; act
       io.disconnect();
       document.removeEventListener("visibilitychange", onVis);
       window.removeEventListener("page-motion-resume", syncPlayback);
+      window.removeEventListener("about-portrait-reset", onReset);
       tl.kill();
     };
   }, [active]);
@@ -93,12 +179,14 @@ export function PageAbout({ go, active = true }: { go: (id: string) => void; act
   }, []);
 
   const items = useMemo(() => {
-    const factEdu = about.facts[0];
-    const factExp = about.facts[1];
-    const factStack = about.facts[2];
-    const factStatus = about.facts[3];
+    const factEdu = about.facts.find((f) => f.label === "EDUCATION") || about.facts[0];
+    const factExp = about.facts.find((f) => f.label === "EXPERIENCE") || about.facts[1];
+    const factCert = about.facts.find((f) => f.label === "CERTIFICATIONS");
+    const factAdd = about.facts.find((f) => f.label === "ADDITIONAL");
+    const factStack = about.facts.find((f) => f.label === "STACK") || about.facts[2];
+    const factStatus = about.facts.find((f) => f.label === "STATUS") || about.facts[3];
 
-    return [
+    const cards = [
       // 1) bio paragraph 1
       <div key="bio-1" className="about-wheel-card">
         <div className="about-wheel-label font-mono text-[11px] sm:text-[12px] uppercase tracking-wider text-[#1F5A3A] font-semibold mb-1">
@@ -126,10 +214,15 @@ export function PageAbout({ go, active = true }: { go: (id: string) => void; act
         </div>
         <p className="about-wheel-body text-[clamp(13px,1.1vw,16px)] font-sans text-[#0B0B0B] leading-relaxed">
           <strong>
-            {"bold" in factEdu && factEdu.bold === "MCA · CGPA 8.33" ? (
-              <>MCA · CGPA <Odometer value="8.33" active={active} delay={0.2} /></>
+            {"bold" in factEdu && factEdu.bold && factEdu.bold.includes("8.33") ? (
+              <>
+                MCA · GPA <Odometer value="8.33" active={active} delay={0.2} />
+                /10
+              </>
+            ) : "bold" in factEdu ? (
+              factEdu.bold
             ) : (
-              "bold" in factEdu ? factEdu.bold : ""
+              ""
             )}
           </strong>
           {factEdu.text}
@@ -157,7 +250,22 @@ export function PageAbout({ go, active = true }: { go: (id: string) => void; act
         )}
       </div>,
 
-      // 5) Stack
+      // 5) Certifications (small & honest)
+      ...(factCert
+        ? [
+            <div key="cert" className="about-wheel-card">
+              <div className="about-wheel-label font-mono text-[11px] sm:text-[12px] uppercase tracking-wider text-[#1F5A3A] font-semibold mb-1">
+                {factCert.label}
+              </div>
+              <p className="about-wheel-body text-[clamp(13px,1.1vw,16px)] font-sans text-[#0B0B0B] leading-relaxed">
+                <strong>{"bold" in factCert ? factCert.bold : ""}</strong>
+                {factCert.text}
+              </p>
+            </div>,
+          ]
+        : []),
+
+      // 6) Stack & Additional Projects
       <div key="stack" className="about-wheel-card">
         <div className="about-wheel-label font-mono text-[11px] sm:text-[12px] uppercase tracking-wider text-[#1F5A3A] font-semibold mb-1">
           {factStack.label}
@@ -165,9 +273,17 @@ export function PageAbout({ go, active = true }: { go: (id: string) => void; act
         <p className="about-wheel-body text-[clamp(13px,1.1vw,16px)] font-sans text-[#0B0B0B] leading-relaxed">
           {factStack.text}
         </p>
+        {factAdd && (
+          <p className="about-wheel-secondary text-[clamp(11px,0.95vw,13px)] text-[#6B645A] font-sans mt-1.5">
+            <span className="font-semibold text-[#0B0B0B]">
+              {"bold" in factAdd ? factAdd.bold : ""}:
+            </span>
+            {factAdd.text}
+          </p>
+        )}
       </div>,
 
-      // 6) Location + availability
+      // 7) Location + availability
       <div key="loc" className="about-wheel-card">
         <div className="about-wheel-label font-mono text-[11px] sm:text-[12px] uppercase tracking-wider text-[#1F5A3A] font-semibold mb-1 flex items-center gap-1.5">
           <span className="w-1.5 h-1.5 rounded-full bg-[#1F5A3A]" aria-hidden="true" />
@@ -176,9 +292,13 @@ export function PageAbout({ go, active = true }: { go: (id: string) => void; act
         <p className="about-wheel-body text-[clamp(13px,1.1vw,16px)] font-sans text-[#0B0B0B] leading-relaxed">
           <strong>
             {"bold" in factStatus && factStatus.bold === "Open to work, 2026" ? (
-              <>Open to work, <Odometer value="2026" active={active} delay={0.2} /></>
+              <>
+                Open to work, <Odometer value="2026" active={active} delay={0.2} />
+              </>
+            ) : "bold" in factStatus ? (
+              factStatus.bold
             ) : (
-              "bold" in factStatus ? factStatus.bold : ""
+              ""
             )}
           </strong>
           {factStatus.text}
@@ -188,14 +308,30 @@ export function PageAbout({ go, active = true }: { go: (id: string) => void; act
         </p>
       </div>,
     ];
+
+    return cards;
   }, [bioSentences, active]);
 
   return (
     <div ref={section} className="about-section">
       <div className="about-portrait" aria-label={about.portraitAlt} role="img">
-        <div ref={portrait} className="about-portrait-images">
-          <img ref={up} src={sideImg} alt="" decoding="async" aria-hidden="true" />
-          <img ref={front} src={frontImg} alt="" decoding="async" aria-hidden="true" />
+        <div ref={portrait} className="about-portrait-images" data-portrait-index="0">
+          <img
+            ref={up}
+            data-portrait-img="0"
+            src={sideImg}
+            alt=""
+            decoding="async"
+            aria-hidden="true"
+          />
+          <img
+            ref={front}
+            data-portrait-img="1"
+            src={frontImg}
+            alt=""
+            decoding="async"
+            aria-hidden="true"
+          />
         </div>
         <div className="about-portrait-fade" aria-hidden="true" />
       </div>
@@ -204,7 +340,9 @@ export function PageAbout({ go, active = true }: { go: (id: string) => void; act
         <HeadlineDissolve auto className="about-name-dissolve">
           <h2 className="about-name display">
             <SplitReveal text={about.name} />
-            <span className="accent"><SplitReveal text={about.period} /></span>
+            <span className="accent">
+              <SplitReveal text={about.period} />
+            </span>
           </h2>
         </HeadlineDissolve>
         <p className="about-role mono">
@@ -242,16 +380,15 @@ export function PageAbout({ go, active = true }: { go: (id: string) => void; act
           </a>
         </div>
 
-
         {/* BendList filling remaining column height */}
         <BendList
+          ref={bendListRef}
           pageId="about"
           active={active}
           showHint={true}
           items={items}
           className="about-bend-list"
         />
-
       </div>
     </div>
   );

@@ -3,7 +3,7 @@ import { Odometer } from "@/components/Odometer";
 import { createPortal } from "react-dom";
 import { gsap } from "gsap";
 import { works, type CaseStudyData } from "@/content";
-import { useScrollSpy } from "@/hooks/useScrollSpy";
+import { useScrollSpy } from "@/hooks";
 import { ddssImages } from "./ScreenshotGallery";
 
 export function CaseStudy({
@@ -20,44 +20,172 @@ export function CaseStudy({
   const backdrop = useRef<HTMLDivElement>(null);
   const scrollArea = useRef<HTMLDivElement>(null);
   const closeBtn = useRef<HTMLButtonElement>(null);
+  const triggerBtnRef = useRef<HTMLElement | null>(null);
   const closing = useRef(false);
+  const openTl = useRef<gsap.core.Timeline | null>(null);
+  const closeTl = useRef<gsap.core.Timeline | null>(null);
+  const scrollTween = useRef<gsap.core.Tween | null>(null);
   const [drawerOpened, setDrawerOpened] = useState(false);
 
-  const sectionIds = useMemo(() => c.sections.map((s) => s.id), [c.sections]);
-  const { activeSection, scrollTo } = useScrollSpy({
+  const validSections = useMemo(() => {
+    return c.sections.filter((sec) => {
+      const hasText = Boolean(sec.text && sec.text.trim());
+      const hasPoints = Boolean(sec.points && sec.points.length > 0);
+      const hasMethods = Boolean(sec.methods && sec.methods.length > 0);
+      const hasScreens = Boolean(sec.screens && sec.screens.length > 0);
+      const hasShots = Boolean(
+        (sec.shot && ddssImages[sec.shot]) || (sec.shots && sec.shots.length > 0),
+      );
+      return hasText || hasPoints || hasMethods || hasScreens || hasShots;
+    });
+  }, [c.sections]);
+
+  const validNav = useMemo(() => {
+    const validIds = new Set(validSections.map((s) => s.id));
+    return c.nav.filter((item) => validIds.has(item.id));
+  }, [c.nav, validSections]);
+
+  const sectionIds = useMemo(() => validSections.map((s) => s.id), [validSections]);
+  const { activeSection, setActiveSection, updateSpy } = useScrollSpy({
     containerRef: scrollArea,
     sectionIds,
     offset: 24,
     enabled: open,
   });
+  const activeSectionRef = useRef(activeSection);
+  activeSectionRef.current = activeSection;
+
+  // Smooth scroll to target section (continuous scroll-spy highlight)
+  const scrollToSection = useCallback(
+    (id: string) => {
+      const container = scrollArea.current;
+      const targetEl = document.getElementById(id);
+      if (!container || !targetEl) return;
+
+      const containerH = container.clientHeight;
+      const maxScroll = Math.max(0, container.scrollHeight - containerH);
+      const containerRect = container.getBoundingClientRect();
+      const targetRect = targetEl.getBoundingClientRect();
+      const scrollOffset = 20;
+      const targetScroll = Math.max(
+        0,
+        Math.min(
+          maxScroll,
+          container.scrollTop + (targetRect.top - containerRect.top) - scrollOffset,
+        ),
+      );
+
+      if (scrollTween.current) scrollTween.current.kill();
+      setActiveSection(id);
+      const proxy = { y: container.scrollTop };
+      scrollTween.current = gsap.to(proxy, {
+        y: targetScroll,
+        duration: 0.45,
+        ease: "power3.inOut",
+        overwrite: "auto",
+        onUpdate: () => {
+          container.scrollTop = proxy.y;
+          setActiveSection(id);
+        },
+        onComplete: () => {
+          container.scrollTop = targetScroll;
+          setActiveSection(id);
+          scrollTween.current = null;
+        },
+      });
+    },
+    [setActiveSection],
+  );
 
   const close = useCallback(() => {
     const el = box.current;
     const bd = backdrop.current;
     if (!el || closing.current) return;
     closing.current = true;
+
+    // Interrupt opening animation if in flight
+    if (openTl.current) {
+      openTl.current.kill();
+      openTl.current = null;
+    }
+
+    // Cancel scroll
+    if (scrollTween.current) {
+      scrollTween.current.kill();
+      scrollTween.current = null;
+    }
+
     setDrawerOpened(false);
-    gsap.killTweensOf([el, bd]);
-    gsap.timeline({
+
+    const contentEls = el.querySelectorAll<HTMLElement>("[data-drawer-content]");
+    const tl = gsap.timeline({
       onComplete: () => {
         closing.current = false;
+        closeTl.current = null;
         onClose();
+        // Return focus to the trigger Details button
+        triggerBtnRef.current?.focus({ preventScroll: true });
       },
-    })
-      .to(el, { xPercent: 100, duration: 0.32, ease: "power3.in" }, 0)
-      .to(bd, { opacity: 0, duration: 0.28, ease: "linear" }, 0.04);
+    });
+    closeTl.current = tl;
+
+    // Content fades and slides 24 px (stagger 0.03 s, 0.25 s duration)
+    tl.to(
+      contentEls,
+      {
+        opacity: 0,
+        x: 24,
+        duration: 0.25,
+        stagger: 0.03,
+        ease: "power2.in",
+      },
+      0,
+    );
+
+    // Panel slides out to the right with power3.in (0.45 s) while backdrop fades out
+    tl.to(
+      el,
+      {
+        xPercent: 100,
+        duration: 0.45,
+        ease: "power3.in",
+      },
+      0.05,
+    );
+
+    if (bd) {
+      tl.to(
+        bd,
+        {
+          opacity: 0,
+          duration: 0.45,
+          ease: "power2.in",
+        },
+        0.05,
+      );
+    }
   }, [onClose]);
 
   useEffect(() => {
     if (!open) return;
-    const prev = document.activeElement as HTMLElement | null;
     const el = box.current;
     const bd = backdrop.current;
     if (!el || !bd) return;
 
+    // Save trigger element for focus restoration
+    triggerBtnRef.current = document.activeElement as HTMLElement | null;
+
+    // Reset before opening animation starts (while hidden)
     if (scrollArea.current) {
       scrollArea.current.scrollTop = 0;
     }
+    setActiveSection(validSections[0]?.id ?? "what-it-does");
+
+    // Collapse any open details or expanded accordions across all projects
+    el.querySelectorAll("details[open]").forEach((d) => d.removeAttribute("open"));
+    el.querySelectorAll<HTMLElement>("[aria-expanded='true']").forEach((b) =>
+      b.setAttribute("aria-expanded", "false"),
+    );
 
     const origHtmlOverflow = document.documentElement.style.overflow;
     const origBodyOverflow = document.body.style.overflow;
@@ -68,24 +196,96 @@ export function CaseStudy({
     const stopScroll = (e: Event) => {
       e.stopPropagation();
     };
-    el.addEventListener("wheel", stopScroll, { passive: false });
-    el.addEventListener("touchmove", stopScroll, { passive: false });
     bd.addEventListener("wheel", stopScroll, { passive: false });
     bd.addEventListener("touchmove", stopScroll, { passive: false });
 
-    setDrawerOpened(false);
-    gsap.fromTo(bd, { opacity: 0 }, { opacity: 1, duration: 0.3, ease: "linear" });
-    gsap.fromTo(el, { xPercent: 100 }, { xPercent: 0, duration: 0.42, ease: "power3.out", onComplete: () => setDrawerOpened(true) });
+    // Natural scrolling on scrollArea; stop propagation so events don't escape drawer
+    const container = scrollArea.current;
 
-    closeBtn.current?.focus({ preventScroll: true });
+    const onWheel = (e: WheelEvent) => {
+      e.stopPropagation();
+      if (scrollTween.current && scrollTween.current.isActive()) {
+        scrollTween.current.kill();
+        scrollTween.current = null;
+      }
+    };
+
+    const onTouch = (e: TouchEvent) => {
+      e.stopPropagation();
+      if (scrollTween.current && scrollTween.current.isActive()) {
+        scrollTween.current.kill();
+        scrollTween.current = null;
+      }
+    };
+
+    if (container) {
+      container.addEventListener("wheel", onWheel, { passive: true });
+      container.addEventListener("touchmove", onTouch, { passive: true });
+    }
+
+    setDrawerOpened(false);
+
+    // Initial state setup before open animation
+    gsap.set(bd, { opacity: 0 });
+    gsap.set(el, { xPercent: 100 });
+    const contentEls = el.querySelectorAll<HTMLElement>("[data-drawer-content]");
+    gsap.set(contentEls, { opacity: 0, x: 24 });
+
+    // Opening animation (interruptible)
+    const tl = gsap.timeline({
+      onComplete: () => {
+        openTl.current = null;
+        setDrawerOpened(true);
+        closeBtn.current?.focus({ preventScroll: true });
+      },
+    });
+    openTl.current = tl;
+
+    tl.to(bd, { opacity: 1, duration: 0.35, ease: "linear" }, 0);
+    tl.to(el, { xPercent: 0, duration: 0.45, ease: "power3.out" }, 0);
+    tl.to(
+      contentEls,
+      {
+        opacity: 1,
+        x: 0,
+        duration: 0.35,
+        stagger: 0.04,
+        ease: "power2.out",
+      },
+      0.12,
+    );
 
     const key = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
         close();
-      } else if (e.key === "Tab") {
+        return;
+      }
+
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      if (e.key === "PageDown" || e.key === "j" || e.key === "J") {
+        e.preventDefault();
+        const currIdx = validSections.findIndex((s) => s.id === activeSectionRef.current);
+        const nextIdx = Math.min(validSections.length - 1, (currIdx >= 0 ? currIdx : 0) + 1);
+        scrollToSection(validSections[nextIdx].id);
+        return;
+      }
+
+      if (e.key === "PageUp" || e.key === "k" || e.key === "K") {
+        e.preventDefault();
+        const currIdx = validSections.findIndex((s) => s.id === activeSectionRef.current);
+        const prevIdx = Math.max(0, (currIdx >= 0 ? currIdx : 0) - 1);
+        scrollToSection(validSections[prevIdx].id);
+        return;
+      }
+
+      if (e.key === "Tab") {
         const f = el.querySelectorAll<HTMLElement>("button, a[href]");
-        const first = f[0], last = f[f.length - 1];
+        const first = f[0],
+          last = f[f.length - 1];
         if (e.shiftKey && document.activeElement === first) {
           e.preventDefault();
           last?.focus();
@@ -95,6 +295,7 @@ export function CaseStudy({
         }
         return;
       }
+
       e.stopImmediatePropagation();
     };
 
@@ -103,18 +304,31 @@ export function CaseStudy({
       document.documentElement.style.overflow = origHtmlOverflow;
       document.body.style.overflow = origBodyOverflow;
       document.documentElement.removeAttribute("data-modal-open");
-      el.removeEventListener("wheel", stopScroll);
-      el.removeEventListener("touchmove", stopScroll);
       bd.removeEventListener("wheel", stopScroll);
       bd.removeEventListener("touchmove", stopScroll);
+      if (container) {
+        container.removeEventListener("wheel", onWheel);
+        container.removeEventListener("touchmove", onTouch);
+      }
+      if (scrollTween.current) {
+        scrollTween.current.kill();
+        scrollTween.current = null;
+      }
+      if (openTl.current) {
+        openTl.current.kill();
+        openTl.current = null;
+      }
+      if (closeTl.current) {
+        closeTl.current.kill();
+        closeTl.current = null;
+      }
       window.removeEventListener("keydown", key, true);
-      prev?.focus({ preventScroll: true });
     };
-  }, [open, close, c]);
+  }, [open, close, c, scrollToSection, updateSpy, setActiveSection]);
 
   if (!open || typeof document === "undefined") return null;
 
-  const badgeText = ("badge" in c && c.badge) ? c.badge : "DEEP DIVE";
+  const badgeText = "badge" in c && c.badge ? c.badge : "DEEP DIVE";
 
   return createPortal(
     <>
@@ -138,14 +352,15 @@ export function CaseStudy({
         style={{ willChange: "transform" }}
       >
         {/* Top bar with title and small Close button */}
-        <div className="flex items-center justify-between border-b border-[#0B0B0B]/15 px-6 sm:px-10 py-5 shrink-0 bg-[#E8DED0]">
+        <div
+          data-drawer-content
+          className="flex items-center justify-between border-b border-[#0B0B0B]/15 px-6 sm:px-10 py-5 shrink-0 bg-[#E8DED0]"
+        >
           <div className="flex items-baseline gap-3">
             <span className="display text-[22px] tracking-tight text-[#0B0B0B]">
               {Array.isArray(c.title) ? c.title.join(" ") : c.title}
             </span>
-            <span className="mono text-[11px] text-[#6B645A]">
-              {badgeText}
-            </span>
+            <span className="mono text-[11px] text-[#6B645A]">{badgeText}</span>
             {"galleryLabel" in c && c.galleryLabel && (
               <span className="mono text-[11px] text-[#1F5A3A] hidden sm:inline-block border-l border-[#0B0B0B]/15 pl-3">
                 PRODUCT SCREENS / <Odometer value="10" active={drawerOpened} /> CAPTURES
@@ -156,24 +371,28 @@ export function CaseStudy({
             ref={closeBtn}
             type="button"
             onClick={close}
-            className="font-mono text-[13px] uppercase tracking-wider text-[#0B0B0B] hover:text-[#1F5A3A] transition-colors cursor-pointer"
+            className="min-h-[44px] min-w-[44px] px-3.5 py-2 flex items-center justify-center rounded-full border border-[#0B0B0B]/20 font-mono text-[13px] uppercase tracking-wider text-[#0B0B0B] hover:text-[#1F5A3A] hover:border-[#1F5A3A] transition-colors cursor-pointer"
           >
             {c.close}
           </button>
         </div>
 
         {/* Two-column drawer content */}
-        <div className="flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-[180px_minmax(0,1fr)] gap-8 lg:gap-12 px-6 sm:px-10 py-6">
+        <div className="flex-1 min-h-0 overflow-hidden grid grid-cols-1 md:grid-cols-[180px_minmax(0,1fr)] gap-8 lg:gap-12 px-6 sm:px-10 py-6">
           {/* Left sticky section list (plain text, current one underlined) */}
-          <aside className="hidden md:block">
-            <nav className="sticky top-2 space-y-4 text-[13px] font-mono tracking-wider" aria-label="Sections">
-              {c.nav.map((item) => {
+          <aside data-drawer-content className="hidden md:block">
+            <nav
+              className="sticky top-2 space-y-4 text-[13px] font-mono tracking-wider"
+              aria-label="Sections"
+            >
+              {validNav.map((item) => {
                 const isActive = activeSection === item.id;
                 return (
                   <button
                     key={item.id}
                     type="button"
-                    onClick={() => scrollTo(item.id)}
+                    aria-current={isActive ? "true" : undefined}
+                    onClick={() => scrollToSection(item.id)}
                     className={`block text-left transition-colors cursor-pointer ${
                       isActive
                         ? "text-[#1F5A3A] font-semibold underline underline-offset-8 decoration-[#1F5A3A] decoration-2"
@@ -188,9 +407,20 @@ export function CaseStudy({
           </aside>
 
           {/* Right scrolling content */}
-          <div ref={scrollArea} className="overflow-y-auto pr-3 sm:pr-6 space-y-16 pb-24" style={{ scrollbarWidth: "thin" }}>
-            {c.sections.map((sec) => (
-              <section key={sec.id} id={sec.id} className="scroll-mt-4">
+          <div
+            ref={scrollArea}
+            data-drawer-scroll
+            data-lenis-prevent
+            className="overflow-y-auto min-h-0 h-full pr-3 sm:pr-6 space-y-16 pb-24"
+            style={{ scrollbarWidth: "thin", overscrollBehavior: "contain" }}
+          >
+            {validSections.map((sec) => (
+              <section
+                key={sec.id}
+                id={sec.id}
+                data-drawer-content
+                className="scroll-mt-6 pb-12 border-b border-[#0B0B0B]/10 last:border-b-0"
+              >
                 <div className="border-t border-[#0B0B0B]/15 pt-4 mb-3">
                   <h3 className="display text-[26px] sm:text-[32px] tracking-tight text-[#0B0B0B] flex items-baseline gap-2">
                     <span className="mono text-[16px] sm:text-[18px] text-[#1F5A3A] font-normal">
@@ -221,12 +451,14 @@ export function CaseStudy({
                       )}
                     </div>
                     <figure className="rounded-[10px] border border-[#0B0B0B]/15 overflow-hidden bg-[#0B0B0B] p-2 shadow-sm">
-                      <img
-                        src={ddssImages[sec.shot]}
-                        alt={sec.shotCaption ?? sec.title}
-                        className="w-full h-auto object-contain rounded"
-                        loading="lazy"
-                      />
+                      <div className="relative aspect-[16/10] w-full overflow-hidden rounded bg-[#161616] flex items-center justify-center">
+                        <img
+                          src={ddssImages[sec.shot]}
+                          alt={sec.shotCaption ?? sec.title}
+                          className="w-full h-full object-contain"
+                          loading="lazy"
+                        />
+                      </div>
                       {sec.shotCaption && (
                         <figcaption className="mono text-[10px] text-[#E8DED0]/80 p-1.5">
                           {sec.shotCaption}
@@ -252,16 +484,16 @@ export function CaseStudy({
                         key={item.shot}
                         className="rounded-[10px] border border-[#0B0B0B]/15 overflow-hidden bg-[#0B0B0B] p-2.5 shadow-sm flex flex-col justify-between"
                       >
-                        <div className="overflow-hidden rounded bg-[#161616] flex items-center justify-center">
+                        <div className="relative aspect-[16/10] w-full overflow-hidden rounded bg-[#161616] flex items-center justify-center">
                           {ddssImages[item.shot] ? (
                             <img
                               src={ddssImages[item.shot]}
                               alt={`${item.label}: ${item.desc}`}
-                              className="w-full h-auto object-contain max-h-[200px]"
+                              className="w-full h-full object-contain"
                               loading="lazy"
                             />
                           ) : (
-                            <div className="h-[140px] flex items-center justify-center text-xs text-white/50 mono">
+                            <div className="h-full flex items-center justify-center text-xs text-white/50 mono">
                               {item.label}
                             </div>
                           )}
@@ -283,15 +515,26 @@ export function CaseStudy({
                 {sec.shots && sec.shots.length > 0 && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
                     {sec.shots.map((shotKey) => (
-                      <figure key={shotKey} className="rounded-[10px] border border-[#0B0B0B]/15 overflow-hidden bg-[#0B0B0B] p-2 shadow-sm">
-                        <img
-                          src={ddssImages[shotKey]}
-                          alt={shotKey === "ddss-10" ? "Treatment plan screenshot" : "Dashboard screenshot"}
-                          className="w-full h-auto object-contain rounded"
-                          loading="lazy"
-                        />
+                      <figure
+                        key={shotKey}
+                        className="rounded-[10px] border border-[#0B0B0B]/15 overflow-hidden bg-[#0B0B0B] p-2 shadow-sm"
+                      >
+                        <div className="relative aspect-[16/10] w-full overflow-hidden rounded bg-[#161616] flex items-center justify-center">
+                          <img
+                            src={ddssImages[shotKey]}
+                            alt={
+                              shotKey === "ddss-10"
+                                ? "Treatment plan screenshot"
+                                : "Dashboard screenshot"
+                            }
+                            className="w-full h-full object-contain"
+                            loading="lazy"
+                          />
+                        </div>
                         <figcaption className="mono text-[10px] text-[#E8DED0]/80 p-1.5">
-                          {shotKey === "ddss-10" ? "Treatment plan and prescription saving" : "Clinician dashboard"}
+                          {shotKey === "ddss-10"
+                            ? "Treatment plan and prescription saving"
+                            : "Clinician dashboard"}
                         </figcaption>
                       </figure>
                     ))}
@@ -302,13 +545,14 @@ export function CaseStudy({
                 {sec.methods && sec.methods.length > 0 && (
                   <div className="space-y-3 max-w-[58ch] mt-4">
                     {sec.methods.map((m) => (
-                      <div key={m.name} className="p-3.5 rounded border border-[#0B0B0B]/15 bg-[rgba(11,11,11,0.02)]">
+                      <div
+                        key={m.name}
+                        className="p-3.5 rounded border border-[#0B0B0B]/15 bg-[rgba(11,11,11,0.02)]"
+                      >
                         <span className="mono text-[12px] font-semibold text-[#1F5A3A] block">
                           {m.name}
                         </span>
-                        <p className="text-[14px] text-[#6B645A] mt-0.5">
-                          {m.desc}
-                        </p>
+                        <p className="text-[14px] text-[#6B645A] mt-0.5">{m.desc}</p>
                       </div>
                     ))}
                   </div>
@@ -331,6 +575,6 @@ export function CaseStudy({
         </div>
       </aside>
     </>,
-    document.body
+    document.body,
   );
 }

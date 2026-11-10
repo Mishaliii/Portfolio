@@ -1,7 +1,4 @@
 import ddssRetrieval from "@/assets/ddss-screen.webp";
-import sampleA from "@/assets/skin-sample-a.jpg";
-import sampleB from "@/assets/skin-sample-b.jpg";
-import sampleC from "@/assets/skin-sample-c.jpg";
 
 export const site = {
   name: "Muhammed Mishal",
@@ -12,7 +9,7 @@ export const site = {
   tag: "AI / ML",
   email: "muhammedmishalkpm13@gmail.com",
   github: "https://github.com/Mishaliii",
-  linkedin: "https://www.linkedin.com/",
+  linkedin: "https://www.linkedin.com/in/muhammedmishal13/",
   cv: "/cv.pdf",
   availability: "Open to roles in Kerala, UAE or remote",
   timezone: "Asia/Kolkata",
@@ -66,13 +63,6 @@ export const pages = [
   { id: "connect", num: "05", label: "Connect" },
 ];
 
-export const intro = {
-  status: "Loading portfolio",
-  skip: "SKIP",
-  clusters: ["Backend", "Vision", "Retrieval", "Practice"],
-  lines: ["loading embeddings", "indexing 3 projects", "top-k ready"],
-};
-
 export const hero = {
   line1: "AI / ML",
   line2: "ENGINEER",
@@ -92,23 +82,86 @@ export const about = {
   period: ".",
   fullName: "MUHAMMED MISHAL",
   role: " · AI / ML ENGINEER · KOLLAM, KERALA",
-  bio: "I'm an AI/ML engineer from Kollam. I build machine learning and computer vision systems and serve them through tested Python APIs. At Bluecast Technologies I built a dermatology decision-support system that finds similar cases with DINOv2 and FAISS.",
+  bio: "I'm an AI/ML engineer from Kollam. I build Python machine learning and computer vision applications and serve them through tested APIs. At Blue Cast Technologies I contributed to an image-based dermatology decision-support system, extracting 768-dimensional DINOv2 embeddings and building FastAPI backends with Supabase PostgreSQL/pgvector across 198 classes.",
   portraitAlt: "Portrait of Muhammed Mishal",
   seeWorks: "See works",
   facts: [
-    { label: "EDUCATION", bold: "MCA · CGPA 8.33", text: " · TKM College of Engineering, Kollam · 2024-26", secondary: "BCA · Musaliar College of Arts and Science · 2021-24" },
-    { label: "EXPERIENCE", bold: "AI / ML Intern, DDSS", text: " · Bluecast Technologies · Jan-Apr 2026", secondary: "Built a dermatology decision-support system using DINOv2 case retrieval" },
-    { label: "STACK", text: "Python, FastAPI, Django, PyTorch, FAISS, scikit-learn, PostgreSQL" },
-    { label: "STATUS", bold: "Open to work, 2026", text: " · Kerala / Remote", live: true },
+    {
+      label: "EDUCATION",
+      bold: "MCA · GPA 8.33/10",
+      text: " · TKM College of Engineering · 08/2024 – 07/2026",
+      secondary: "BCA · Musaliar College of Arts and Science · 08/2021 – 04/2024",
+    },
+    {
+      label: "EXPERIENCE",
+      bold: "AI / ML Developer Intern",
+      text: " · Blue Cast Technologies · Jan – Apr 2026",
+      secondary:
+        "Contributed to 768-dim DINOv2 ViT-B case retrieval and FastAPI pgvector pipeline across 198 classes",
+    },
+    {
+      label: "CERTIFICATIONS",
+      bold: "Azure AI Essentials · IBM Deep Learning with Keras",
+      text: " · NPTEL Java · Python Data Science ML & AI · Data Engineering: SQL, Python & Spark",
+    },
+    {
+      label: "ADDITIONAL",
+      bold: "Additional projects",
+      text: " · Build Track Pro (Django, MySQL) · Fresh Cart (PHP/MySQL) · Drop for Life",
+    },
+    {
+      label: "STACK",
+      text: "Python, FastAPI, Supabase PostgreSQL, pgvector, PyTorch, FAISS, scikit-learn, Streamlit",
+    },
+    { label: "STATUS", bold: "Open to work, 2026", text: " · Kerala, UAE or remote", live: true },
   ],
 };
 
-export type Skill = { id: string; name: string; cluster: number; x: number; y: number; note: string };
+export type Skill = {
+  id: string;
+  name: string;
+  cluster: number;
+  x: number;
+  y: number;
+  note: string;
+};
 export const PROJECTS: Record<string, { status: string; target: string; skills: string[] }> = {
-  "Dermatology Decision Support": { status: "done", target: "ddss", skills: ["Python","FastAPI","PyTorch","DINOv2","FAISS","OpenCV","PostgreSQL","Image retrieval","React / TS"] },
-  "Productivity & Role Prediction": { status: "done", target: "role", skills: ["Python","Pandas","scikit-learn","SQLite"] },
-  "CareerLens AI": { status: "backend built", target: "careerlens", skills: ["Python","FastAPI","REST design","SQLite","FAISS","Gemini API","RAG pipelines","Sentence Transformers","Testing"] },
-  "This portfolio": { status: "live", target: "overview", skills: ["React / TS","Git"] },
+  "Dermatology Decision Support": {
+    status: "done",
+    target: "ddss",
+    skills: [
+      "Python",
+      "FastAPI",
+      "PyTorch",
+      "DINOv2",
+      "FAISS",
+      "OpenCV",
+      "PostgreSQL",
+      "Image retrieval",
+      "React / TS",
+    ],
+  },
+  "Productivity & Role Prediction": {
+    status: "done",
+    target: "role",
+    skills: ["Python", "scikit-learn", "Streamlit", "Pandas"],
+  },
+  "CareerLens AI": {
+    status: "backend built",
+    target: "careerlens",
+    skills: [
+      "Python",
+      "FastAPI",
+      "REST design",
+      "SQLite",
+      "FAISS",
+      "Gemini API",
+      "RAG pipelines",
+      "Sentence Transformers",
+      "Testing",
+    ],
+  },
+  "This portfolio": { status: "live", target: "overview", skills: ["React / TS", "Git"] },
 };
 
 export const expertise = {
@@ -125,41 +178,41 @@ export const expertise = {
   },
   clusters: ["BACKEND & DATA", "ML & VISION", "RETRIEVAL & RAG", "ENGINEERING"],
   skills: [
-    { id: "py", name: "Python", cluster: 0, x: .15, y: .24, note: "" },
-    { id: "fastapi", name: "FastAPI", cluster: 0, x: .29, y: .21, note: "" },
-    { id: "rest", name: "REST design", cluster: 0, x: .15, y: .33, note: "" },
-    { id: "pg", name: "PostgreSQL", cluster: 0, x: .29, y: .32, note: "" },
-    { id: "sqlite", name: "SQLite", cluster: 0, x: .22, y: .42, note: "" },
-    { id: "torch", name: "PyTorch", cluster: 1, x: .64, y: .23, note: "" },
-    { id: "dino", name: "DINOv2", cluster: 1, x: .80, y: .23, note: "" },
-    { id: "sk", name: "scikit-learn", cluster: 1, x: .64, y: .33, note: "" },
-    { id: "pandas", name: "Pandas", cluster: 1, x: .80, y: .34, note: "" },
-    { id: "cv", name: "OpenCV", cluster: 1, x: .70, y: .43, note: "" },
-    { id: "image", name: "Image retrieval", cluster: 2, x: .62, y: .67, note: "" },
-    { id: "sentence", name: "Sentence Transformers", cluster: 2, x: .81, y: .67, note: "" },
-    { id: "faiss", name: "FAISS", cluster: 2, x: .64, y: .78, note: "" },
-    { id: "rag", name: "RAG pipelines", cluster: 2, x: .77, y: .78, note: "" },
-    { id: "gemini", name: "Gemini API", cluster: 2, x: .69, y: .87, note: "" },
-    { id: "git", name: "Git", cluster: 3, x: .15, y: .67, note: "" },
-    { id: "docker", name: "Docker", cluster: 3, x: .29, y: .67, note: "" },
-    { id: "test", name: "Testing", cluster: 3, x: .15, y: .78, note: "" },
-    { id: "react", name: "React / TS", cluster: 3, x: .29, y: .78, note: "" },
-    { id: "streamlit", name: "Streamlit", cluster: 3, x: .21, y: .87, note: "" },
+    { id: "py", name: "Python", cluster: 0, x: 0.15, y: 0.24, note: "" },
+    { id: "fastapi", name: "FastAPI", cluster: 0, x: 0.29, y: 0.21, note: "" },
+    { id: "rest", name: "REST design", cluster: 0, x: 0.15, y: 0.33, note: "" },
+    { id: "pg", name: "PostgreSQL", cluster: 0, x: 0.29, y: 0.32, note: "" },
+    { id: "sqlite", name: "SQLite", cluster: 0, x: 0.22, y: 0.42, note: "" },
+    { id: "torch", name: "PyTorch", cluster: 1, x: 0.64, y: 0.23, note: "" },
+    { id: "dino", name: "DINOv2", cluster: 1, x: 0.8, y: 0.23, note: "" },
+    { id: "sk", name: "scikit-learn", cluster: 1, x: 0.64, y: 0.33, note: "" },
+    { id: "pandas", name: "Pandas", cluster: 1, x: 0.8, y: 0.34, note: "" },
+    { id: "cv", name: "OpenCV", cluster: 1, x: 0.7, y: 0.43, note: "" },
+    { id: "image", name: "Image retrieval", cluster: 2, x: 0.62, y: 0.67, note: "" },
+    { id: "sentence", name: "Sentence Transformers", cluster: 2, x: 0.81, y: 0.67, note: "" },
+    { id: "faiss", name: "FAISS", cluster: 2, x: 0.64, y: 0.78, note: "" },
+    { id: "rag", name: "RAG pipelines", cluster: 2, x: 0.77, y: 0.78, note: "" },
+    { id: "gemini", name: "Gemini API", cluster: 2, x: 0.69, y: 0.87, note: "" },
+    { id: "git", name: "Git", cluster: 3, x: 0.15, y: 0.67, note: "" },
+    { id: "docker", name: "Docker", cluster: 3, x: 0.29, y: 0.67, note: "" },
+    { id: "test", name: "Testing", cluster: 3, x: 0.15, y: 0.78, note: "" },
+    { id: "react", name: "React / TS", cluster: 3, x: 0.29, y: 0.78, note: "" },
+    { id: "streamlit", name: "Streamlit", cluster: 3, x: 0.21, y: 0.87, note: "" },
   ] as Skill[],
 };
 
 export type ImportanceItem = { label: string; value: number };
-export type PipelineStep = { label: string; shot: string; zoom?: boolean };
-export type PipelineRow = { label: string; shot: string; zoom?: boolean };
-export type FilmstripItem = { k: string; t: string };
-export type PipelineBox = { label: string; caption: string; built: boolean; desc?: string };
+type PipelineStep = { label: string; shot: string; zoom?: boolean };
+type PipelineRow = { label: string; shot: string; zoom?: boolean };
+type FilmstripItem = { k: string; t: string };
+type PipelineBox = { label: string; caption: string; built: boolean; desc?: string };
 
-export type TableRow = {
+type TableRow = {
   id: string;
   vals: string[];
 };
 
-export type TableOutput = {
+type TableOutput = {
   label: string;
   vals: string[];
 };
@@ -208,7 +261,7 @@ export type CaseStudyData = {
   shots?: { k: string; t: string; d: string }[];
 };
 
-export type CaseStudyScreen = { shot: string; label: string; desc: string };
+type CaseStudyScreen = { shot: string; label: string; desc: string };
 
 export type CaseStudySection = {
   id: string;
@@ -242,8 +295,9 @@ export const works = {
     {
       id: "ddss",
       title: "Dermatology Decision Support",
-      sentence: "A doctor gets a ranked list of similar cases with the evidence, not one confident guess.",
-      line: "DINOv2 embeddings and FAISS similarity search. Built at Bluecast Technologies.",
+      sentence:
+        "A clinician gets a ranked list of similar past cases with evidence, not one confident guess.",
+      line: "DINOv2 ViT-B embeddings, FAISS cosine retrieval, and FastAPI with Supabase PostgreSQL/pgvector. Built at Blue Cast Technologies.",
       mutedLine: "Support, not diagnosis.",
       buttonLabel: "Deep Dive",
       statusLine: "Support, not diagnosis.",
@@ -271,28 +325,31 @@ export const works = {
       ],
       links: {},
       metrics: [],
-      problem: "A doctor gets a ranked list of similar cases with the evidence, not one confident guess.",
-      approach: "DINOv2 embeddings and FAISS similarity search. Built at Bluecast Technologies.",
+      problem:
+        "Clinician-facing tool that returns ranked similar dermatological conditions with High/Moderate/Low confidence indicators to support case review.",
+      approach:
+        "768-dim DINOv2 ViT-B embeddings, FAISS cosine retrieval, and FastAPI with Supabase PostgreSQL/pgvector across 198 SD-198 classes.",
       result: "Support, not diagnosis.",
-      stack: ["DINOv2 ViT-B", "PyTorch", "FAISS", "pgvector"],
+      stack: ["DINOv2 ViT-B", "FastAPI", "Supabase", "pgvector", "FAISS", "PyTorch"],
     },
     {
       id: "role",
       title: "Productivity and Role Prediction",
-      sentence: "Predicts how productive a worker is and groups workers by behaviour.",
-      line: "Random Forest regression for the productivity score, K-Means for the worker groups.",
-      mutedLine: "Objective numeric score and behavioural cluster pattern.",
-      statusLine: "Random Forest regression and K-Means clustering.",
+      sentence:
+        "Predicts employee productivity and roles, reaching approximately 87% classification accuracy.",
+      line: "Random Forest and Logistic Regression models saved with joblib and served through Streamlit.",
+      mutedLine: "EDA, feature engineering, and approximately 87% classification accuracy.",
+      statusLine: "Random Forest, Logistic Regression, and Streamlit.",
       buttonLabel: "Details",
       pipelineSteps: [
-        "Behaviour features",
-        "Random Forest regression",
-        "K-Means clustering",
-        "Score and role",
+        "EDA & feature engineering",
+        "Random Forest & Logistic Regression",
+        "~87% classification accuracy",
+        "Streamlit & joblib deployment",
       ],
       table: {
         columns: [
-          "Subject",
+          "Subject (Sample)",
           "Typing_Intensity",
           "Idle_Duration",
           "Task_Switching_Frequency",
@@ -303,12 +360,12 @@ export const works = {
           "Time_Docs",
         ],
         rows: [
-          { id: "S001", vals: ["75", "23", "11", "4.9", "7.65", "9.8", "13.78", "13.16"] },
-          { id: "S003", vals: ["61", "9", "7", "10.86", "12.22", "7.87", "7.6", "7.33"] },
-          { id: "S007", vals: ["87", "13", "4", "18.26", "19.24", "12.07", "0.33", "0.33"] },
+          { id: "Sample 1", vals: ["75", "23", "11", "4.9", "7.65", "9.8", "13.78", "13.16"] },
+          { id: "Sample 2", vals: ["61", "9", "7", "10.86", "12.22", "7.87", "7.6", "7.33"] },
+          { id: "Sample 3", vals: ["87", "13", "4", "18.26", "19.24", "12.07", "0.33", "0.33"] },
         ],
         outputs: [
-          { label: "Productivity score", vals: ["S001 53.48", "S003 54.36", "S007 77.14"] },
+          { label: "Productivity score", vals: ["53.48", "54.36", "77.14"] },
           { label: "Label", vals: ["Medium", "Medium", "High"] },
           { label: "Role", vals: ["Manager"] },
         ],
@@ -316,14 +373,17 @@ export const works = {
       importance: [] as ImportanceItem[],
       links: {},
       metrics: [],
-      problem: "Predicts how productive a worker is and groups workers by behaviour.",
-      approach: "Random Forest regression for the productivity score, K-Means for the worker groups.",
-      stack: ["scikit-learn", "Python", "pandas"],
+      problem:
+        "Predicts employee productivity and roles, reaching approximately 87% classification accuracy.",
+      approach:
+        "Random Forest and Logistic Regression models evaluated with cross-validation and served through Streamlit.",
+      stack: ["scikit-learn", "Streamlit", "joblib", "Python", "pandas"],
     },
     {
       id: "careerlens",
       title: "CareerLens AI",
-      sentence: "Matches a resume to roles and explains the gaps. Backend is built and tested; the front end is being rebuilt.",
+      sentence:
+        "Matches a resume to roles and explains the gaps. Backend is built and tested; the front end is being rebuilt.",
       line: "Sentence Transformers embeddings of resumes and roles, FAISS similarity search, Gemini gap explanation.",
       mutedLine: "Automated semantic role matching with verified citations.",
       statusLine: "Backend built and tested. Front end being rebuilt.",
@@ -336,19 +396,61 @@ export const works = {
         "Skill gaps & store",
       ],
       pipelineBoxes: [
-        { label: "Resume PDF", caption: "Resume parsing", built: true, desc: "Parses candidate profile data from raw PDF documents." },
-        { label: "Profile extraction", caption: "Profile extraction", built: true, desc: "Extracts technical skills, experience, and education into structured entities." },
-        { label: "Embeddings (MiniLM)", caption: "MiniLM embeddings", built: true, desc: "Generates 384-dimensional dense semantic vectors using Sentence Transformers." },
-        { label: "FAISS search", caption: "Cosine similarity", built: true, desc: "Indexes role definitions and runs fast nearest-neighbor similarity searches." },
-        { label: "Gemini explanation with citations", caption: "Gemini citations", built: true, desc: "Synthesises personalised skill gap analysis with direct source citations." },
-        { label: "Job match and skill gaps", caption: "SQLAlchemy store", built: true, desc: "Calculates match scores and persists role-fit evaluation in SQLite." },
-        { label: "Front end", caption: "Being rebuilt", built: false, desc: "Next-generation responsive UI currently in active development." },
-        { label: "Deployment", caption: "Pending", built: false, desc: "Cloud containerization and deployment pending frontend completion." },
+        {
+          label: "Resume PDF",
+          caption: "Resume parsing",
+          built: true,
+          desc: "Parses candidate profile data from raw PDF documents.",
+        },
+        {
+          label: "Profile extraction",
+          caption: "Profile extraction",
+          built: true,
+          desc: "Extracts technical skills, experience, and education into structured entities.",
+        },
+        {
+          label: "Embeddings (MiniLM)",
+          caption: "MiniLM embeddings",
+          built: true,
+          desc: "Generates 384-dimensional dense semantic vectors using Sentence Transformers.",
+        },
+        {
+          label: "FAISS search",
+          caption: "Cosine similarity",
+          built: true,
+          desc: "Indexes role definitions and runs fast nearest-neighbor similarity searches.",
+        },
+        {
+          label: "Gemini explanation with citations",
+          caption: "Gemini citations",
+          built: true,
+          desc: "Synthesises personalised skill gap analysis with direct source citations.",
+        },
+        {
+          label: "Job match and skill gaps",
+          caption: "SQLAlchemy store",
+          built: true,
+          desc: "Calculates match scores and persists role-fit evaluation in SQLite.",
+        },
+        {
+          label: "Front end",
+          caption: "Being rebuilt",
+          built: false,
+          desc: "Next-generation responsive UI currently in active development.",
+        },
+        {
+          label: "Deployment",
+          caption: "Pending",
+          built: false,
+          desc: "Cloud containerization and deployment pending frontend completion.",
+        },
       ],
       links: {},
       metrics: [],
-      problem: "Matches a resume to roles and explains the gaps. Backend is built and tested; the front end is being rebuilt.",
-      approach: "Sentence Transformers embeddings of resumes and roles, FAISS similarity search, Gemini gap explanation.",
+      problem:
+        "Matches a resume to roles and explains the gaps. Backend is built and tested; the front end is being rebuilt.",
+      approach:
+        "Sentence Transformers embeddings of resumes and roles, FAISS similarity search, Gemini gap explanation.",
       stack: ["FastAPI", "Python", "SQLite", "Sentence Transformers", "FAISS", "Gemini API"],
     },
   ] as Project[],
@@ -357,25 +459,6 @@ export const works = {
     alt: "DermAI uploaded skin image alongside ranked differential suggestions and confidence scores",
   },
   demoNote: "Recorded retrieval result · not live inference",
-  retrievalDemo: {
-    title: "Try retrieval",
-    badge: "PRECOMPUTED DEMO",
-    intro: "DDSS compares a skin image with reference images using visual embeddings. This public demo presents prepared examples from the research workflow, without running the model.",
-    disclaimer: "This is an experimental research demonstration using precomputed image-similarity results. Similarity does not establish a diagnosis and should not replace evaluation by a qualified healthcare professional.",
-    sampleNote: "Sample illustration · approved query images and actual retrieval results have not been supplied yet.",
-    queryLabel: "Query image",
-    resultsLabel: "Similar reference cases",
-    referenceLabel: "Reference image",
-    anotherExample: "Select another example",
-    similarityLabel: "Similarity",
-    empty: "No reference matches for this sample.",
-    references: [] as ReferenceCase[],
-    samples: [
-      { id: "sample-a", label: "Example 1", image: sampleA, placeholder: true, matches: [] },
-      { id: "sample-b", label: "Example 2", image: sampleB, placeholder: true, matches: [] },
-      { id: "sample-c", label: "Example 3", image: sampleC, placeholder: true, matches: [] },
-    ] as RetrievalSample[],
-  },
   caseStudy: {
     title: ["DERMATOLOGY", "DECISION SUPPORT."],
     close: "Close",
@@ -412,12 +495,36 @@ export const works = {
         title: "The clinical workflow screens",
         text: "Six key product screens from patient intake to treatment planning:",
         screens: [
-          { shot: "ddss-2", label: "Dashboard", desc: "Daily patient intake, visit logs, and disease distribution at a glance." },
-          { shot: "ddss-5", label: "Patient history", desc: "Chronological visit records with past diagnoses and case notes." },
-          { shot: "ddss-6", label: "Photo upload", desc: "High-resolution lesion image upload with automated quality checks." },
-          { shot: "ddss-8", label: "Differentials", desc: "Similar conditions ranked with confidence bars for clinician confirmation." },
-          { shot: "ddss-9", label: "GASI severity", desc: "Region-based severity calculator mapping scores to Mild, Moderate, or Severe." },
-          { shot: "ddss-10", label: "Treatment plan", desc: "Pre-filled medications and dosages that the doctor edits, approves, and saves." },
+          {
+            shot: "ddss-2",
+            label: "Dashboard",
+            desc: "Daily patient intake, visit logs, and disease distribution at a glance.",
+          },
+          {
+            shot: "ddss-5",
+            label: "Patient history",
+            desc: "Chronological visit records with past diagnoses and case notes.",
+          },
+          {
+            shot: "ddss-6",
+            label: "Photo upload",
+            desc: "Lesion image upload to initiate the visual embedding pipeline.",
+          },
+          {
+            shot: "ddss-8",
+            label: "Differentials",
+            desc: "Similar conditions ranked with confidence bars for clinician confirmation.",
+          },
+          {
+            shot: "ddss-9",
+            label: "GASI severity",
+            desc: "Region-based severity calculator mapping scores to Mild, Moderate, or Severe.",
+          },
+          {
+            shot: "ddss-10",
+            label: "Treatment plan",
+            desc: "Pre-filled medications and dosages that the doctor edits, approves, and saves.",
+          },
         ],
       },
       {
@@ -426,9 +533,9 @@ export const works = {
         title: "Data and preprocessing",
         text: "The reference database is built on the published SD-198 benchmark dataset covering 198 skin conditions.",
         points: [
-          "Reference set: SD-198 is partitioned into reference training cases and a held-out evaluation test split.",
-          "Image preparation: Photos are preprocessed using OpenCV and Pillow, resized to 224×224 pixels, and normalised.",
-          "Patch division: The 224×224 image is divided into a 14×14 grid of 16×16 patches for Vision Transformer attention.",
+          "Reference set: SD-198 is partitioned into reference cases across all 198 disease classes.",
+          "Image preparation: Photos are preprocessed using OpenCV and PyTorch, transformed and normalised for Vision Transformer input.",
+          "Embedding representation: DINOv2 extracts patch tokens without supervised label bias across the lesion surface.",
         ],
       },
       {
@@ -441,7 +548,7 @@ export const works = {
           "768-d embedding: The [CLS] token condenses lesion color and texture into a single 768-dimensional dense vector.",
           "Similarity metric: Cosine similarity compares the query vector against indexed reference embeddings.",
           "FAISS index: Nearest-neighbour vector search retrieves closest reference matches with low latency.",
-          "Ranked results: Returns top-3 candidate cases with similarity bars mapped to High, Moderate, and Low confidence tiers.",
+          "Ranked results: Returns top candidate cases with similarity bars mapped to High, Moderate, and Low confidence tiers.",
         ],
         shot: "ddss-8",
         shotCaption: "Ranked differential candidates with similarity confidence bars.",
@@ -452,9 +559,9 @@ export const works = {
         title: "Backend and API",
         text: "The architecture separates clinical record management from low-latency visual inference services.",
         points: [
-          "Framework: Django powers the clinical portal, patient history, and severity grading; FastAPI serves vector retrieval.",
-          "Database: PostgreSQL stores patient records, case history, diagnoses, and saved prescriptions.",
-          "Authentication: Role-based doctor login provides secure access to the private clinical workspace.",
+          "FastAPI REST APIs: Built FastAPI endpoints to serve the end-to-end image upload, embedding extraction, and vector similarity retrieval pipeline.",
+          "Supabase PostgreSQL with pgvector: Integrated Supabase PostgreSQL with pgvector for vector storage and similarity search across the image-to-prediction pipeline.",
+          "Clinical case review: Clinician receives ranked dermatological conditions with High/Moderate/Low confidence indicators to support case review.",
         ],
       },
       {
@@ -462,9 +569,18 @@ export const works = {
         num: "6",
         title: "Retrieval methods compared",
         methods: [
-          { name: "MV-Mean", desc: "Averages feature vectors across multiple views of the same lesion into one centroid. Dropped because diverse stages blurred into unrepresentative averages." },
-          { name: "MV-CLS", desc: "Pools CLS token embeddings across multiple views to preserve visual transformer attention." },
-          { name: "kNN (FAISS)", desc: "Nearest-neighbour lookup over indexed individual training cases using cosine similarity, preserving intra-condition variety." },
+          {
+            name: "MV-Mean",
+            desc: "Averages feature vectors across multiple views of the same lesion into one centroid. Dropped because diverse stages blurred into unrepresentative averages.",
+          },
+          {
+            name: "MV-CLS",
+            desc: "Pools CLS token embeddings across multiple views to preserve visual transformer attention.",
+          },
+          {
+            name: "kNN (FAISS)",
+            desc: "Nearest-neighbour lookup over indexed individual training cases using cosine similarity, preserving intra-condition variety.",
+          },
         ],
       },
       {
@@ -480,22 +596,27 @@ export const works = {
       },
     ] as CaseStudySection[],
     shots: [
-      { k: "ddss", t: "Sign in", d: "Doctors sign in to a private workspace." },
+      {
+        k: "ddss",
+        t: "Clinical workspace",
+        d: "Clinician entry point to the decision support system.",
+      },
       { k: "ddss-2", t: "Dashboard", d: "Daily patients, visits and disease counts at a glance." },
       { k: "ddss-3", t: "Analytics", d: "Cases per month and severity distribution." },
       { k: "ddss-4", t: "Add patient", d: "Name, age, gender and contact create a new record." },
       { k: "ddss-5", t: "Patient history", d: "Every earlier visit with its confirmed diagnosis." },
       { k: "ddss-6", t: "Upload", d: "A lesion photograph starts the analysis." },
-      { k: "ddss-7", t: "Image analysis", d: "The photo is checked before the model runs." },
-      { k: "ddss-8", t: "Ranked differential", d: "Similar conditions ranked with confidence bars; the doctor confirms one." },
+      { k: "ddss-7", t: "Image analysis", d: "Extracting 768-dimensional DINOv2 feature vectors." },
+      {
+        k: "ddss-8",
+        t: "Ranked differential",
+        d: "Similar conditions ranked with confidence bars; the doctor confirms one.",
+      },
       { k: "ddss-9", t: "Severity: GAGS", d: "Region sliders compute the acne severity score." },
       { k: "ddss-10", t: "Treatment plan", d: "Pre-filled medicines the doctor edits and saves." },
     ],
   },
 };
-
-export type ReferenceCase = { id: string; image: string; label?: string; note?: string };
-export type RetrievalSample = { id: string; label: string; image: string; placeholder?: boolean; matches: { referenceId: string; similarity?: number }[] };
 
 export type JourneyStop = {
   year: string;
@@ -512,35 +633,35 @@ export const journey = {
       year: "2021",
       role: "BCA",
       place: "Musaliar College of Arts and Science",
-      line: "Bachelor of Computer Applications, algorithms, programming, and software foundations.",
+      line: "Bachelor of Computer Applications (08/2021 – 04/2024). Software foundations, programming, and algorithms.",
       tag: "Degree",
     },
     {
       year: "2024",
-      role: "MCA · CGPA 8.33",
-      place: "TKM College of Engineering, Kollam",
-      line: "Master of Computer Applications with focus on machine learning and intelligent systems.",
+      role: "MCA · GPA 8.33/10",
+      place: "TKM College of Engineering",
+      line: "Master of Computer Applications (08/2024 – 07/2026), GPA 8.33/10. Machine learning and intelligent systems.",
       tag: "Postgraduate",
     },
     {
       year: "2026",
-      role: "AI / ML Intern, DDSS",
-      place: "Bluecast Technologies (Jan to Apr)",
-      line: "Built a dermatology decision-support system using DINOv2 case retrieval and FAISS.",
+      role: "AI / ML Developer Intern",
+      place: "Blue Cast Technologies (Jan - Apr 2026)",
+      line: "Contributed to an image-based dermatology decision-support system with DINOv2, FAISS, and FastAPI with pgvector.",
       tag: "Internship",
     },
     {
       year: "2026",
       role: "AI / ML Engineer",
       place: "Open to work",
-      line: "Building machine learning and computer vision systems, open to work in Kerala, UAE or remote.",
+      line: "Building Python machine learning and computer vision applications, open to work in Kerala, UAE or remote.",
       tag: "Available",
     },
   ] as JourneyStop[],
   timeline: [
-    { when: "2021-24", what: "BCA", where: "Musaliar College of Arts and Science, Pathanamthitta" },
-    { when: "2024-26", what: "MCA · CGPA 8.33", where: "TKM College of Engineering, Kollam" },
-    { when: "Jan-Apr 2026", what: "AI / ML Intern, DDSS", where: "Bluecast Technologies" },
+    { when: "08/2021 - 04/2024", what: "BCA", where: "Musaliar College of Arts and Science" },
+    { when: "08/2024 - 07/2026", what: "MCA · GPA 8.33/10", where: "TKM College of Engineering" },
+    { when: "Jan - Apr 2026", what: "AI / ML Developer Intern", where: "Blue Cast Technologies" },
     { when: "2026", what: "AI / ML Engineer", where: "Open to work" },
   ],
   stream: ["embed -> 768-d", "search -> top-k", "rank -> 3 cases"],
@@ -573,7 +694,12 @@ export const connect = {
 };
 
 export const palette = [
-  ...pages.map((p) => ({ id: `go-${p.id}`, label: `Go to ${p.label}`, kind: "page" as const, target: p.id })),
+  ...pages.map((p) => ({
+    id: `go-${p.id}`,
+    label: `Go to ${p.label}`,
+    kind: "page" as const,
+    target: p.id,
+  })),
   { id: "cv", label: "Download CV", kind: "cv" as const },
   { id: "email", label: "Copy email", kind: "email" as const },
   { id: "gh", label: "Open GitHub", kind: "github" as const },
@@ -587,61 +713,146 @@ export const roleCaseStudy: CaseStudyData = {
   closeKey: "Esc",
   nav: [
     { id: "what-it-does", label: "What it does" },
-    { id: "pipeline-methods", label: "Pipeline & methods" },
-    { id: "behaviour-features", label: "Behaviour features" },
-    { id: "stack-outputs", label: "Stack & outputs" },
+    { id: "how-it-works", label: "How it works" },
+    { id: "stack-architecture", label: "Stack & architecture" },
+    { id: "results-limits", label: "Results & limits" },
   ],
   sections: [
     {
       id: "what-it-does",
       num: "1",
       title: "What it does",
-      text: "Predicts how productive a worker is and groups workers by behaviour based on desktop session activity logs. It outputs an objective numeric productivity score and behavioural cluster role classification.",
+      text: "Trained Random Forest and Logistic Regression models to predict employee productivity and roles from session activity logs, reaching approximately 87% classification accuracy.",
+      points: [
+        "Classification accuracy: Reaches approximately 87% accuracy predicting employee productivity levels and roles.",
+        "Feature evaluation: Analyzes behavioral metrics including typing intensity, idle duration, and application time distribution.",
+        "Interactive deployment: Models saved with joblib and served through an interactive Streamlit application for real-time prediction.",
+      ],
     },
     {
-      id: "pipeline-methods",
+      id: "how-it-works",
       num: "2",
-      title: "Pipeline & methods",
+      title: "How it works",
+      text: "A pipeline spanning exploratory data analysis, feature engineering, dual-model training, and real-time Streamlit prediction:",
       methods: [
         {
-          name: "Random Forest Regression",
-          desc: "Trained on tabular behavioural features to predict a continuous productivity score from 0 to 100.",
+          name: "EDA & Feature Engineering",
+          desc: "Extracts activity features including typing intensity, idle intervals, task switching frequency, and time allocated across coding, documentation, and communication tools.",
         },
         {
-          name: "K-Means Clustering",
-          desc: "Unsupervised clustering grouping workers into behavioural role patterns (e.g. Manager) based on activity time distribution.",
+          name: "Random Forest & Logistic Regression",
+          desc: "Trained Random Forest and Logistic Regression classifiers to evaluate productivity tiers and employee roles, reaching ~87% classification accuracy.",
         },
         {
-          name: "Feature Preprocessing",
-          desc: "Standardises and normalises 8 distinct activity features extracted from raw worker desktop sessions.",
+          name: "Model Evaluation & Persistence",
+          desc: "Rigorous cross-validation, feature importance ranking, and serialization with joblib for instant deployment.",
         },
+        {
+          name: "Streamlit App Deployment",
+          desc: "Interactive Streamlit application providing real-time inference and prediction from live or sample session parameters.",
+        },
+      ],
+      points: [
+        "Typing Intensity & Inactivity: Measures active keystroke density and idle duration during work intervals.",
+        "Application Breakdown: Allocates session time across coding, documentation, browsing, and communication tools.",
+        "Context Switching: Quantifies task switches between different desktop tools and windows.",
       ],
     },
     {
-      id: "behaviour-features",
+      id: "stack-architecture",
       num: "3",
-      title: "Behaviour features",
-      text: "Eight behavioural features are tracked across worker sessions: Typing Intensity, Idle Duration, Task Switching Frequency, Time Coding, Time Email, Time Social Media, Time Browsing, and Time Docs.",
+      title: "Stack and architecture",
+      text: "Built in Python using established machine learning and data science libraries:",
       points: [
-        "Typing Intensity: Active keystroke density during work intervals.",
-        "Idle Duration: Total inactivity duration across recorded sessions.",
-        "Task Switching: Context switches between distinct desktop applications.",
-        "Application Breakdown: Hours allocated to Coding, Email, Social Media, Browsing, and Docs.",
+        "scikit-learn: Powers Random Forest, Logistic Regression, model evaluation, and cross-validation pipelines.",
+        "Streamlit: Delivers the interactive front-end application for real-time model scoring and visualization.",
+        "joblib: Serializes trained machine learning pipelines for lightweight, fast-loading inference.",
+        "pandas & NumPy: Handles exploratory data analysis, data cleaning, and feature engineering transformations.",
       ],
     },
     {
-      id: "stack-outputs",
+      id: "results-limits",
       num: "4",
-      title: "Stack & outputs",
-      text: "Built in Python using scikit-learn for Random Forest regression and K-Means clustering, Pandas for data processing, and SQLite for session storage.",
+      title: "Results and limits",
+      text: "Model benchmarks and operational boundaries evaluated on curated session datasets:",
       points: [
-        "Infers productivity score (e.g. S001: 53.48, S003: 54.36, S007: 77.14).",
-        "Categorises score tiers into Medium and High performance.",
-        "Groups workers into role clusters (Manager).",
+        "Classification benchmark: ~87% classification accuracy across validated test splits.",
+        "Sample session data: Evaluated against benchmark test sessions with Medium and High productivity classifications.",
+        "Desktop activity scope: Evaluates computer interaction patterns only; does not capture offline meetings or subjective work quality.",
       ],
     },
   ],
 };
+
+export interface CareerLensStage {
+  num: string;
+  label: string;
+  fullLabel?: string;
+  caption: string;
+  built: boolean;
+  desc: string;
+}
+
+export const careerlensStages: CareerLensStage[] = [
+  {
+    num: "01",
+    label: "Resume PDF",
+    caption: "Resume parsing",
+    built: true,
+    desc: "Parses candidate profile data from raw PDF documents into structured entities.",
+  },
+  {
+    num: "02",
+    label: "Profile extraction",
+    caption: "Profile extraction",
+    built: true,
+    desc: "Extracts technical skills, experience, and education into structured entities.",
+  },
+  {
+    num: "03",
+    label: "Embeddings (MiniLM)",
+    caption: "MiniLM embeddings",
+    built: true,
+    desc: "Generates 384-dimensional dense semantic vectors using Sentence Transformers.",
+  },
+  {
+    num: "04",
+    label: "FAISS search",
+    caption: "Cosine similarity",
+    built: true,
+    desc: "Indexes role definitions and runs fast nearest-neighbor similarity searches.",
+  },
+  {
+    num: "05",
+    label: "Gemini citations",
+    fullLabel: "Gemini explanation with citations",
+    caption: "Gemini citations",
+    built: true,
+    desc: "Synthesises personalised skill gap analysis with direct source citations.",
+  },
+  {
+    num: "06",
+    label: "Job match & gaps",
+    fullLabel: "Job match and skill gaps",
+    caption: "SQLAlchemy store",
+    built: true,
+    desc: "Calculates match scores and persists role-fit evaluation in SQLite.",
+  },
+  {
+    num: "07",
+    label: "Front end",
+    caption: "Being rebuilt",
+    built: false,
+    desc: "Next-generation responsive UI currently in active development.",
+  },
+  {
+    num: "08",
+    label: "Deployment",
+    caption: "Pending",
+    built: false,
+    desc: "Cloud containerization and deployment pending frontend completion.",
+  },
+];
 
 export const careerlensCaseStudy: CaseStudyData = {
   title: ["CAREERLENS AI", "ARCHITECTURE."],
@@ -650,9 +861,9 @@ export const careerlensCaseStudy: CaseStudyData = {
   closeKey: "Esc",
   nav: [
     { id: "what-it-does", label: "What it does" },
-    { id: "pipeline-architecture", label: "Pipeline architecture" },
-    { id: "backend-stack", label: "Backend stack" },
-    { id: "current-status", label: "Current status & limits" },
+    { id: "how-it-works", label: "How it works" },
+    { id: "stack-architecture", label: "Stack & architecture" },
+    { id: "results-limits", label: "Results & limits" },
   ],
   sections: [
     {
@@ -660,51 +871,49 @@ export const careerlensCaseStudy: CaseStudyData = {
       num: "1",
       title: "What it does",
       text: "Matches a candidate resume to open roles and explains skill gaps with source citations, providing actionable alignment insights.",
+      points: [
+        "Semantic matching: Compares resume experience directly against indexed role definitions in vector space.",
+        "Evidence-backed explanations: Highlights specific skill gaps supported by direct textual quotes rather than arbitrary compatibility percentages.",
+        "Targeted transitions: Assists candidates in identifying concrete qualification requirements for career changes.",
+      ],
     },
     {
-      id: "pipeline-architecture",
+      id: "how-it-works",
       num: "2",
-      title: "Pipeline architecture",
-      methods: [
-        {
-          name: "Resume PDF Parsing",
-          desc: "Extracts candidate experience, technical skills, and education history from PDF documents into structured profile objects.",
-        },
-        {
-          name: "MiniLM Embeddings",
-          desc: "Generates dense 384-dimensional semantic vectors using Sentence Transformers to capture role requirements and experience nuances.",
-        },
-        {
-          name: "FAISS Similarity Search",
-          desc: "Indexes role definitions and performs fast cosine similarity searches to rank candidate fit.",
-        },
-        {
-          name: "Gemini Gap Explanation",
-          desc: "Synthesises personalised skill gap analysis with direct textual citations from the resume and target job description.",
-        },
+      title: "How it works",
+      text: `A semantic retrieval and cited explanation pipeline processes candidate profiles through ${careerlensStages.length} stages:`,
+      methods: careerlensStages.map((stage) => ({
+        name: stage.fullLabel || stage.label,
+        desc: `${stage.desc}${stage.built ? "" : ` (${stage.caption})`}`,
+      })),
+      points: [
+        "Local vectorization: Dense embeddings are computed locally using Sentence Transformers, keeping resume data private.",
+        "Direct citation: Gap explanations cite exact job qualification requirements and corresponding candidate experiences.",
       ],
     },
     {
-      id: "backend-stack",
+      id: "stack-architecture",
       num: "3",
-      title: "Backend stack",
-      text: "Implemented as a tested Python service using FastAPI for REST endpoints, SQLite and SQLAlchemy for persistence, Sentence Transformers for embeddings, and the Gemini API for cited explanations.",
+      title: "Stack and architecture",
+      text: "Implemented as a modular Python backend service combining fast vector search with generative explanation:",
       points: [
-        "FastAPI REST endpoints for resume ingestion and candidate evaluation.",
-        "Local Sentence Transformers (MiniLM) for private embedding generation.",
-        "FAISS vector store for sub-millisecond similarity queries.",
-        "SQLAlchemy store for candidate matches and persistent gap records.",
+        "FastAPI: Asynchronous REST endpoints for resume ingestion, parsing, and candidate match requests.",
+        "Sentence Transformers (all-MiniLM-L6-v2): Efficient local embedding generation producing 384-d dense vectors.",
+        "FAISS: High-speed vector index executing cosine similarity searches over target role vectors.",
+        "Gemini API: Structured prompt orchestration generating verifiable citations for identified skill gaps.",
+        "SQLAlchemy & SQLite: Persistent relational store for parsed profiles, candidate evaluations, and role definitions.",
       ],
     },
     {
-      id: "current-status",
+      id: "results-limits",
       num: "4",
-      title: "Current status & limits",
-      text: "Backend built and tested. Front end being rebuilt.",
+      title: "Results and limits",
+      text: "Current implementation milestone and active engineering constraints:",
       points: [
-        "Backend services, vector search, and Gemini integration are fully implemented and tested.",
-        "User interface is undergoing a complete architectural rebuild.",
-        "Production cloud deployment is pending frontend completion.",
+        "Backend status: Ingestion, MiniLM vector search, FAISS indexing, and Gemini citation pipelines are built and tested.",
+        "Frontend rebuild: User interface is undergoing a complete architectural rebuild for modern web standards.",
+        "Deployment readiness: Cloud containerization and production rollout are held pending frontend completion.",
+        "External dependencies: Cited explanations require active Gemini API connectivity and clean PDF formatting.",
       ],
     },
   ],

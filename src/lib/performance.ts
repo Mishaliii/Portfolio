@@ -1,8 +1,23 @@
-export const perfLayers = ["shader", "video", "headline", "grain", "blur", "gradients", "lenis", "wipe"] as const;
+export const perfLayers = [
+  "shader",
+  "video",
+  "headline",
+  "grain",
+  "blur",
+  "gradients",
+  "lenis",
+  "wipe",
+] as const;
 export type PerfLayer = (typeof perfLayers)[number];
 export const performanceLayers: Record<PerfLayer, boolean> = {
-  shader: true, video: true, headline: true, grain: true,
-  blur: true, gradients: true, lenis: true, wipe: true,
+  shader: true,
+  video: true,
+  headline: true,
+  grain: true,
+  blur: true,
+  gradients: true,
+  lenis: true,
+  wipe: true,
 };
 export function setPerformanceLayer(layer: PerfLayer, enabled: boolean) {
   performanceLayers[layer] = enabled;
@@ -13,4 +28,4 @@ export function sceneResolution(width: number, height: number, pixelRatio: numbe
   const scale = Math.min(pixelRatio || 1, 1, 1600 / width);
   return { width: Math.round(width * scale), height: Math.round(height * scale) };
 }
-export const useSmallVideo = (width: number) => width < 1500;
+export const isSmallVideo = (width: number) => width <= 900;

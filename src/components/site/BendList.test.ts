@@ -4,7 +4,7 @@ import { describe, it, expect } from "vitest";
 export function calculateItemTransform(
   itemIndex: number,
   progress: number,
-  focusedHeight: number = 100
+  focusedHeight: number = 100,
 ) {
   const d = itemIndex - progress;
   const absD = Math.abs(d);

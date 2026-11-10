@@ -1,8 +1,9 @@
 import { useEffect, useRef } from "react";
 
 export type WheelCaptureHandler = {
+  isPointerOver?: () => boolean;
   canConsume: (dir: 1 | -1) => boolean;
-  consume: (dir: 1 | -1) => void;
+  consume: (dir: 1 | -1, deltaY?: number) => void;
 };
 
 const registry = new Map<string, WheelCaptureHandler>();
@@ -36,8 +37,9 @@ export function useWheelCapture(pageId: string, handler: WheelCaptureHandler | n
       return;
     }
     const bridge: WheelCaptureHandler = {
+      isPointerOver: () => handlerRef.current?.isPointerOver?.() ?? true,
       canConsume: (dir) => handlerRef.current?.canConsume(dir) ?? false,
-      consume: (dir) => handlerRef.current?.consume(dir),
+      consume: (dir, deltaY) => handlerRef.current?.consume(dir, deltaY),
     };
     registerWheelCapture(pageId, bridge);
     return () => {

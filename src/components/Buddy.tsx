@@ -3,32 +3,7 @@ import { gsap } from "gsap";
 import { matchBuddyIntent, type BuddyMood, DEFAULT_FOLLOW_UPS } from "@/lib/buddy-matcher";
 
 export type BuddyPose =
-  | "idle"
-  | "run"
-  | "wave"
-  | "sleep"
-  | "surprised"
-  | "laugh"
-  | "stretch"
-  | "sit_a"
-  | "sit_b";
-
-interface TextToken {
-  text: string;
-  bold: boolean;
-}
-
-function parseTokens(str: string): TextToken[] {
-  const parts = str.split(/(\*\*[^*]+\*\*)/g);
-  return parts
-    .filter((p) => p.length > 0)
-    .map((part) => {
-      if (part.startsWith("**") && part.endsWith("**")) {
-        return { text: part.slice(2, -2), bold: true };
-      }
-      return { text: part, bold: false };
-    });
-}
+  "idle" | "run" | "wave" | "sleep" | "surprised" | "laugh" | "stretch" | "sit_a" | "sit_b";
 
 interface ChatMessage {
   id: string;
@@ -36,6 +11,81 @@ interface ChatMessage {
   text: string;
   isTyping?: boolean;
   typedLength?: number;
+}
+
+function renderFormattedText(raw: string): React.ReactNode {
+  if (!raw) return null;
+
+  // Split by line breaks first
+  const lines = raw.split(/\r?\n/);
+
+  return (
+    <>
+      {lines.map((line, lineIdx) => {
+        // Regex matches markdown links [text](url), complete bold **text**, or unclosed **text at end
+        const tokenRegex = /(\[[^\]]+\]\([^)]+\)|\*\*[^*]+\*\*|\*\*[^*]+$)/g;
+        const parts = line.split(tokenRegex);
+
+        const nodes: React.ReactNode[] = [];
+        parts.forEach((part, pIdx) => {
+          if (!part) return;
+
+          // Markdown link
+          const linkMatch = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+          if (linkMatch) {
+            nodes.push(
+              <a
+                key={`l-${lineIdx}-${pIdx}`}
+                href={linkMatch[2]}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="underline hover:text-white"
+              >
+                {linkMatch[1]}
+              </a>,
+            );
+            return;
+          }
+
+          // Complete bold **text**
+          if (part.startsWith("**") && part.endsWith("**") && part.length >= 4) {
+            nodes.push(
+              <strong key={`b-${lineIdx}-${pIdx}`} className="buddy-hl font-bold text-white">
+                {part.slice(2, -2)}
+              </strong>,
+            );
+            return;
+          }
+
+          // Incomplete bold (e.g. during typewriter typing "**Dermatology")
+          if (part.startsWith("**")) {
+            const clean = part.slice(2);
+            if (clean.length > 0) {
+              nodes.push(
+                <strong key={`pb-${lineIdx}-${pIdx}`} className="buddy-hl font-bold text-white">
+                  {clean}
+                </strong>,
+              );
+            }
+            return;
+          }
+
+          // Strip any stray ** in normal text
+          const sanitized = part.replace(/\*\*/g, "");
+          if (sanitized) {
+            nodes.push(<span key={`s-${lineIdx}-${pIdx}`}>{sanitized}</span>);
+          }
+        });
+
+        return (
+          <div key={`line-${lineIdx}`} className={lineIdx > 0 ? "mt-1.5" : ""}>
+            {nodes.length > 0 ? nodes : <br />}
+          </div>
+        );
+      })}
+    </>
+  );
 }
 
 interface IdleBubbleItem {
@@ -49,34 +99,146 @@ interface IdleBubbleItem {
 
 const IDLE_BUBBLES_POOL: IdleBubbleItem[] = [
   // Time of day
-  { id: "t1", text: "Good morning! Coffee first, portfolio second.", action: "Ask me something", query: "Tell me about Mishal", timeContext: "morning" },
-  { id: "t2", text: "Late night coding session? Let's explore some ML.", action: "What can you do?", query: "What can you do?", timeContext: "night" },
+  {
+    id: "t1",
+    text: "Good morning! Coffee first, portfolio second.",
+    action: "Ask me something",
+    query: "Tell me about Mishal",
+    timeContext: "morning",
+  },
+  {
+    id: "t2",
+    text: "Late night coding session? Let's explore some ML.",
+    action: "What can you do?",
+    query: "What can you do?",
+    timeContext: "night",
+  },
   // Returning to tab / scroll
-  { id: "r1", text: "You're back! I wasn't counting. (It was 4 minutes.)", action: "What's new?", query: "What has Mishal built?" },
-  { id: "s1", text: "Whoa, speed reader! Want the 10 second version?", action: "Tell me about Mishal", query: "Who is Mishal?" },
-  { id: "s2", text: "Scrolling fast! Looking for anything specific?", action: "Show projects", query: "What has Mishal built?" },
+  {
+    id: "r1",
+    text: "You're back! I wasn't counting. (It was 4 minutes.)",
+    action: "What's new?",
+    query: "What has Mishal built?",
+  },
+  {
+    id: "s1",
+    text: "Whoa, speed reader! Want the 10 second version?",
+    action: "Tell me about Mishal",
+    query: "Who is Mishal?",
+  },
+  {
+    id: "s2",
+    text: "Scrolling fast! Looking for anything specific?",
+    action: "Show projects",
+    query: "What has Mishal built?",
+  },
   // Page aware: Works
-  { id: "w1", text: "Psst, DDSS is the one with the clinical images.", action: "Tell me about DDSS", query: "Tell me about DDSS", page: "works" },
-  { id: "w2", text: "Three case studies here. DDSS is a personal favourite.", action: "Why DDSS?", query: "How does DDSS work?", page: "works" },
+  {
+    id: "w1",
+    text: "Psst, DDSS is the one with the clinical images.",
+    action: "Tell me about DDSS",
+    query: "Tell me about DDSS",
+    page: "works",
+  },
+  {
+    id: "w2",
+    text: "Three case studies here. DDSS is a personal favourite.",
+    action: "Why DDSS?",
+    query: "How does DDSS work?",
+    page: "works",
+  },
   // Page aware: Journey
-  { id: "j1", text: "That is a lot of years and chai.", action: "How did he start?", query: "Education background", page: "journey" },
-  { id: "j2", text: "Notice the odometer rolling back in time?", action: "Career path", query: "Tell me about your career", page: "journey" },
+  {
+    id: "j1",
+    text: "That is a lot of years and chai.",
+    action: "How did he start?",
+    query: "Education background",
+    page: "journey",
+  },
+  {
+    id: "j2",
+    text: "Notice the odometer rolling back in time?",
+    action: "Career path",
+    query: "Tell me about your career",
+    page: "journey",
+  },
   // Page aware: Expertise
-  { id: "e1", text: "Python, FastAPI, PyTorch... he even knows what a tensor is.", action: "Tech stack?", query: "Tech stack?", page: "expertise" },
-  { id: "e2", text: "Computer vision and NLP are his core superpowers.", action: "What is he best at?", query: "What is he best at?", page: "expertise" },
+  {
+    id: "e1",
+    text: "Python, FastAPI, PyTorch... he even knows what a tensor is.",
+    action: "Tech stack?",
+    query: "Tech stack?",
+    page: "expertise",
+  },
+  {
+    id: "e2",
+    text: "Computer vision and NLP are his core superpowers.",
+    action: "What is he best at?",
+    query: "What is he best at?",
+    page: "expertise",
+  },
   // Page aware: Connect
-  { id: "c1", text: "Say hi, he replies faster than me.", action: "Contact", query: "How can I contact Mishal?", page: "connect" },
-  { id: "c2", text: "Coffee chat or job offer? He's open to both.", action: "Is he available?", query: "Is he available to hire?", page: "connect" },
+  {
+    id: "c1",
+    text: "Say hi, he replies faster than me.",
+    action: "Contact",
+    query: "How can I contact Mishal?",
+    page: "connect",
+  },
+  {
+    id: "c2",
+    text: "Coffee chat or job offer? He's open to both.",
+    action: "Is he available?",
+    query: "Is he available to hire?",
+    page: "connect",
+  },
   // Page aware: About
-  { id: "a1", text: "All facts verified. No hallucinations in this bio.", action: "Why hire him?", query: "Why should I hire him?", page: "about" },
-  { id: "a2", text: "TKM College of Engineering and Bluecast roots!", action: "Background", query: "Tell me about your background", page: "about" },
+  {
+    id: "a1",
+    text: "All facts verified. No hallucinations in this bio.",
+    action: "Why hire him?",
+    query: "Why should I hire him?",
+    page: "about",
+  },
+  {
+    id: "a2",
+    text: "TKM College of Engineering and Blue Cast roots!",
+    action: "Background",
+    query: "Tell me about your background",
+    page: "about",
+  },
   // Generic & playful
-  { id: "g1", text: "I can tell jokes. They are bad.", action: "Tell me a joke", query: "Tell me a joke" },
+  {
+    id: "g1",
+    text: "I can tell jokes. They are bad.",
+    action: "Tell me a joke",
+    query: "Tell me a joke",
+  },
   { id: "g2", text: "Poke me. I dare you." },
-  { id: "g3", text: "Did you know Mishal is open to work?", action: "Is he available?", query: "Is Mishal available for hire?" },
-  { id: "g4", text: "I don't sleep often, but I might doze off soon.", action: "Ask me anything", query: "What are your skills?" },
-  { id: "g5", text: "Want to see my wooden dance moves?", action: "Dance for me", query: "Dance for me" },
-  { id: "g6", text: "Tabs or spaces? Let's play a game.", action: "Play a game", query: "Play a game" },
+  {
+    id: "g3",
+    text: "Did you know Mishal is open to work?",
+    action: "Is he available?",
+    query: "Is Mishal available for hire?",
+  },
+  {
+    id: "g4",
+    text: "I don't sleep often, but I might doze off soon.",
+    action: "Ask me anything",
+    query: "What are your skills?",
+  },
+  {
+    id: "g5",
+    text: "Want to see my wooden dance moves?",
+    action: "Dance for me",
+    query: "Dance for me",
+  },
+  {
+    id: "g6",
+    text: "Tabs or spaces? Let's play a game.",
+    action: "Play a game",
+    query: "Play a game",
+  },
 ];
 
 const INITIAL_TRANSCRIPT: ChatMessage[] = [
@@ -107,8 +269,21 @@ export function Buddy() {
   const askedIntents = useRef<Set<string>>(new Set());
   const hasChatted = useRef(false);
 
+  // Visitor identity & conversation memory (session React state)
+  const [visitorName, setVisitorName] = useState<string | null>(() => {
+    try {
+      return sessionStorage.getItem("sprout_visitor_name");
+    } catch {
+      return null;
+    }
+  });
+  const awaitingName = useRef<boolean>(false);
+  const greetedWithName = useRef<boolean>(false);
+  const lastIntent = useRef<string | null>(null);
+  const lastResponseText = useRef<string | null>(null);
+
   // DOM Refs
-  const walkerRef = useRef<HTMLButtonElement>(null);
+  const walkerRef = useRef<HTMLDivElement>(null);
   const spriteWrapRef = useRef<HTMLDivElement>(null);
   const doorLeafRef = useRef<SVGGElement>(null);
   const mouthRef = useRef<HTMLDivElement>(null);
@@ -116,7 +291,7 @@ export function Buddy() {
   const chatInputRef = useRef<HTMLInputElement>(null);
   const transcriptScrollRef = useRef<HTMLDivElement>(null);
   const bubbleRef = useRef<HTMLDivElement>(null);
-  const [bubbleOffset, setBubbleOffset] = useState({ shiftX: 0, tailShiftX: 0 });
+  const [bubbleOffset, setBubbleOffset] = useState({ shiftX: 0, tailShiftX: 0, tailLeft: 110 });
 
   // Motion & Animation state
   const curPos = useRef({ x: 0, y: 0 });
@@ -166,38 +341,26 @@ export function Buddy() {
       setTimeout(preload, 2000);
     }
 
-    const checkImage = (src: string): Promise<boolean> =>
-      new Promise((resolve) => {
-        const i = new Image();
-        i.onload = () => resolve(true);
-        i.onerror = () => resolve(false);
-        i.src = src;
-      });
-
-    Promise.all([checkImage("/buddy/sit_a.webp"), checkImage("/buddy/sit_b.webp")]).then(
-      ([a, b]) => {
-        setHasSitA(a);
-        setHasSitB(b);
-      }
-    );
+    setHasSitA(false);
+    setHasSitB(false);
   }, []);
 
   const prefersReduced = useCallback(() => {
     return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   }, []);
 
-  // Bubble positioning: clamp horizontally with 12px viewport margins, and flip left if overlapping content
+  // Bubble positioning: clamp horizontally with 16px viewport margins, and flip left if overlapping content
   const updateBubblePlacement = useCallback(() => {
     if (!walkerRef.current || !bubbleRef.current) return;
     const walkerRect = walkerRef.current.getBoundingClientRect();
     const walkerCenterX = walkerRect.left + walkerRect.width / 2;
-    const bubbleWidth = bubbleRef.current.offsetWidth || 220;
+    const bubbleWidth = bubbleRef.current.offsetWidth || 240;
     const bubbleHeight = bubbleRef.current.offsetHeight || 60;
-    const margin = 12;
+    const margin = 16;
 
     // Check if on Works page or near right edge / content
     const isWorks =
-      window.location.hash === '#works' ||
+      window.location.hash === "#works" ||
       Boolean(document.querySelector('#works.is-active, [data-page="works"].is-active'));
 
     const canFlipLeft = walkerRect.left >= bubbleWidth + 24;
@@ -215,7 +378,10 @@ export function Buddy() {
         const checkPoints = [
           { x: candidateAboveLeft + 15, y: candidateAboveTop + 15 },
           { x: candidateAboveRight - 15, y: candidateAboveTop + 15 },
-          { x: (candidateAboveLeft + candidateAboveRight) / 2, y: (candidateAboveTop + candidateAboveBottom) / 2 },
+          {
+            x: (candidateAboveLeft + candidateAboveRight) / 2,
+            y: (candidateAboveTop + candidateAboveBottom) / 2,
+          },
         ];
         for (const pt of checkPoints) {
           if (pt.x > 0 && pt.x < window.innerWidth && pt.y > 0 && pt.y < window.innerHeight) {
@@ -223,7 +389,7 @@ export function Buddy() {
             if (el && !walkerRef.current.contains(el)) {
               if (
                 el.closest(
-                  'main h1, main h2, main h3, main p, main a, main button, main input, [data-content], .project-card, .case-study, .score-box, .interactive-explorer'
+                  "main h1, main h2, main h3, main p, main a, main button, main input, [data-content], .project-card, .case-study, .score-box, .interactive-explorer, .hero-chip, .productivity-card, .productivity-chart",
                 )
               ) {
                 shouldFlipLeft = true;
@@ -238,7 +404,7 @@ export function Buddy() {
     setFlipLeft(shouldFlipLeft);
 
     let minCenter = margin + bubbleWidth / 2;
-    const bendListEl = document.querySelector('.page.is-active .bend-list-wrapper');
+    const bendListEl = document.querySelector(".page.is-active .bend-list-wrapper");
     if (bendListEl) {
       const blRect = bendListEl.getBoundingClientRect();
       if (blRect.right > 0 && blRect.right < window.innerWidth * 0.75) {
@@ -250,8 +416,9 @@ export function Buddy() {
     const clampedCenter = Math.max(minCenter, Math.min(maxCenter, walkerCenterX));
     const shiftX = clampedCenter - walkerCenterX;
     const tailShiftX = shiftX;
+    const tailLeft = Math.max(14, Math.min(bubbleWidth - 14, bubbleWidth / 2 - shiftX));
 
-    setBubbleOffset({ shiftX, tailShiftX });
+    setBubbleOffset({ shiftX, tailShiftX, tailLeft });
   }, []);
 
   useEffect(() => {
@@ -269,7 +436,13 @@ export function Buddy() {
 
   // Idle Bobbing
   const startIdleBob = useCallback(() => {
-    if (prefersReduced() || isRunning.current || isPerched.current || isAsleep || idleBobTween.current)
+    if (
+      prefersReduced() ||
+      isRunning.current ||
+      isPerched.current ||
+      isAsleep ||
+      idleBobTween.current
+    )
       return;
     if (spriteWrapRef.current) {
       idleBobTween.current = gsap.to(spriteWrapRef.current, {
@@ -313,18 +486,45 @@ export function Buddy() {
         }
       }
 
+      // If chat panel is open, head bubble is strictly disabled
+      if (chatOpen) {
+        setBubbleVisible(false);
+        setBubbleText(null);
+        setBubbleAction(null);
+        return;
+      }
+
       setBubbleAction(action || null);
-      setBubbleVisible(true);
       setBubbleText(text);
+      setBubbleVisible(true);
 
       const fadeTime = 6000;
       bubbleFadeTimeout.current = window.setTimeout(() => {
         setBubbleVisible(false);
         setBubbleAction(null);
+        setBubbleText(null);
       }, fadeTime);
     },
-    [isAsleep]
+    [chatOpen, isAsleep],
   );
+
+  // Dismiss speech bubble immediately on any page change
+  useEffect(() => {
+    const dismissBubble = () => {
+      setBubbleVisible(false);
+      setBubbleText(null);
+      setBubbleAction(null);
+      if (bubbleFadeTimeout.current) clearTimeout(bubbleFadeTimeout.current);
+    };
+    window.addEventListener("page-change", dismissBubble);
+    window.addEventListener("hashchange", dismissBubble);
+    window.addEventListener("popstate", dismissBubble);
+    return () => {
+      window.removeEventListener("page-change", dismissBubble);
+      window.removeEventListener("hashchange", dismissBubble);
+      window.removeEventListener("popstate", dismissBubble);
+    };
+  }, []);
 
   // Dance sequence (alternate laugh and wave poses with hops for 3 seconds)
   const performDance = useCallback(() => {
@@ -387,7 +587,7 @@ export function Buddy() {
             }
           }, 150);
         },
-      }
+      },
     );
   }, []);
 
@@ -456,20 +656,19 @@ export function Buddy() {
         },
       });
     },
-    [prefersReduced, startIdleBob, stopIdleBob, updateBubblePlacement]
+    [prefersReduced, startIdleBob, stopIdleBob, updateBubblePlacement],
   );
 
   const returnHome = useCallback(
     (speed = 270, onComplete?: () => void) => {
       runTo(0, speed, onComplete);
     },
-    [runTo]
+    [runTo],
   );
 
   // Perch on door
   const perchOnDoor = useCallback(() => {
-    if (prefersReduced() || isRunning.current || isPerched.current || isAsleep || chatOpen)
-      return;
+    if (prefersReduced() || isRunning.current || isPerched.current || isAsleep || chatOpen) return;
     isPerched.current = true;
     stopIdleBob();
     setPose("run");
@@ -491,7 +690,7 @@ export function Buddy() {
                 sitToggle = !sitToggle;
                 setPose(sitToggle ? "sit_b" : "sit_a");
               },
-            }
+            },
           );
         } else {
           setPose("sleep");
@@ -528,7 +727,7 @@ export function Buddy() {
                 duration: 1.8,
                 ease: "power1.out",
                 onComplete: () => el.remove(),
-              }
+              },
             );
           }
         }, 760);
@@ -554,7 +753,7 @@ export function Buddy() {
           }
         },
       },
-      0
+      0,
     );
 
     tl.to(
@@ -569,7 +768,7 @@ export function Buddy() {
           }
         },
       },
-      0
+      0,
     );
 
     tl.to(
@@ -584,7 +783,7 @@ export function Buddy() {
           }
         },
       },
-      0.38
+      0.38,
     );
   }, [chatOpen, hasSitA, hasSitB, isAsleep, prefersReduced, stopIdleBob]);
 
@@ -626,13 +825,12 @@ export function Buddy() {
         },
       });
     },
-    [startIdleBob]
+    [startIdleBob],
   );
 
   // Sleep & Wake
   const putToSleep = useCallback(() => {
-    if (prefersReduced() || isRunning.current || isPerched.current || isAsleep || chatOpen)
-      return;
+    if (prefersReduced() || isRunning.current || isPerched.current || isAsleep || chatOpen) return;
     setIsAsleep(true);
     stopIdleBob();
     setPose("sleep");
@@ -679,12 +877,16 @@ export function Buddy() {
     let hasEntered = false;
     try {
       hasEntered = sessionStorage.getItem("sprout_entered") === "1";
-    } catch {}
+    } catch {
+      /* ignore */
+    }
 
     if (!hasEntered && !prefersReduced()) {
       try {
         sessionStorage.setItem("sprout_entered", "1");
-      } catch {}
+      } catch {
+        /* ignore */
+      }
 
       openDoor(() => {
         curPos.current.x = 20;
@@ -793,11 +995,12 @@ export function Buddy() {
       let candidates = IDLE_BUBBLES_POOL.filter((item) => {
         if (item.page && item.page !== currentPage) return false;
         if (item.timeContext === "morning" && hour >= 12) return false;
-        if (item.timeContext === "night" && (hour >= 6 && hour < 20)) return false;
+        if (item.timeContext === "night" && hour >= 6 && hour < 20) return false;
         return true;
       });
 
-      if (candidates.length === 0) candidates = IDLE_BUBBLES_POOL.filter((item) => !item.page && !item.timeContext);
+      if (candidates.length === 0)
+        candidates = IDLE_BUBBLES_POOL.filter((item) => !item.page && !item.timeContext);
 
       const picked = candidates[Math.floor(Math.random() * candidates.length)];
       if (!picked) return;
@@ -808,7 +1011,7 @@ export function Buddy() {
       speakReaction(
         picked.text,
         "happy",
-        picked.action && picked.query ? { label: picked.action, query: picked.query } : undefined
+        picked.action && picked.query ? { label: picked.action, query: picked.query } : undefined,
       );
     }, 7000);
 
@@ -930,7 +1133,10 @@ export function Buddy() {
     if (!chatOpen) {
       setChatOpen(true);
       wakeUp();
-      speakReaction("Hi! Ask me anything about Mishal's work.", "happy");
+      setBubbleVisible(false);
+      setBubbleText(null);
+      setBubbleAction(null);
+      if (bubbleFadeTimeout.current) clearTimeout(bubbleFadeTimeout.current);
       setTimeout(() => {
         if (window.innerWidth >= 640) chatInputRef.current?.focus();
       }, 100);
@@ -1038,11 +1244,22 @@ export function Buddy() {
     window.addEventListener("pointerup", onUp);
   };
 
+  const closeChat = useCallback(() => {
+    if (activeTypingRef.current) activeTypingRef.current.cancel();
+    if (talkInterval.current) clearInterval(talkInterval.current);
+    isTalking.current = false;
+    setChatOpen(false);
+    setBubbleVisible(false);
+    setBubbleText(null);
+    setBubbleAction(null);
+    if (bubbleFadeTimeout.current) clearTimeout(bubbleFadeTimeout.current);
+  }, []);
+
   // Keyboard accessibility
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" && chatOpen) {
-        setChatOpen(false);
+        closeChat();
       }
     };
     window.addEventListener("keydown", onKeyDown);
@@ -1059,10 +1276,68 @@ export function Buddy() {
       // Ensure chat is open
       if (!chatOpen) setChatOpen(true);
 
-      const userMsgId = "user_" + Date.now();
-      const sproutMsgId = "sprout_" + Date.now();
+      // Disable head bubble strictly while chat panel is open
+      setBubbleVisible(false);
+      setBubbleText(null);
+      setBubbleAction(null);
+      if (bubbleFadeTimeout.current) clearTimeout(bubbleFadeTimeout.current);
 
-      // 1. Add user message
+      if (activeTypingRef.current) {
+        activeTypingRef.current.cancel();
+        activeTypingRef.current = null;
+      }
+      if (talkInterval.current) {
+        clearInterval(talkInterval.current);
+        talkInterval.current = null;
+      }
+      isTalking.current = false;
+
+      const userMsgId = "user_" + Date.now();
+      const sproutMsgId = "sprout_" + (Date.now() + 1);
+
+      // Match intent with session identity & repetition context
+      const ans = matchBuddyIntent(cleanQ, {
+        gameStep,
+        visitorName: visitorName || undefined,
+        awaitingName: awaitingName.current,
+        greetedWithName: greetedWithName.current,
+        lastIntent: lastIntent.current || undefined,
+        lastResponseText: lastResponseText.current || undefined,
+      });
+      if (!ans) return;
+
+      if (ans.newVisitorName) {
+        setVisitorName(ans.newVisitorName);
+        try {
+          sessionStorage.setItem("sprout_visitor_name", ans.newVisitorName);
+        } catch {
+          /* ignore */
+        }
+        awaitingName.current = false;
+      }
+      if (ans.awaitingName !== undefined) {
+        awaitingName.current = ans.awaitingName;
+      }
+      if (ans.greetedWithName) {
+        greetedWithName.current = true;
+      }
+
+      // Anti-repetition: if user triggers the same intent consecutively, append follow-up
+      let responseText = ans.text;
+      let responseFollowUps = [...ans.followUps];
+      if (lastIntent.current === ans.intent && lastResponseText.current) {
+        responseText = `As mentioned: ${ans.text}\n\nWould you like to explore another topic?`;
+        responseFollowUps = ["Tell me about DDSS", "Tech stack?", "Download CV"];
+      }
+      lastIntent.current = ans.intent;
+      lastResponseText.current = ans.text;
+
+      askedIntents.current.add(ans.intent);
+      if (typeof ans.gameStep === "number") {
+        setGameStep(ans.gameStep);
+      }
+
+      // Add user message & sprout message with typing indicator
       setTranscript((prev) => [
         ...prev,
         { id: userMsgId, sender: "user", text: cleanQ },
@@ -1071,65 +1346,84 @@ export function Buddy() {
 
       setInputText("");
 
-      // Match intent
-      const ans = matchBuddyIntent(cleanQ, gameStep);
-      if (!ans) return;
-
-      askedIntents.current.add(ans.intent);
-      if (typeof ans.gameStep === "number") {
-        setGameStep(ans.gameStep);
+      // Visual pose reaction only (no speech bubble over head while panel is open!)
+      if (ans.mood) {
+        if (ans.mood === "excited") setPose("laugh");
+        else if (ans.mood === "happy") setPose("wave");
+        else if (ans.mood === "shy") setPose("idle");
+        else if (ans.mood === "laugh") setPose("laugh");
+        else if (ans.mood === "hug") setPose("laugh");
+        else if (ans.mood === "surprised") setPose("surprised");
       }
 
-      // 2. Speak reaction in head speech bubble (short, max 6 words)
-      speakReaction(ans.reaction || "Got it!", ans.mood);
-
-      // 3. Typing indicator (~450ms) then typewriter
+      // Brief typing indicator (~200ms) then live typewriter effect into the transcript bubble
       const timer = setTimeout(() => {
         if (prefersReduced()) {
           setTranscript((prev) =>
-            prev.map((m) => (m.id === sproutMsgId ? { ...m, isTyping: false, text: ans.text } : m))
+            prev.map((m) =>
+              m.id === sproutMsgId ? { ...m, isTyping: false, text: responseText } : m,
+            ),
           );
           if (transcriptScrollRef.current) {
             transcriptScrollRef.current.scrollTop = transcriptScrollRef.current.scrollHeight;
           }
-          setFollowUps(ans.followUps);
+          setFollowUps(responseFollowUps);
           if (ans.dance) performDance();
           if (window.innerWidth >= 640) chatInputRef.current?.focus();
           return;
         }
 
-        // Animated typewriter at 36ms/char with mouth flap
-        isTalking.current = true;
-        let charIdx = 0;
-        const total = ans.text.length;
+        // Switch isTyping to false, start live typing into the bubble
+        setTranscript((prev) =>
+          prev.map((m) => (m.id === sproutMsgId ? { ...m, isTyping: false, text: "" } : m)),
+        );
 
+        isTalking.current = true;
         const completeInstantly = () => {
-          if (talkInterval.current) clearInterval(talkInterval.current);
+          if (talkInterval.current) {
+            clearInterval(talkInterval.current);
+            talkInterval.current = null;
+          }
           isTalking.current = false;
           activeTypingRef.current = null;
           setTranscript((prev) =>
-            prev.map((m) => (m.id === sproutMsgId ? { ...m, isTyping: false, text: ans.text } : m))
+            prev.map((m) =>
+              m.id === sproutMsgId ? { ...m, isTyping: false, text: responseText } : m,
+            ),
           );
           if (transcriptScrollRef.current) {
             transcriptScrollRef.current.scrollTop = transcriptScrollRef.current.scrollHeight;
           }
-          setFollowUps(ans.followUps);
+          setFollowUps(responseFollowUps);
           if (ans.dance) performDance();
           if (window.innerWidth >= 640) chatInputRef.current?.focus();
         };
 
         activeTypingRef.current = { cancel: completeInstantly, finish: completeInstantly };
 
+        // Chunk by words and whitespace so nothing is ever truncated mid-word
+        const chunks = responseText.match(/\S+|\s+/g) || [responseText];
+        let chunkIdx = 0;
+        let accumulated = "";
+
         talkInterval.current = window.setInterval(() => {
-          charIdx += 2; // smooth 2 chars per tick or 1 char per 36ms
-          if (charIdx >= total) {
+          if (chunkIdx >= chunks.length) {
             completeInstantly();
             return;
           }
 
-          const partial = ans.text.slice(0, charIdx);
+          accumulated += chunks[chunkIdx];
+          chunkIdx++;
+          // If the next token is whitespace, append it immediately with the word
+          if (chunkIdx < chunks.length && /^\s+$/.test(chunks[chunkIdx])) {
+            accumulated += chunks[chunkIdx];
+            chunkIdx++;
+          }
+
           setTranscript((prev) =>
-            prev.map((m) => (m.id === sproutMsgId ? { ...m, isTyping: false, text: partial } : m))
+            prev.map((m) =>
+              m.id === sproutMsgId ? { ...m, isTyping: false, text: accumulated } : m,
+            ),
           );
           if (transcriptScrollRef.current) {
             transcriptScrollRef.current.scrollTop = transcriptScrollRef.current.scrollHeight;
@@ -1147,12 +1441,12 @@ export function Buddy() {
               ease: "power1.inOut",
             });
           }
-        }, 72);
-      }, 450);
+        }, 36);
+      }, 200);
 
       return () => clearTimeout(timer);
     },
-    [chatOpen, gameStep, performDance, prefersReduced, speakReaction]
+    [chatOpen, gameStep, performDance, prefersReduced, visitorName],
   );
 
   const onChatSubmit = (e: FormEvent) => {
@@ -1162,24 +1456,14 @@ export function Buddy() {
 
   const clearTranscript = () => {
     if (activeTypingRef.current) activeTypingRef.current.cancel();
-    setTranscript(INITIAL_TRANSCRIPT);
+    if (talkInterval.current) clearInterval(talkInterval.current);
+    isTalking.current = false;
+    setTranscript([]);
     setFollowUps(DEFAULT_FOLLOW_UPS);
     setGameStep(0);
     askedIntents.current.clear();
-  };
-
-  // Render formatted markdown bold text
-  const renderFormattedText = (raw: string) => {
-    const tokens = parseTokens(raw);
-    return tokens.map((tok, i) =>
-      tok.bold ? (
-        <strong key={i} className="buddy-hl">
-          {tok.text}
-        </strong>
-      ) : (
-        <span key={i}>{tok.text}</span>
-      )
-    );
+    lastIntent.current = null;
+    lastResponseText.current = null;
   };
 
   // Head bubble content
@@ -1219,12 +1503,7 @@ export function Buddy() {
         aria-label="Sprout's door. Call Sprout back to his home."
         tabIndex={0}
       >
-        <svg
-          viewBox="0 0 58 94"
-          width="100%"
-          height="100%"
-          xmlns="http://www.w3.org/2000/svg"
-        >
+        <svg viewBox="0 0 58 94" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
           <path
             d="M 6 92 L 6 32 A 23 23 0 0 1 52 32 L 52 92 Z"
             fill="#0B0B0B"
@@ -1272,9 +1551,9 @@ export function Buddy() {
       />
 
       {/* Sprout Sprite Walker */}
-      <button
+      <div
         ref={walkerRef}
-        type="button"
+        role="button"
         className="buddy-walker"
         onClick={onBuddyClick}
         onPointerDown={onPointerDown}
@@ -1292,18 +1571,54 @@ export function Buddy() {
           style={{ transform: facingRight ? "scaleX(1)" : "scaleX(-1)" }}
         >
           <div ref={spriteWrapRef} className="buddy-sprite-wrap">
-            <img src="/buddy/idle.webp" alt="Sprout idle" className={pose === "idle" ? "is-visible" : ""} />
-            <img src="/buddy/run.webp" alt="Sprout running" className={pose === "run" ? "is-visible" : ""} />
-            <img src="/buddy/wave.webp" alt="Sprout waving" className={pose === "wave" ? "is-visible" : ""} />
-            <img src="/buddy/sleep.webp" alt="Sprout sleeping" className={pose === "sleep" ? "is-visible" : ""} />
-            <img src="/buddy/surprised.webp" alt="Sprout surprised" className={pose === "surprised" ? "is-visible" : ""} />
-            <img src="/buddy/laugh.webp" alt="Sprout laughing" className={pose === "laugh" ? "is-visible" : ""} />
-            <img src="/buddy/stretch.webp" alt="Sprout stretching" className={pose === "stretch" ? "is-visible" : ""} />
+            <img
+              src="/buddy/idle.webp"
+              alt="Sprout idle"
+              className={pose === "idle" ? "is-visible" : ""}
+            />
+            <img
+              src="/buddy/run.webp"
+              alt="Sprout running"
+              className={pose === "run" ? "is-visible" : ""}
+            />
+            <img
+              src="/buddy/wave.webp"
+              alt="Sprout waving"
+              className={pose === "wave" ? "is-visible" : ""}
+            />
+            <img
+              src="/buddy/sleep.webp"
+              alt="Sprout sleeping"
+              className={pose === "sleep" ? "is-visible" : ""}
+            />
+            <img
+              src="/buddy/surprised.webp"
+              alt="Sprout surprised"
+              className={pose === "surprised" ? "is-visible" : ""}
+            />
+            <img
+              src="/buddy/laugh.webp"
+              alt="Sprout laughing"
+              className={pose === "laugh" ? "is-visible" : ""}
+            />
+            <img
+              src="/buddy/stretch.webp"
+              alt="Sprout stretching"
+              className={pose === "stretch" ? "is-visible" : ""}
+            />
             {hasSitA && (
-              <img src="/buddy/sit_a.webp" alt="Sprout sitting A" className={pose === "sit_a" ? "is-visible" : ""} />
+              <img
+                src="/buddy/sit_a.webp"
+                alt="Sprout sitting A"
+                className={pose === "sit_a" ? "is-visible" : ""}
+              />
             )}
             {hasSitB && (
-              <img src="/buddy/sit_b.webp" alt="Sprout sitting B" className={pose === "sit_b" ? "is-visible" : ""} />
+              <img
+                src="/buddy/sit_b.webp"
+                alt="Sprout sitting B"
+                className={pose === "sit_b" ? "is-visible" : ""}
+              />
             )}
 
             {/* Mouth Flap */}
@@ -1312,9 +1627,7 @@ export function Buddy() {
               className="buddy-mouth"
               style={{
                 display:
-                  (pose === "idle" || pose === "wave") && isTalking.current
-                    ? "block"
-                    : "none",
+                  (pose === "idle" || pose === "wave") && isTalking.current ? "block" : "none",
               }}
             >
               <div className="buddy-tongue" />
@@ -1323,18 +1636,17 @@ export function Buddy() {
         </div>
 
         {/* Soft shadow */}
-        <div
-          className="buddy-shadow"
-          style={{ opacity: isPerched.current ? 0 : 1 }}
-        />
+        <div className="buddy-shadow" style={{ opacity: isPerched.current ? 0 : 1 }} />
 
         {/* Head Speech Bubble */}
         <div
+          aria-hidden="true"
           className={`buddy-bubble-wrap ${flipLeft ? "is-flipped-left" : ""}`}
           style={{
             transform: flipLeft ? "none" : `translateX(calc(-50% + ${bubbleOffset.shiftX}px))`,
-            opacity: (bubbleVisible && bubbleText) || isAsleep ? 1 : 0,
-            pointerEvents: (bubbleVisible && bubbleText) || isAsleep ? "auto" : "none",
+            opacity: !chatOpen && ((bubbleVisible && bubbleText) || isAsleep) ? 1 : 0,
+            pointerEvents:
+              !chatOpen && ((bubbleVisible && bubbleText) || isAsleep) ? "auto" : "none",
           }}
         >
           <div
@@ -1346,6 +1658,8 @@ export function Buddy() {
               if (!isAsleep) {
                 setBubbleVisible(false);
                 setBubbleAction(null);
+                setBubbleText(null);
+                if (bubbleFadeTimeout.current) clearTimeout(bubbleFadeTimeout.current);
               }
             }}
           >
@@ -1357,12 +1671,7 @@ export function Buddy() {
                 xmlns="http://www.w3.org/2000/svg"
               >
                 <polygon points="0,0 14,0 7,8" fill="#F3ECE0" />
-                <polyline
-                  points="0,0 7,8 14,0"
-                  stroke="#0B0B0B"
-                  strokeWidth="1.5"
-                  fill="none"
-                />
+                <polyline points="0,0 7,8 14,0" stroke="#0B0B0B" strokeWidth="1.5" fill="none" />
               </svg>
             ) : (
               <svg
@@ -1370,21 +1679,16 @@ export function Buddy() {
                 viewBox="0 0 14 8"
                 xmlns="http://www.w3.org/2000/svg"
                 style={{
-                  left: `calc(50% - ${bubbleOffset.tailShiftX}px)`,
+                  left: `${bubbleOffset.tailLeft}px`,
                 }}
               >
                 <polygon points="0,0 14,0 7,8" fill="#F3ECE0" />
-                <polyline
-                  points="0,0 7,8 14,0"
-                  stroke="#0B0B0B"
-                  strokeWidth="1.5"
-                  fill="none"
-                />
+                <polyline points="0,0 7,8 14,0" stroke="#0B0B0B" strokeWidth="1.5" fill="none" />
               </svg>
             )}
           </div>
         </div>
-      </button>
+      </div>
 
       {/* Conversation Panel (STAYS OPEN across answers) */}
       {chatOpen && (
@@ -1406,7 +1710,7 @@ export function Buddy() {
               <button
                 type="button"
                 className="buddy-chat-close"
-                onClick={() => setChatOpen(false)}
+                onClick={closeChat}
                 aria-label="Close chat"
               >
                 ×
@@ -1421,35 +1725,40 @@ export function Buddy() {
             data-lenis-prevent
             aria-live="polite"
           >
-            {transcript.map((msg) => {
-              if (msg.sender === "user") {
-                return (
+            {transcript.length === 0 ? (
+              <div className="buddy-transcript-empty">
+                <p>Ask me anything about Mishal's projects, technical skills, or availability!</p>
+              </div>
+            ) : (
+              transcript.map((msg) =>
+                msg.sender === "user" ? (
                   <div key={msg.id} className="buddy-msg-user">
                     {msg.text}
                   </div>
-                );
-              }
-              return (
-                <div
-                  key={msg.id}
-                  className="buddy-msg-sprout"
-                  onClick={() => {
-                    if (activeTypingRef.current) activeTypingRef.current.finish();
-                  }}
-                  title="Click to complete instantly"
-                >
-                  {msg.isTyping ? (
-                    <div className="buddy-typing-dots">
-                      <span className="buddy-typing-dot" />
-                      <span className="buddy-typing-dot" />
-                      <span className="buddy-typing-dot" />
-                    </div>
-                  ) : (
-                    renderFormattedText(msg.text)
-                  )}
-                </div>
-              );
-            })}
+                ) : (
+                  <div
+                    key={msg.id}
+                    className="buddy-msg-sprout"
+                    onClick={() => {
+                      if (activeTypingRef.current) activeTypingRef.current.finish();
+                    }}
+                    title={
+                      msg.isTyping || isTalking.current ? "Click to complete instantly" : undefined
+                    }
+                  >
+                    {msg.isTyping ? (
+                      <div className="buddy-typing-dots">
+                        <span className="buddy-typing-dot" />
+                        <span className="buddy-typing-dot" />
+                        <span className="buddy-typing-dot" />
+                      </div>
+                    ) : (
+                      renderFormattedText(msg.text)
+                    )}
+                  </div>
+                ),
+              )
+            )}
           </div>
 
           {/* Follow-up Chips (always visible, outside transcript) */}

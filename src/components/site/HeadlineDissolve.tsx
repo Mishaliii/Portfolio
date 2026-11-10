@@ -17,9 +17,26 @@ type TextLayout = {
   color: string;
 };
 
-// Global registry for loader gate readiness
+// Global registry for loader gate readiness and single draw-loop assertions
 export const headlineInstances = new Set<string>();
 export const headlineReady = new Set<string>();
+export const activeHeadlineDrawLoops = new Map<string, (t: number) => void>();
+
+export function assertSingleDrawLoopPerHeadline(): {
+  valid: boolean;
+  activeLoops: number;
+  totalInstances: number;
+} {
+  const activeLoops = activeHeadlineDrawLoops.size;
+  const totalInstances = headlineInstances.size;
+  const valid = activeLoops <= totalInstances;
+  if (!valid) {
+    console.error(
+      `[HeadlineDissolve] Assertion failed: ${activeLoops} active draw loops for ${totalInstances} instances`,
+    );
+  }
+  return { valid, activeLoops, totalInstances };
+}
 
 /**
  * Canvas overlay sized to the headline.
@@ -34,7 +51,11 @@ export function HeadlineDissolve({
   auto = false,
   wait = false,
   erase = false,
+  active = true,
   className = "",
+  capSpeckle,
+  cleanDuration,
+  disableReduced = false,
 }: {
   children: ReactNode;
   bg?: string;
@@ -42,11 +63,17 @@ export function HeadlineDissolve({
   auto?: boolean;
   wait?: boolean;
   erase?: boolean;
+  active?: boolean;
   className?: string;
+  capSpeckle?: number;
+  cleanDuration?: number;
+  disableReduced?: boolean;
 }) {
   const wrap = useRef<HTMLDivElement>(null);
   const cv = useRef<HTMLCanvasElement>(null);
   const instanceId = useRef<string>(Math.random().toString(36).slice(2));
+  const activeRef = useRef(active);
+  activeRef.current = active;
 
   useEffect(() => {
     const id = instanceId.current;
@@ -54,12 +81,22 @@ export function HeadlineDissolve({
     return () => {
       headlineInstances.delete(id);
       headlineReady.delete(id);
+      activeHeadlineDrawLoops.delete(id);
     };
   }, []);
 
   useEffect(() => {
-    const w = wrap.current, c = cv.current;
+    const w = wrap.current,
+      c = cv.current;
     if (!w || !c) return;
+
+    const id = instanceId.current;
+    if (disableReduced && reduced()) {
+      headlineReady.add(id);
+      window.dispatchEvent(new Event("headline-first-frame"));
+      return;
+    }
+
     const ctx = c.getContext("2d", { willReadFrequently: false });
     if (!ctx) return;
 
@@ -79,11 +116,14 @@ export function HeadlineDissolve({
     const inkc = resolve(ink);
     const greenc = resolve("var(--green-light)");
 
-    let W = 0, H = 0;
-    const dpr = erase ? Math.min(1.5, window.devicePixelRatio || 1) : 1;
+    let W = 0,
+      H = 0;
+    let dpr = erase ? Math.min(1.5, window.devicePixelRatio || 1) : 1;
 
     let textLayout: TextLayout | null = null;
     let assembled = !wait;
+    let destroyed = false;
+    let bounds = c.getBoundingClientRect();
 
     const measureLayout = (): TextLayout | null => {
       if (!h1 || !erase) return null;
@@ -92,7 +132,8 @@ export function HeadlineDissolve({
 
       const cs = getComputedStyle(h1);
       const font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
-      const letterSpacing = cs.letterSpacing && cs.letterSpacing !== "normal" ? cs.letterSpacing : "";
+      const letterSpacing =
+        cs.letterSpacing && cs.letterSpacing !== "normal" ? cs.letterSpacing : "";
       const wordSpacing = cs.wordSpacing && cs.wordSpacing !== "normal" ? cs.wordSpacing : "";
       const color = cs.color || resolve("var(--cream)");
 
@@ -109,8 +150,21 @@ export function HeadlineDissolve({
         span.remove();
 
         const hr = hline.getBoundingClientRect();
-        const x = hr.left - wrapRect.left;
-        const y = sr.bottom - wrapRect.top;
+        let dx = 0,
+          dy = 0;
+        try {
+          const tf = getComputedStyle(hline).transform;
+          if (tf && tf !== "none") {
+            const m = new DOMMatrixReadOnly(tf);
+            dx = m.m41;
+            dy = m.m42;
+          }
+        } catch {
+          /* ignore */
+        }
+
+        const x = hr.left - dx - wrapRect.left;
+        const y = sr.bottom - dy - wrapRect.top;
         return { text: cs.textTransform === "uppercase" ? text.toUpperCase() : text, x, y };
       });
 
@@ -119,9 +173,22 @@ export function HeadlineDissolve({
       if (dotEl) {
         const dr = dotEl.getBoundingClientRect();
         const dcs = getComputedStyle(dotEl);
+        let dx = 0,
+          dy = 0;
+        try {
+          const parentHline = dotEl.closest<HTMLElement>("[data-hline]");
+          const tf = getComputedStyle(parentHline || dotEl).transform;
+          if (tf && tf !== "none") {
+            const m = new DOMMatrixReadOnly(tf);
+            dx = m.m41;
+            dy = m.m42;
+          }
+        } catch {
+          /* ignore */
+        }
         dot = {
-          x: dr.left - wrapRect.left + dr.width / 2,
-          y: dr.top - wrapRect.top + dr.height / 2,
+          x: dr.left - dx - wrapRect.left + dr.width / 2,
+          y: dr.top - dy - wrapRect.top + dr.height / 2,
           r: dr.width / 2,
           color: dcs.backgroundColor || greenc,
         };
@@ -130,69 +197,76 @@ export function HeadlineDissolve({
       return { lines, dot, font, letterSpacing, wordSpacing, color };
     };
 
-    let bounds = c.getBoundingClientRect();
-
-    const refreshBounds = () => {
-      if (!onPage(w)) return;
-      bounds = c.getBoundingClientRect();
-      W = bounds.width;
-      H = bounds.height;
-      if (erase && assembled) {
-        textLayout = measureLayout();
-      }
-    };
-
-    const size = () => {
-      const targetEl = (erase && h1) ? h1 : w;
+    const applyLayoutAndSize = () => {
+      if (destroyed || !w || !c) return;
+      dpr = erase ? Math.min(1.5, window.devicePixelRatio || 1) : 1;
+      const targetEl = erase && h1 ? h1 : w;
       const b = targetEl.getBoundingClientRect();
       const wb = w.getBoundingClientRect();
       W = b.width;
       H = b.height;
-      c.width = Math.round(W * dpr);
-      c.height = Math.round(H * dpr);
-      if (erase && h1) {
-        c.style.position = "absolute";
-        c.style.left = `${Math.round(b.left - wb.left)}px`;
-        c.style.top = `${Math.round(b.top - wb.top)}px`;
-        c.style.width = `${W}px`;
-        c.style.height = `${H}px`;
-      }
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      if (erase && assembled) {
-        textLayout = measureLayout();
+      if (W > 0 && H > 0) {
+        c.width = Math.round(W * dpr);
+        c.height = Math.round(H * dpr);
+        if (erase && h1) {
+          c.style.position = "absolute";
+          c.style.left = `${Math.round(b.left - wb.left)}px`;
+          c.style.top = `${Math.round(b.top - wb.top)}px`;
+          c.style.width = `${W}px`;
+          c.style.height = `${H}px`;
+        }
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       }
       bounds = c.getBoundingClientRect();
 
-      // Mark this canvas as initialized and drawn for loader gate
-      headlineReady.add(instanceId.current);
+      if (erase && assembled) {
+        textLayout = measureLayout();
+        if (h1 && textLayout && textLayout.lines.length > 0 && pointerEnabled) {
+          h1.style.opacity = "0";
+        }
+      }
+
+      headlineReady.add(id);
       window.dispatchEvent(new Event("headline-first-frame"));
     };
-    size();
-    const ro = new ResizeObserver(size);
-    ro.observe(w);
 
     type Dot = { x: number; y: number; r: number; life: number };
     type Speck = { x: number; y: number; vx: number; vy: number; life: number };
-    const dots: Dot[] = [], specks: Speck[] = [];
+    const dots: Dot[] = [],
+      specks: Speck[] = [];
     const pool: Dot[] = Array.from({ length: 4100 }, () => ({ x: 0, y: 0, r: 0, life: 0 }));
-    const speckPool: Speck[] = Array.from({ length: 150 }, () => ({ x: 0, y: 0, vx: 0, vy: 0, life: 0 }));
+    const speckPool: Speck[] = Array.from({ length: 150 }, () => ({
+      x: 0,
+      y: 0,
+      vx: 0,
+      vy: 0,
+      life: 0,
+    }));
     let unsub: (() => void) | undefined;
     let timer = 0;
 
     const wake = () => {
-      if (!unsub && !document.hidden && onPage(w)) {
+      if (!unsub && !destroyed && !document.hidden && onPage(w)) {
+        if (activeHeadlineDrawLoops.has(id)) {
+          activeHeadlineDrawLoops.delete(id);
+        }
         prev = performance.now();
         unsub = subscribe(draw);
+        activeHeadlineDrawLoops.set(id, draw);
+        assertSingleDrawLoopPerHeadline();
       }
     };
     const sleep = () => {
-      unsub?.();
-      unsub = undefined;
+      if (unsub) {
+        unsub();
+        unsub = undefined;
+        activeHeadlineDrawLoops.delete(id);
+      }
     };
     const schedule = () => {
       clearTimeout(timer);
-      if (erase) return;
+      if (erase || destroyed) return;
       if (!onPage(w)) return;
       if (auto && pointerEnabled && Number.isFinite(nextSweep)) {
         timer = window.setTimeout(wake, Math.max(1000, nextSweep - performance.now()));
@@ -209,16 +283,22 @@ export function HeadlineDissolve({
       dots.push(dot);
     };
 
-    let mx = -1e4, my = -1e4, inside = false, still = 0, lastMove = 0, visible = true;
+    let mx = -1e4,
+      my = -1e4,
+      inside = false,
+      still = 0,
+      lastMove = 0,
+      visible = true;
     let sweep = -1;
-    // Delay initial auto sweep so it demos only after visitor has settled on the page (5s after entrance)
     let nextSweep = wait || !auto ? Infinity : performance.now() + 5000;
     const io = new IntersectionObserver(([e]) => (visible = e.isIntersecting));
     io.observe(w);
 
     const move = (e: PointerEvent) => {
-      if (!onPage(w) || !performanceLayers.headline) return;
-      // Pre-cached bounds from pointerenter, page-transition-end, resize, or scroll (zero reflows)
+      if (!onPage(w) || !performanceLayers.headline || destroyed) return;
+      bounds = c.getBoundingClientRect();
+      W = bounds.width;
+      H = bounds.height;
       mx = e.clientX - bounds.left;
       my = e.clientY - bounds.top;
       inside = mx >= 0 && my >= 0 && mx <= W && my <= H;
@@ -227,42 +307,70 @@ export function HeadlineDissolve({
       still = 0;
     };
 
-    const assemble = () => {
-      if (!w.closest("#overview")) return;
-      assembled = true;
-      nextSweep = auto ? performance.now() + 6000 : Infinity;
-      refreshBounds();
-      if (erase && pointerEnabled) {
-        textLayout = measureLayout();
-        if (h1 && textLayout && textLayout.lines.length > 0) {
-          h1.style.opacity = "0";
+    const init = async () => {
+      if (destroyed) return;
+
+      // 1. Wait for document.fonts.ready
+      if (typeof document !== "undefined" && document.fonts) {
+        try {
+          await document.fonts.ready;
+        } catch {
+          /* fonts optional */
         }
       }
-      wake();
-    };
-    window.addEventListener("hero-assemble", assemble);
+      if (destroyed) return;
 
-    // If hero is already booted, activate erase mode directly
-    if (erase && pointerEnabled && typeof document !== "undefined") {
-      const isLoaded = !document.querySelector(".site-shell.is-loading");
-      if (isLoaded) {
-        window.setTimeout(assemble, 50);
+      // 2. Initial size and readiness for loader gate
+      applyLayoutAndSize();
+
+      // 3. If wait is true and intro is still active, listen for handoff
+      if (wait) {
+        const isIntroDone = () => {
+          if (typeof window === "undefined") return true;
+          if ((window as any).__siteBooted) return true;
+          const shell = document.querySelector(".site-shell");
+          return Boolean(shell && !shell.classList.contains("is-loading"));
+        };
+
+        if (!isIntroDone()) {
+          const onHandoff = () => {
+            window.removeEventListener("intro-end", onHandoff);
+            window.removeEventListener("site-loader-done", onHandoff);
+            window.removeEventListener("hero-assemble", onHandoff);
+            if (!destroyed) {
+              assembled = true;
+              applyLayoutAndSize();
+              if (erase && pointerEnabled) {
+                drawn = false;
+                wake();
+              }
+            }
+          };
+          window.addEventListener("intro-end", onHandoff);
+          window.addEventListener("site-loader-done", onHandoff);
+          window.addEventListener("hero-assemble", onHandoff);
+          return;
+        }
+        assembled = true;
       }
-    }
 
-    if (pointerEnabled) {
-      window.addEventListener("pointermove", move);
-      w.addEventListener("pointerenter", refreshBounds);
-    }
+      if (erase && pointerEnabled) {
+        drawn = false;
+        wake();
+      } else if (auto && !erase) {
+        schedule();
+      }
+    };
 
-    let prev = performance.now(), drawn = false;
+    let prev = performance.now(),
+      drawn = false;
     const LEVELS = 10;
 
     const draw = (t: number) => {
       const dt = Math.min(0.05, (t - prev) / 1000);
       prev = t;
 
-      if (!visible || W === 0 || !onPage(w) || !performanceLayers.headline) {
+      if (!visible || W === 0 || !onPage(w) || !performanceLayers.headline || destroyed) {
         if (!onPage(w)) {
           sleep();
           return;
@@ -288,14 +396,15 @@ export function HeadlineDissolve({
         if (t - lastMove > 120) still = Math.min(1, still + dt * 1.2);
         const rad = 34 + still * 40;
         for (let i = 0; i < 26; i++) {
-          const a = Math.random() * Math.PI * 2, d = Math.pow(Math.random(), 0.6) * rad;
+          const a = Math.random() * Math.PI * 2,
+            d = Math.pow(Math.random(), 0.6) * rad;
           addDot(
             mx + Math.cos(a) * d + (Math.random() - 0.5) * still * 8,
             my + Math.sin(a) * d,
-            1 + Math.random() * 3.2 * (1 - d / rad + 0.3)
+            1 + Math.random() * 3.2 * (1 - d / rad + 0.3),
           );
         }
-        if (Math.random() < 0.6) {
+        if (Math.random() < 0.6 && (capSpeckle === undefined || specks.length < capSpeckle)) {
           const s = speckPool.pop();
           if (s) {
             s.x = mx + (Math.random() - 0.5) * rad;
@@ -354,10 +463,11 @@ export function HeadlineDissolve({
       }
 
       // --- 2. UPDATE DOT LIFETIMES ---
+      const dotDecayRate = cleanDuration && cleanDuration > 0 ? 1 / cleanDuration : 1.0;
       let keep = 0;
       for (let i = 0; i < dots.length; i++) {
         const d = dots[i];
-        d.life -= dt;
+        d.life -= dt * dotDecayRate;
         if (d.life <= 0) {
           pool.push(d);
           continue;
@@ -376,7 +486,8 @@ export function HeadlineDissolve({
             ctx.beginPath();
             for (let i = 0; i < dots.length; i++) {
               const d = dots[i];
-              if (Math.min(LEVELS - 1, Math.floor(Math.min(1, d.life * 1.6) * LEVELS - 1e-6)) !== k) continue;
+              if (Math.min(LEVELS - 1, Math.floor(Math.min(1, d.life * 1.6) * LEVELS - 1e-6)) !== k)
+                continue;
               ctx.moveTo(d.x + d.r, d.y);
               ctx.arc(d.x, d.y, d.r, 0, 6.283);
             }
@@ -391,7 +502,8 @@ export function HeadlineDissolve({
             ctx.beginPath();
             for (let i = 0; i < dots.length; i++) {
               const d = dots[i];
-              if (Math.min(LEVELS - 1, Math.floor(Math.min(1, d.life * 1.6) * LEVELS - 1e-6)) !== k) continue;
+              if (Math.min(LEVELS - 1, Math.floor(Math.min(1, d.life * 1.6) * LEVELS - 1e-6)) !== k)
+                continue;
               ctx.moveTo(d.x + d.r, d.y);
               ctx.arc(d.x, d.y, d.r, 0, 6.283);
             }
@@ -404,9 +516,10 @@ export function HeadlineDissolve({
       // --- 4. DRAW DRIFTING DUST SPECKS ---
       ctx.globalCompositeOperation = "source-over";
       const speckColor = activeErase && textLayout ? textLayout.color : inkc;
+      const speckDecayRate = cleanDuration && cleanDuration > 0 ? 1 / (cleanDuration * 0.75) : 0.8;
       for (let i = specks.length - 1; i >= 0; i--) {
         const s = specks[i];
-        s.life -= dt * 0.8;
+        s.life -= dt * speckDecayRate;
         s.x += s.vx * dt;
         s.y += s.vy * dt;
         if (s.life <= 0) {
@@ -422,17 +535,25 @@ export function HeadlineDissolve({
     };
 
     const refresh = () => {
-      if (!onPage(w)) return;
-      refreshBounds();
+      if (destroyed) return;
+      if (!activeRef.current || !onPage(w)) {
+        if (!erase) {
+          ctx.clearRect(0, 0, W, H);
+          sleep();
+        }
+        return;
+      }
+
+      if (erase && !assembled) {
+        assembled = true;
+      }
+
+      applyLayoutAndSize();
+
       if (auto && !erase) {
         nextSweep = performance.now() + 5000;
       }
-      if (erase && assembled) {
-        textLayout = measureLayout();
-        if (h1 && textLayout && textLayout.lines.length > 0 && pointerEnabled) {
-          h1.style.opacity = "0";
-        }
-      }
+
       if (performanceLayers.headline) {
         drawn = false;
         wake();
@@ -443,29 +564,62 @@ export function HeadlineDissolve({
       }
     };
 
-    window.addEventListener("page-motion-resume", refresh);
+    const onPointerEnter = () => {
+      if (destroyed || !onPage(w)) return;
+      bounds = c.getBoundingClientRect();
+      W = bounds.width;
+      H = bounds.height;
+      if (erase && assembled) {
+        textLayout = measureLayout();
+        if (h1 && textLayout && textLayout.lines.length > 0 && pointerEnabled) {
+          h1.style.opacity = "0";
+        }
+      }
+    };
+
+    const ro = new ResizeObserver(() => {
+      if (!destroyed) refresh();
+    });
+    ro.observe(w);
+
+    init();
+
+    window.addEventListener("intro-end", refresh);
+    window.addEventListener("site-loader-done", refresh);
+    window.addEventListener("hero-assemble", refresh);
     window.addEventListener("page-transition-end", refresh);
+    window.addEventListener("page-motion-resume", refresh);
     window.addEventListener("resize", refresh);
     window.addEventListener("scroll", refresh, { passive: true });
     window.addEventListener("perf-layer-change", refresh);
-    schedule();
+
+    if (pointerEnabled) {
+      window.addEventListener("pointermove", move as any);
+      window.addEventListener("mousemove", move as any);
+      w.addEventListener("pointerenter", onPointerEnter);
+      w.addEventListener("mouseenter", onPointerEnter);
+    }
 
     return () => {
+      destroyed = true;
       sleep();
       clearTimeout(timer);
       ro.disconnect();
       io.disconnect();
       if (h1) h1.style.opacity = "";
-      window.removeEventListener("page-motion-resume", refresh);
+      activeHeadlineDrawLoops.delete(id);
+      window.removeEventListener("intro-end", refresh);
+      window.removeEventListener("site-loader-done", refresh);
+      window.removeEventListener("hero-assemble", refresh);
       window.removeEventListener("page-transition-end", refresh);
+      window.removeEventListener("page-motion-resume", refresh);
       window.removeEventListener("resize", refresh);
       window.removeEventListener("scroll", refresh);
       window.removeEventListener("perf-layer-change", refresh);
-      window.removeEventListener("pointermove", move);
       if (pointerEnabled) {
-        w.removeEventListener("pointerenter", refreshBounds);
+        window.removeEventListener("pointermove", move);
+        w.removeEventListener("pointerenter", onPointerEnter);
       }
-      window.removeEventListener("hero-assemble", assemble);
     };
   }, [bg, ink, auto, wait, erase]);
 

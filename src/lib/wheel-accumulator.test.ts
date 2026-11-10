@@ -1,5 +1,76 @@
 import { describe, it, expect, vi } from "vitest";
-import { WheelAccumulator } from "./wheel-accumulator";
+import {
+  WheelAccumulator,
+  ContinuousWheelAccumulator,
+  normalizeWheelDelta,
+} from "./wheel-accumulator";
+
+describe("normalizeWheelDelta", () => {
+  it("leaves pixel mode deltas untouched", () => {
+    expect(normalizeWheelDelta({ deltaY: 100, deltaMode: 0 })).toBe(100);
+  });
+
+  it("normalizes line mode deltas by ~33.33px per line", () => {
+    expect(normalizeWheelDelta({ deltaY: 3, deltaMode: 1 })).toBeCloseTo(99.99, 1);
+  });
+
+  it("normalizes page mode deltas by 600px per page", () => {
+    expect(normalizeWheelDelta({ deltaY: 2, deltaMode: 2 })).toBe(1200);
+  });
+});
+
+describe("ContinuousWheelAccumulator", () => {
+  it("converts wheel delta to target position at ~1 item per 110px", () => {
+    const onTargetChange = vi.fn();
+    const acc = new ContinuousWheelAccumulator({
+      itemCount: 6,
+      initialIndex: 0,
+      pixelsPerItem: 110,
+      onTargetChange,
+    });
+
+    // 110px down -> target should be 1.0
+    acc.handleWheel({ deltaY: 110, deltaMode: 0 }, 1000);
+    expect(acc.getTarget()).toBeCloseTo(1.0, 2);
+    expect(onTargetChange).toHaveBeenCalledWith(expect.closeTo(1.0, 2));
+  });
+
+  it("caps maximum scroll travel to 3 items per flick", () => {
+    const acc = new ContinuousWheelAccumulator({
+      itemCount: 6,
+      initialIndex: 0,
+      pixelsPerItem: 110,
+      maxItemsPerFlick: 3,
+    });
+
+    // Huge flick: 1000px in one gesture
+    acc.handleWheel({ deltaY: 1000, deltaMode: 0 }, 1000);
+    expect(acc.getTarget()).toBe(3.0);
+  });
+
+  it("settles by snapping to nearest integer item after 140ms quiet", () => {
+    vi.useFakeTimers();
+    const onSettle = vi.fn();
+    const acc = new ContinuousWheelAccumulator({
+      itemCount: 6,
+      initialIndex: 0,
+      pixelsPerItem: 110,
+      quietDelayMs: 140,
+      onSettle,
+    });
+
+    // Wheel 150px -> target = 1.36
+    acc.handleWheel({ deltaY: 150, deltaMode: 0 }, 1000);
+    expect(acc.getTarget()).toBeCloseTo(1.36, 2);
+
+    // After 140ms quiet, snaps to 1
+    vi.advanceTimersByTime(145);
+    expect(onSettle).toHaveBeenCalledWith(1);
+    expect(acc.getTarget()).toBe(1);
+
+    vi.useRealTimers();
+  });
+});
 
 describe("WheelAccumulator", () => {
   it("accumulates deltaY until threshold 60px, triggers one step, and locks during inertia", () => {
@@ -75,4 +146,3 @@ describe("WheelAccumulator", () => {
     expect(onStep).toHaveBeenCalledWith(-1);
   });
 });
-

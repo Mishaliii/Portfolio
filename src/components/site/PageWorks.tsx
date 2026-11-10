@@ -1,18 +1,18 @@
-import { useCallback, useEffect, useRef, useState, lazy, Suspense } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { SplitText } from "gsap/SplitText";
 import {
   works,
   roleCaseStudy,
   careerlensCaseStudy,
+  careerlensStages,
   type Project,
 } from "@/content";
 import { SplitReveal } from "./Split";
 import { HeadlineDissolve } from "./HeadlineDissolve";
 import { EASE, reduced } from "@/lib/motion";
-const CaseStudy = lazy(() => import("./CaseStudy").then((m) => ({ default: m.CaseStudy })));
-import { ddssImages, ddssThumbs, preloadScreenshots } from "./ScreenshotGallery";
-import { Odometer } from "@/components/Odometer";
+import { CaseStudy } from "./CaseStudy";
+import { ddssImages, preloadScreenshots } from "./ScreenshotGallery";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(SplitText);
@@ -30,64 +30,33 @@ function MaskedParagraph({
   delay?: number;
 }) {
   const elRef = useRef<HTMLParagraphElement>(null);
-  const splitRef = useRef<any>(null);
 
   useEffect(() => {
     const el = elRef.current;
     if (!el) return;
 
     if (reduced()) {
-      if (splitRef.current) {
-        splitRef.current.revert();
-        splitRef.current = null;
-      }
       gsap.set(el, { opacity: 1, y: 0 });
       return;
     }
 
     if (!active) {
-      if (splitRef.current) {
-        splitRef.current.revert();
-        splitRef.current = null;
-      }
-      gsap.set(el, { opacity: 0 });
+      gsap.set(el, { opacity: 0, y: 12 });
       return;
     }
 
-    let isCancelled = false;
-    document.fonts.ready.then(() => {
-      if (isCancelled || !elRef.current) return;
-      if (splitRef.current) {
-        splitRef.current.revert();
-      }
-      try {
-        gsap.set(elRef.current, { opacity: 1 });
-        const sp = SplitText.create(elRef.current, { type: "lines", mask: "lines" });
-        splitRef.current = sp;
-        gsap.fromTo(
-          sp.lines,
-          { yPercent: 100 },
-          {
-            yPercent: 0,
-            duration: 0.7,
-            stagger: 0.08,
-            ease: "power3.out",
-            delay,
-          }
-        );
-      } catch {
-        gsap.fromTo(elRef.current, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.7, delay });
-      }
-    });
-
-    return () => {
-      isCancelled = true;
-      if (splitRef.current) {
-        splitRef.current.revert();
-        splitRef.current = null;
-      }
-    };
-  }, [active, text, delay]);
+    gsap.fromTo(
+      el,
+      { opacity: 0, y: 12 },
+      {
+        opacity: 1,
+        y: 0,
+        duration: 0.65,
+        delay,
+        ease: "power3.out",
+      },
+    );
+  }, [active, delay]);
 
   return (
     <p ref={elRef} className={className}>
@@ -197,20 +166,30 @@ export function WorkCardShell({
       gsap.fromTo(
         chars,
         { yPercent: 120, scale: 1.04 },
-        { yPercent: 0, scale: 1, duration: 0.48, ease: EASE.in, stagger: 0.008, overwrite: "auto" }
+        { yPercent: 0, scale: 1, duration: 1.0, ease: EASE.in, stagger: 0.015, overwrite: "auto" },
       );
     }
   }, [active]);
 
   return (
     <article
-      className="flex flex-col max-[899px]:gap-6 min-[900px]:grid min-[900px]:grid-cols-[5fr_7fr] min-[900px]:gap-[56px] items-center px-4 sm:px-8 lg:px-[64px] w-full max-w-[1440px] mx-auto min-h-0"
+      className="flex flex-col max-[899px]:gap-6 min-[900px]:grid min-[900px]:grid-cols-[5fr_7fr] min-[900px]:gap-[56px] items-center px-4 sm:px-8 lg:px-[64px] w-full max-w-[1440px] mx-auto min-h-0 max-[899px]:cursor-pointer"
       aria-label={ariaLabel}
+      onClick={(e) => {
+        const target = e.target as HTMLElement;
+        if (target?.closest?.('button, a, input, select, textarea, video, [role="button"]')) return;
+        onOpenDetails();
+      }}
     >
       {/* Left text column */}
       <div className="min-w-0 flex flex-col justify-center max-[899px]:order-2">
         <div ref={titleWrapRef}>
-          <HeadlineDissolve bg="var(--cream)" ink="var(--ink)" className="works-title-dissolve">
+          <HeadlineDissolve
+            active={active}
+            bg="var(--cream)"
+            ink="var(--ink)"
+            className="works-title-dissolve"
+          >
             <h3
               className="display text-[#0B0B0B] tracking-tight"
               style={{ fontSize: "clamp(40px, 5.2vw, 76px)", lineHeight: 0.95 }}
@@ -236,9 +215,7 @@ export function WorkCardShell({
           />
         )}
 
-        {statusLine && (
-          <TypewriterStatus text={statusLine} active={active} delay={0.35} />
-        )}
+        {statusLine && <TypewriterStatus text={statusLine} active={active} delay={0.35} />}
 
         <div className="mt-6" data-fade>
           <button
@@ -262,88 +239,40 @@ export function WorkCardShell({
   );
 }
 
-const DDSS_STAGE_KEYS = [
-  "ddss",
-  "ddss-2",
-  "ddss-4",
-  "ddss-5",
-  "ddss-6",
-  "ddss-7",
-  "ddss-8",
-  "ddss-9",
-  "ddss-10",
-];
-
 function DDSSCard({ p, active }: { p: Project; active: boolean }) {
   const [cs, setCs] = useState(false);
   const closeCs = useCallback(() => setCs(false), []);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [showVideo, setShowVideo] = useState(true);
+  const [showVideo, setShowVideo] = useState(false);
   const [videoFailed, setVideoFailed] = useState(false);
   const [selectedShot, setSelectedShot] = useState<string | null>(null);
   const [isZoomed, setIsZoomed] = useState(false);
-  const [inView, setInView] = useState(false);
 
   const shots = works.caseStudy.shots;
   const activeShotKey = selectedShot ?? shots[0]?.k ?? "ddss";
-  const posterSrc = ddssImages["ddss"] ?? ddssImages["ddss-screen"];
-
-  // Pre-decode all stage images on idle so hovering/clicking never blocks the main thread
-  useEffect(() => {
-    if (!active) return;
-    const decodeAll = () => {
-      DDSS_STAGE_KEYS.forEach((key) => {
-        const src = ddssImages[key] ?? posterSrc;
-        if (!src) return;
-        const img = new Image();
-        img.src = src;
-        img.decode().catch(() => {});
-      });
-    };
-    if (typeof window !== "undefined") {
-      if ("requestIdleCallback" in window) {
-        const h = (window as any).requestIdleCallback(decodeAll);
-        return () => (window as any).cancelIdleCallback(h);
-      } else {
-        const t = setTimeout(decodeAll, 150);
-        return () => clearTimeout(t);
-      }
-    }
-    return undefined;
-  }, [active, posterSrc]);
-
-  // Video playback management: pause when inactive, drawer open (cs), hidden, or showing stills
-  useEffect(() => {
-    const v = videoRef.current;
-    if (!v) return;
-    const obs = new IntersectionObserver(([entry]) => {
-      setInView(entry?.isIntersecting ?? false);
-    }, { threshold: 0.1 });
-    obs.observe(v);
-    return () => obs.disconnect();
-  }, []);
+  const posterSrc = "/media/ddss-demo-poster.webp";
 
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
-    const shouldPlay = active && inView && showVideo && !videoFailed && !document.hidden && !cs;
+    const shouldPlay = active && showVideo && !videoFailed && !document.hidden;
     if (shouldPlay) {
       v.play().catch(() => {});
     } else {
       v.pause();
     }
-  }, [active, inView, showVideo, videoFailed, cs]);
+  }, [active, showVideo, videoFailed]);
 
   useEffect(() => {
     const onVisChange = () => {
       const v = videoRef.current;
       if (!v) return;
-      if (document.hidden || cs) v.pause();
-      else if (active && inView && showVideo && !videoFailed) v.play().catch(() => {});
+      if (document.hidden) v.pause();
+      else if (active && showVideo && !videoFailed) v.play().catch(() => {});
     };
     document.addEventListener("visibilitychange", onVisChange);
     return () => document.removeEventListener("visibilitychange", onVisChange);
-  }, [active, inView, showVideo, videoFailed, cs]);
+  }, [active, showVideo, videoFailed]);
 
   const filmstrip = p.filmstrip ?? [
     { k: "ddss-2", t: "Dashboard" },
@@ -365,8 +294,12 @@ function DDSSCard({ p, active }: { p: Project; active: boolean }) {
 
   const titleNode = (
     <>
-      <span className="block"><SplitReveal text="Dermatology" /></span>
-      <span className="block"><SplitReveal text="Decision Support" /></span>
+      <span className="block">
+        <SplitReveal text="Dermatology" />
+      </span>
+      <span className="block">
+        <SplitReveal text="Decision Support" />
+      </span>
     </>
   );
 
@@ -382,7 +315,8 @@ function DDSSCard({ p, active }: { p: Project; active: boolean }) {
       aria-label="Pipeline steps"
     >
       {pipelineRows.map((step, idx) => {
-        const isStepActive = !showVideo && selectedShot === step.shot && (step.zoom ? isZoomed : !isZoomed);
+        const isStepActive =
+          !showVideo && selectedShot === step.shot && (step.zoom ? isZoomed : !isZoomed);
         return (
           <div
             key={step.label}
@@ -401,7 +335,9 @@ function DDSSCard({ p, active }: { p: Project; active: boolean }) {
           >
             <div className="flex flex-col items-center justify-center relative w-2.5 shrink-0">
               {idx > 0 && <span className="absolute -top-3 bottom-1/2 w-px bg-[#0B0B0B]/25" />}
-              {idx < pipelineRows.length - 1 && <span className="absolute top-1/2 -bottom-3 w-px bg-[#0B0B0B]/25" />}
+              {idx < pipelineRows.length - 1 && (
+                <span className="absolute top-1/2 -bottom-3 w-px bg-[#0B0B0B]/25" />
+              )}
               <span
                 className={`w-2 h-2 rounded-full transition-all relative z-10 ${
                   isStepActive
@@ -413,7 +349,9 @@ function DDSSCard({ p, active }: { p: Project; active: boolean }) {
             <div className="relative inline-block transition-transform duration-200 ease-out group-hover:translate-x-[6px]">
               <span
                 className={`font-mono text-[13px] tracking-wide transition-colors ${
-                  isStepActive ? "text-[#1F5A3A] font-semibold" : "text-[#0B0B0B] group-hover:text-[#1F5A3A]"
+                  isStepActive
+                    ? "text-[#1F5A3A] font-semibold"
+                    : "text-[#0B0B0B] group-hover:text-[#1F5A3A]"
                 }`}
               >
                 {step.label}
@@ -432,49 +370,34 @@ function DDSSCard({ p, active }: { p: Project; active: boolean }) {
   const visualNode = (
     <>
       <div
-        className="relative aspect-[16/10] w-full overflow-hidden rounded-[12px] border border-[#0B0B0B]/20 bg-[#E8DED0] shadow-[0_8px_30px_rgb(0,0,0,0.06)]"
+        className="relative aspect-[16/10] w-full overflow-hidden rounded-[12px] border border-[#0B0B0B]/20 bg-[#0B0B0B] shadow-[0_8px_30px_rgb(0,0,0,0.06)]"
         data-sig
       >
-        {/* Looping video layer: paused when drawer is open or stills active */}
-        <video
-          ref={videoRef}
-          src="/media/ddss-demo.mp4"
-          muted
-          loop
-          playsInline
-          preload="auto"
-          poster={posterSrc}
-          onError={() => setVideoFailed(true)}
-          className="absolute inset-0 h-full w-full object-cover transition-opacity duration-300 pointer-events-none"
-          style={{
-            objectFit: "cover",
-            opacity: showVideo && !videoFailed ? 1 : 0,
-            zIndex: 1,
-          }}
-        />
-
-        {/* Stacked stage images: opacity/transform only, pre-decoded on idle */}
-        {DDSS_STAGE_KEYS.map((key) => {
-          const isSelected = !showVideo && activeShotKey === key;
-          const isZoom = isSelected && isZoomed;
-          return (
-            <img
-              key={key}
-              src={ddssImages[key] ?? posterSrc}
-              alt={shots.find((s) => s.k === key)?.t ?? "DDSS product capture"}
-              decoding="async"
-              className="absolute inset-0 h-full w-full object-cover transition-[opacity,transform] duration-300 ease-out pointer-events-none"
-              style={{
-                objectFit: "cover",
-                opacity: isSelected ? 1 : 0,
-                transform: isZoom ? "scale(1.45) translate(-12%, -6%)" : "scale(1) translate(0, 0)",
-                transformOrigin: "top right",
-                zIndex: isSelected ? 2 : 0,
-                willChange: isSelected ? "transform, opacity" : "auto",
-              }}
-            />
-          );
-        })}
+        {active && showVideo && !videoFailed ? (
+          <video
+            ref={videoRef}
+            src="/media/ddss-demo.mp4"
+            muted
+            loop
+            playsInline
+            preload="none"
+            poster={posterSrc}
+            onError={() => setVideoFailed(true)}
+            className="h-full w-full object-cover"
+            style={{ objectFit: "cover" }}
+          />
+        ) : (
+          <img
+            src={ddssImages[activeShotKey] ?? posterSrc}
+            alt={shots.find((s) => s.k === activeShotKey)?.t ?? "DDSS product capture"}
+            className="h-full w-full object-cover transition-transform duration-500 ease-out"
+            style={{
+              objectFit: "cover",
+              transform: isZoomed ? "scale(1.45) translate(-12%, -6%)" : "none",
+              transformOrigin: "top right",
+            }}
+          />
+        )}
       </div>
 
       {/* Filmstrip: 8 small thumbnails 16:10 in one row, equal width, 8px gap */}
@@ -500,7 +423,12 @@ function DDSSCard({ p, active }: { p: Project; active: boolean }) {
                   title={s.t}
                   aria-label={s.t}
                 >
-                  <img src={ddssThumbs[s.k] || ddssImages[s.k]} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" />
+                  <img
+                    src={ddssImages[s.k]}
+                    alt=""
+                    className="h-full w-full object-cover"
+                    loading="lazy"
+                  />
                 </button>
               );
             })}
@@ -532,12 +460,17 @@ function DDSSCard({ p, active }: { p: Project; active: boolean }) {
         line={p.line}
         statusLine={p.statusLine ?? p.mutedLine}
         buttonLabel={p.buttonLabel ?? "Deep Dive"}
-        onOpenDetails={() => setCs(true)}
+        onOpenDetails={() => {
+          setSelectedShot(null);
+          setIsZoomed(false);
+          setShowVideo(true);
+          setCs(true);
+        }}
         pipeline={pipelineNode}
         visual={visualNode}
         active={active}
       />
-      <Suspense fallback={null}><CaseStudy open={cs} onClose={closeCs} /></Suspense>
+      <CaseStudy open={cs} onClose={closeCs} />
     </>
   );
 }
@@ -553,25 +486,25 @@ const ROLE_FEATURES = [
   { key: "Time_Docs", label: "Time docs", max: 13.16 },
 ];
 
-type SubjectId = "S001" | "S003" | "S007";
+type SubjectId = "Sample 1" | "Sample 2" | "Sample 3";
 
 const SUBJECT_ROWS: Record<
   SubjectId,
   { vals: number[]; score: number; label: string; role: string }
 > = {
-  S001: {
+  "Sample 1": {
     vals: [75, 23, 11, 4.9, 7.65, 9.8, 13.78, 13.16],
     score: 53.48,
     label: "Medium",
     role: "Manager",
   },
-  S003: {
+  "Sample 2": {
     vals: [61, 9, 7, 10.86, 12.22, 7.87, 7.6, 7.33],
     score: 54.36,
     label: "Medium",
     role: "Manager",
   },
-  S007: {
+  "Sample 3": {
     vals: [87, 13, 4, 18.26, 19.24, 12.07, 0.33, 0.33],
     score: 77.14,
     label: "High",
@@ -579,13 +512,68 @@ const SUBJECT_ROWS: Record<
   },
 };
 
-function OdometerScore({ value, active }: { value: number; active: boolean }) {
+function OdometerDigit({
+  char,
+  delay = 0,
+  active,
+}: {
+  char: string;
+  delay?: number;
+  active: boolean;
+}) {
+  const isDigit = /^[0-9]$/.test(char);
+  const targetDigit = isDigit ? parseInt(char, 10) : 0;
+  const colRef = useRef<HTMLDivElement>(null);
+
+  const prevDigitRef = useRef<number | null>(null);
+  useEffect(() => {
+    const el = colRef.current;
+    if (!el || !isDigit) return;
+
+    if (reduced() || !active) {
+      gsap.set(el, { yPercent: -targetDigit * 10 });
+      prevDigitRef.current = targetDigit;
+      return;
+    }
+
+    if (prevDigitRef.current === targetDigit) {
+      return;
+    }
+    prevDigitRef.current = targetDigit;
+
+    gsap.to(el, {
+      yPercent: -targetDigit * 10,
+      duration: 0.65,
+      delay,
+      ease: "power2.out",
+    });
+  }, [targetDigit, isDigit, delay, active]);
+
+  if (!isDigit) {
+    return <span className="inline-block px-[1px]">{char}</span>;
+  }
+
   return (
-    <Odometer
-      value={value.toFixed(2)}
-      active={active}
-      className="font-mono text-[22px] sm:text-[28px] font-bold text-[#0B0B0B] leading-none"
-    />
+    <span className="inline-block overflow-hidden h-[1.15em] leading-none align-baseline">
+      <span ref={colRef} className="flex flex-col select-none will-change-transform">
+        {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
+          <span key={n} className="h-[1.15em] leading-none flex items-center justify-center">
+            {n}
+          </span>
+        ))}
+      </span>
+    </span>
+  );
+}
+
+function OdometerScore({ value, active }: { value: number; active: boolean }) {
+  const str = value.toFixed(2);
+  return (
+    <span className="font-mono text-[22px] sm:text-[28px] font-bold text-[#0B0B0B] leading-none inline-flex items-center">
+      {str.split("").map((c, i) => (
+        <OdometerDigit key={i} char={c} delay={i * 0.04} active={active} />
+      ))}
+    </span>
   );
 }
 
@@ -596,7 +584,7 @@ function ProductivityExplorer({
   active: boolean;
   pulseTarget: string | null;
 }) {
-  const [selectedId, setSelectedId] = useState<SubjectId>("S001");
+  const [selectedId, setSelectedId] = useState<SubjectId>("Sample 1");
   const barRefs = useRef<(HTMLDivElement | null)[]>([]);
   const barsContainerRef = useRef<HTMLDivElement>(null);
   const scoreBoxRef = useRef<HTMLDivElement>(null);
@@ -612,15 +600,14 @@ function ProductivityExplorer({
       const el = barRefs.current[idx];
       if (!el) return;
       const feat = ROLE_FEATURES[idx];
-      const pct = Math.min(100, Math.max(3, (v / feat.max) * 100));
+      const scale = Math.min(1, Math.max(0.03, v / feat.max));
       if (reduced()) {
-        gsap.set(el, { scaleX: pct / 100, transformOrigin: "left center" });
+        gsap.set(el, { scaleX: scale });
       } else {
         gsap.to(el, {
-          scaleX: pct / 100,
+          scaleX: scale,
           duration: 0.5,
           ease: "power3.out",
-          transformOrigin: "left center",
         });
       }
     });
@@ -633,33 +620,36 @@ function ProductivityExplorer({
       gsap.fromTo(
         barsContainerRef.current,
         { scale: 1 },
-        { scale: 1.015, duration: 0.25, yoyo: true, repeat: 1, ease: "power2.out" }
+        { scale: 1.015, duration: 0.25, yoyo: true, repeat: 1, ease: "power2.out" },
       );
-    } else if (pulseTarget === "regression" && scoreBoxRef.current) {
+    } else if ((pulseTarget === "models" || pulseTarget === "regression") && scoreBoxRef.current) {
       gsap.fromTo(
         scoreBoxRef.current,
         { scale: 1 },
-        { scale: 1.05, duration: 0.25, yoyo: true, repeat: 1, ease: "power2.out" }
+        { scale: 1.05, duration: 0.25, yoyo: true, repeat: 1, ease: "power2.out" },
       );
-    } else if (pulseTarget === "clustering" && roleChipRef.current) {
+    } else if (
+      (pulseTarget === "accuracy" || pulseTarget === "clustering") &&
+      roleChipRef.current
+    ) {
       gsap.fromTo(
         roleChipRef.current,
         { scale: 1 },
-        { scale: 1.08, duration: 0.25, yoyo: true, repeat: 1, ease: "power2.out" }
+        { scale: 1.08, duration: 0.25, yoyo: true, repeat: 1, ease: "power2.out" },
       );
     } else if (pulseTarget === "score-role") {
       if (scoreBoxRef.current) {
         gsap.fromTo(
           scoreBoxRef.current,
           { scale: 1 },
-          { scale: 1.04, duration: 0.25, yoyo: true, repeat: 1, ease: "power2.out" }
+          { scale: 1.04, duration: 0.25, yoyo: true, repeat: 1, ease: "power2.out" },
         );
       }
       if (roleChipRef.current) {
         gsap.fromTo(
           roleChipRef.current,
           { scale: 1 },
-          { scale: 1.06, duration: 0.25, yoyo: true, repeat: 1, ease: "power2.out" }
+          { scale: 1.06, duration: 0.25, yoyo: true, repeat: 1, ease: "power2.out" },
         );
       }
     }
@@ -674,9 +664,9 @@ function ProductivityExplorer({
       <div className="flex items-center justify-between border-b border-[#0B0B0B]/15 pb-2.5 shrink-0">
         <div className="flex items-center gap-1.5 sm:gap-2">
           <span className="mono text-[11px] text-[#6B645A] uppercase tracking-wider mr-1">
-            Subject:
+            Sample:
           </span>
-          {(["S001", "S003", "S007"] as SubjectId[]).map((id) => (
+          {(["Sample 1", "Sample 2", "Sample 3"] as SubjectId[]).map((id) => (
             <button
               key={id}
               type="button"
@@ -692,7 +682,7 @@ function ProductivityExplorer({
           ))}
         </div>
         <span className="mono text-[10px] sm:text-[11px] text-[#1F5A3A] font-semibold uppercase tracking-wider">
-          Session Activity
+          Sample Session Data
         </span>
       </div>
 
@@ -707,7 +697,10 @@ function ProductivityExplorer({
           const val = subjectData.vals[idx];
           const initialPct = (val / feat.max) * 100;
           return (
-            <div key={feat.key} className="flex items-center text-[11px] sm:text-[12px] mono leading-tight">
+            <div
+              key={feat.key}
+              className="flex items-center text-[11px] sm:text-[12px] mono leading-tight"
+            >
               <span className="w-[125px] sm:w-[155px] truncate text-[#0B0B0B]/80 font-medium">
                 {feat.label}
               </span>
@@ -717,11 +710,11 @@ function ProductivityExplorer({
                     barRefs.current[idx] = el;
                   }}
                   className="h-full bg-[#1F5A3A] rounded-full"
-                  style={{ width: "100%", transform: `scaleX(${initialPct / 100})`, transformOrigin: "left center" }}
+                  style={{ width: `${initialPct}%` }}
                 />
               </div>
-              <span className="w-[42px] sm:w-[48px] text-right font-semibold text-[#0B0B0B] inline-flex justify-end">
-                <Odometer value={val} active={active} />
+              <span className="w-[42px] sm:w-[48px] text-right font-semibold text-[#0B0B0B]">
+                {val}
               </span>
             </div>
           );
@@ -770,16 +763,20 @@ function RoleCard({ p, active }: { p: Project; active: boolean }) {
   const [pulseTarget, setPulseTarget] = useState<string | null>(null);
 
   const pipelineSteps = [
-    { label: "Behaviour features", target: "features" },
-    { label: "Random Forest regression", target: "regression" },
-    { label: "K-Means clustering", target: "clustering" },
-    { label: "Score and role", target: "score-role" },
+    { label: "EDA & feature engineering", target: "features" },
+    { label: "Random Forest & Logistic Regression", target: "models" },
+    { label: "~87% classification accuracy", target: "accuracy" },
+    { label: "Streamlit & joblib deployment", target: "score-role" },
   ];
 
   const titleNode = (
     <>
-      <span className="block"><SplitReveal text="Productivity and" /></span>
-      <span className="block"><SplitReveal text="Role Prediction" /></span>
+      <span className="block">
+        <SplitReveal text="Productivity and" />
+      </span>
+      <span className="block">
+        <SplitReveal text="Role Prediction" />
+      </span>
     </>
   );
 
@@ -802,7 +799,9 @@ function RoleCard({ p, active }: { p: Project; active: boolean }) {
           >
             <div className="flex flex-col items-center justify-center relative w-2.5 shrink-0">
               {idx > 0 && <span className="absolute -top-3 bottom-1/2 w-px bg-[#0B0B0B]/25" />}
-              {idx < pipelineSteps.length - 1 && <span className="absolute top-1/2 -bottom-3 w-px bg-[#0B0B0B]/25" />}
+              {idx < pipelineSteps.length - 1 && (
+                <span className="absolute top-1/2 -bottom-3 w-px bg-[#0B0B0B]/25" />
+              )}
               <span
                 className={`w-2 h-2 rounded-full transition-all relative z-10 ${
                   isHovered
@@ -814,7 +813,9 @@ function RoleCard({ p, active }: { p: Project; active: boolean }) {
             <div className="relative inline-block transition-transform duration-200 ease-out group-hover:translate-x-[6px]">
               <span
                 className={`font-mono text-[13px] tracking-wide transition-colors ${
-                  isHovered ? "text-[#1F5A3A] font-semibold" : "text-[#0B0B0B] group-hover:text-[#1F5A3A]"
+                  isHovered
+                    ? "text-[#1F5A3A] font-semibold"
+                    : "text-[#0B0B0B] group-hover:text-[#1F5A3A]"
                 }`}
               >
                 {step.label}
@@ -839,78 +840,20 @@ function RoleCard({ p, active }: { p: Project; active: boolean }) {
         line={p.line}
         statusLine={p.statusLine ?? p.mutedLine}
         buttonLabel={p.buttonLabel ?? "Details"}
-        onOpenDetails={() => setCs(true)}
+        onOpenDetails={() => {
+          setPulseTarget(null);
+          setCs(true);
+        }}
         pipeline={pipelineNode}
         visual={<ProductivityExplorer active={active} pulseTarget={pulseTarget} />}
         active={active}
       />
-      <Suspense fallback={null}><CaseStudy open={cs} onClose={closeCs} data={roleCaseStudy} /></Suspense>
+      <CaseStudy open={cs} onClose={closeCs} data={roleCaseStudy} />
     </>
   );
 }
 
-const CAREERLENS_NODES = [
-  // Row 1 (built)
-  {
-    num: "01",
-    label: "Resume PDF",
-    caption: "Resume parsing",
-    built: true,
-    desc: "Parses candidate profile data from raw PDF documents.",
-  },
-  {
-    num: "02",
-    label: "Profile extraction",
-    caption: "Profile extraction",
-    built: true,
-    desc: "Extracts technical skills, experience, and education into structured entities.",
-  },
-  {
-    num: "03",
-    label: "Embeddings (MiniLM)",
-    caption: "MiniLM embeddings",
-    built: true,
-    desc: "Generates 384-dimensional dense semantic vectors using Sentence Transformers.",
-  },
-  {
-    num: "04",
-    label: "FAISS search",
-    caption: "Cosine similarity",
-    built: true,
-    desc: "Indexes role definitions and runs fast nearest-neighbor similarity searches.",
-  },
-  // Row 2 (nodes 5 & 6 built, 7 & 8 pending)
-  {
-    num: "05",
-    label: "Gemini citations",
-    fullLabel: "Gemini explanation with citations",
-    caption: "Gemini citations",
-    built: true,
-    desc: "Synthesises personalised skill gap analysis with direct source citations.",
-  },
-  {
-    num: "06",
-    label: "Job match & gaps",
-    fullLabel: "Job match and skill gaps",
-    caption: "SQLAlchemy store",
-    built: true,
-    desc: "Calculates match scores and persists role-fit evaluation in SQLite.",
-  },
-  {
-    num: "07",
-    label: "Front end",
-    caption: "Being rebuilt",
-    built: false,
-    desc: "Next-generation responsive UI currently in active development.",
-  },
-  {
-    num: "08",
-    label: "Deployment",
-    caption: "Pending",
-    built: false,
-    desc: "Cloud containerization and deployment pending frontend completion.",
-  },
-];
+const CAREERLENS_NODES = careerlensStages;
 
 function CareerLensPipeline({ active }: { active: boolean }) {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
@@ -920,10 +863,12 @@ function CareerLensPipeline({ active }: { active: boolean }) {
 
   const activeNode = hoveredIdx !== null ? CAREERLENS_NODES[hoveredIdx] : CAREERLENS_NODES[0];
 
+  const cachedLength = useRef<number | null>(null);
+
   useEffect(() => {
     const path = pathRef.current;
     if (!path) return;
-    const len = path.getTotalLength();
+    const len = cachedLength.current ?? (cachedLength.current = path.getTotalLength() || 600);
     path.style.strokeDasharray = `${len}`;
 
     const validNodes = nodeRefs.current.filter(Boolean);
@@ -943,7 +888,7 @@ function CareerLensPipeline({ active }: { active: boolean }) {
     path.style.strokeDashoffset = `${len}`;
     gsap.set(validNodes, { opacity: 0, y: 12 });
 
-    const tl = gsap.timeline();
+    const tl = gsap.timeline({ delay: 0.2 });
     // 1. Connector paths draw in on enter (1.4s, power2.out)
     tl.to(
       path,
@@ -952,7 +897,7 @@ function CareerLensPipeline({ active }: { active: boolean }) {
         duration: 1.4,
         ease: "power2.out",
       },
-      0
+      0,
     );
 
     // 2. Nodes fade up in order (stagger 0.07s)
@@ -965,7 +910,7 @@ function CareerLensPipeline({ active }: { active: boolean }) {
         stagger: 0.07,
         ease: "power2.out",
       },
-      0.25
+      0.25,
     );
 
     return () => {
@@ -1007,7 +952,7 @@ function CareerLensPipeline({ active }: { active: boolean }) {
           Architecture Flow
         </span>
         <span className="mono text-[10px] sm:text-[11px] text-[#1F5A3A] font-semibold uppercase tracking-wider">
-          <><Odometer value="8" active={active} /> Pipeline Stages</>
+          {careerlensStages.length} Pipeline Stages
         </span>
       </div>
 
@@ -1115,8 +1060,8 @@ function CareerLensPipeline({ active }: { active: boolean }) {
                       node.built
                         ? "text-[#1F5A3A] bg-[#1F5A3A]/10"
                         : node.label === "Front end"
-                        ? "text-[#92400E] bg-[#92400E]/10"
-                        : "text-[#6B645A] bg-[#0B0B0B]/5"
+                          ? "text-[#92400E] bg-[#92400E]/10"
+                          : "text-[#6B645A] bg-[#0B0B0B]/5"
                     }`}
                   >
                     {node.built ? "Built" : node.caption}
@@ -1140,9 +1085,7 @@ function CareerLensPipeline({ active }: { active: boolean }) {
           <span className="font-semibold text-[#1F5A3A] shrink-0">
             {activeNode.num} / {activeNode.label.toUpperCase()}:
           </span>
-          <span className="text-[#0B0B0B] truncate text-[11px]">
-            {activeNode.desc}
-          </span>
+          <span className="text-[#0B0B0B] truncate text-[11px]">{activeNode.desc}</span>
         </div>
         <span className="shrink-0 text-[9px] sm:text-[10px] uppercase font-mono px-2 py-0.5 rounded border border-[#0B0B0B]/15 bg-[#E8DED0] text-[#6B645A] ml-2 hidden sm:inline-block">
           {activeNode.caption}
@@ -1156,16 +1099,12 @@ function CareerLensCard({ p, active }: { p: Project; active: boolean }) {
   const [cs, setCs] = useState(false);
   const closeCs = useCallback(() => setCs(false), []);
 
-  const pipelineSteps = [
-    { label: "Resume extraction" },
-    { label: "MiniLM embeddings" },
-    { label: "FAISS search" },
-    { label: "Gemini citations" },
-    { label: "Skill gaps & store" },
-  ];
+  const pipelineSteps = careerlensStages.map((s) => ({ label: s.label }));
 
   const titleNode = (
-    <span className="block"><SplitReveal text="CareerLens AI" /></span>
+    <span className="block">
+      <SplitReveal text="CareerLens AI" />
+    </span>
   );
 
   const pipelineNode = (
@@ -1178,7 +1117,9 @@ function CareerLensCard({ p, active }: { p: Project; active: boolean }) {
         >
           <div className="flex flex-col items-center justify-center relative w-2.5 shrink-0">
             {idx > 0 && <span className="absolute -top-3 bottom-1/2 w-px bg-[#0B0B0B]/25" />}
-            {idx < pipelineSteps.length - 1 && <span className="absolute top-1/2 -bottom-3 w-px bg-[#0B0B0B]/25" />}
+            {idx < pipelineSteps.length - 1 && (
+              <span className="absolute top-1/2 -bottom-3 w-px bg-[#0B0B0B]/25" />
+            )}
             <span className="w-2 h-2 rounded-full transition-all relative z-10 bg-[#0B0B0B] group-hover:bg-[#1F5A3A]" />
           </div>
           <div className="relative inline-block transition-transform duration-200 ease-out group-hover:translate-x-[6px]">
@@ -1209,7 +1150,7 @@ function CareerLensCard({ p, active }: { p: Project; active: boolean }) {
         visual={<CareerLensPipeline active={active} />}
         active={active}
       />
-      <Suspense fallback={null}><CaseStudy open={cs} onClose={closeCs} data={careerlensCaseStudy} /></Suspense>
+      <CaseStudy open={cs} onClose={closeCs} data={careerlensCaseStudy} />
     </>
   );
 }
@@ -1230,19 +1171,68 @@ export function PageWorks({
   const dimRefs = useRef<(HTMLDivElement | null)[]>([]);
   const prevSub = useRef(sub);
   const initialRender = useRef(true);
+  const prevActiveRef = useRef(active);
+  const activeTimelineRef = useRef<gsap.core.Timeline | null>(null);
 
   useEffect(() => {
-    if (active) preloadScreenshots();
-  }, [active]);
+    preloadScreenshots();
+  }, []);
 
+  // Ensure cards rest in exact positions whenever Works page mounts or becomes active
   useEffect(() => {
     if (!paged) return;
+
+    if (!active) {
+      if (activeTimelineRef.current?.isActive()) {
+        activeTimelineRef.current.kill();
+      }
+      cardRefs.current.forEach((c) => {
+        if (c) c.style.visibility = "hidden";
+      });
+      prevActiveRef.current = false;
+      return;
+    }
+
+    const justEntered = active && !prevActiveRef.current;
+    prevActiveRef.current = active;
+
+    if (justEntered || initialRender.current) {
+      initialRender.current = false;
+      if (activeTimelineRef.current?.isActive()) {
+        activeTimelineRef.current.kill();
+      }
+      const cards = cardRefs.current;
+      const dims = dimRefs.current;
+      cards.forEach((c, i) => {
+        if (!c) return;
+        const dim = dims[i];
+        if (i > sub) {
+          gsap.set(c, { yPercent: 100, scale: 1 });
+          if (dim) gsap.set(dim, { opacity: 0 });
+          c.style.visibility = "hidden";
+        } else if (i === sub) {
+          gsap.set(c, { yPercent: 0, scale: 1 });
+          if (dim) gsap.set(dim, { opacity: 0 });
+          c.style.visibility = "visible";
+        } else {
+          const depth = sub - i;
+          gsap.set(c, { yPercent: -4 * depth, scale: Math.max(0.8, 1 - 0.06 * depth) });
+          if (dim) gsap.set(dim, { opacity: Math.min(0.8, 0.45 * depth) });
+          c.style.visibility = "visible";
+        }
+      });
+      prevSub.current = sub;
+    }
+  }, [active, paged, sub]);
+
+  // Card change stacking animation
+  useEffect(() => {
+    if (!paged || !active) return;
 
     const cards = cardRefs.current;
     const dims = dimRefs.current;
 
-    if (initialRender.current || reduced()) {
-      initialRender.current = false;
+    if (reduced()) {
       prevSub.current = sub;
       cards.forEach((c, i) => {
         if (!c) return;
@@ -1250,13 +1240,16 @@ export function PageWorks({
         if (i > sub) {
           gsap.set(c, { yPercent: 100, scale: 1 });
           if (dim) gsap.set(dim, { opacity: 0 });
+          c.style.visibility = "hidden";
         } else if (i === sub) {
           gsap.set(c, { yPercent: 0, scale: 1 });
           if (dim) gsap.set(dim, { opacity: 0 });
+          c.style.visibility = "visible";
         } else {
           const depth = sub - i;
           gsap.set(c, { yPercent: -4 * depth, scale: Math.max(0.8, 1 - 0.06 * depth) });
           if (dim) gsap.set(dim, { opacity: Math.min(0.8, 0.45 * depth) });
+          c.style.visibility = "visible";
         }
       });
       return;
@@ -1264,81 +1257,142 @@ export function PageWorks({
 
     const from = prevSub.current;
     const to = sub;
+    if (from === to) return;
     prevSub.current = sub;
 
-    if (from === to) return;
+    if (activeTimelineRef.current?.isActive()) {
+      activeTimelineRef.current.kill();
+    }
+
+    // Set will-change and visibility before starting tween
+    cards.forEach((c, i) => {
+      if (!c) return;
+      if (i <= Math.max(from, to) && i >= 0) {
+        c.style.visibility = "visible";
+      }
+      c.style.willChange = "transform";
+    });
+    dims.forEach((d) => {
+      if (d) d.style.willChange = "opacity";
+    });
+
+    const tl = gsap.timeline({
+      onComplete: () => {
+        cards.forEach((c, i) => {
+          if (!c) return;
+          c.style.willChange = "auto";
+          if (i > to) {
+            c.style.visibility = "hidden";
+          } else {
+            c.style.visibility = "visible";
+          }
+        });
+        dims.forEach((d) => {
+          if (d) d.style.willChange = "auto";
+        });
+      },
+    });
+    activeTimelineRef.current = tl;
 
     if (to > from) {
-      // Forward transition: next card slides up from bottom (yPercent 100 to 0, 0.9 s, expo.out) over current card,
-      // while current card scales to 0.94, moves up 4% and dims to 55% brightness.
+      // Forward transition: incoming card slides up over current card (0.7s power3.inOut),
+      // while previous cards scale down to ~0.94, move up ~4%, and dim with dark overlay.
       cards.forEach((c, i) => {
         if (!c) return;
         const dim = dims[i];
 
         if (i === to) {
-          gsap.fromTo(
+          tl.fromTo(
             c,
             { yPercent: 100, scale: 1 },
-            { yPercent: 0, scale: 1, duration: 0.9, ease: "expo.out" }
+            { yPercent: 0, scale: 1, duration: 0.7, ease: "power3.inOut" },
+            0,
           );
-          if (dim) gsap.set(dim, { opacity: 0 });
+          if (dim) {
+            tl.fromTo(dim, { opacity: 0 }, { opacity: 0, duration: 0.7, ease: "power3.inOut" }, 0);
+          }
         } else if (i < to) {
           const depth = to - i;
           const targetScale = Math.max(0.8, 1 - 0.06 * depth);
           const targetYPercent = -4 * depth;
           const targetDim = Math.min(0.8, 0.45 * depth);
 
-          gsap.to(c, {
-            yPercent: targetYPercent,
-            scale: targetScale,
-            duration: 0.9,
-            ease: "expo.out",
-          });
+          tl.to(
+            c,
+            {
+              yPercent: targetYPercent,
+              scale: targetScale,
+              duration: 0.7,
+              ease: "power3.inOut",
+            },
+            0,
+          );
           if (dim) {
-            gsap.to(dim, {
-              opacity: targetDim,
-              duration: 0.9,
-              ease: "expo.out",
-            });
+            tl.to(
+              dim,
+              {
+                opacity: targetDim,
+                duration: 0.7,
+                ease: "power3.inOut",
+              },
+              0,
+            );
           }
         } else {
-          gsap.set(c, { yPercent: 100, scale: 1 });
-          if (dim) gsap.set(dim, { opacity: 0 });
+          tl.set(c, { yPercent: 100, scale: 1 }, 0);
+          if (dim) tl.set(dim, { opacity: 0 }, 0);
         }
       });
     } else {
-      // Reverse transition: top card slides down and the card beneath scales back to 1
+      // Reverse transition: top card slides down and revealing the card beneath,
+      // which scales back to 1 and dim returns to 0.
       cards.forEach((c, i) => {
         if (!c) return;
         const dim = dims[i];
 
         if (i > to) {
-          gsap.to(c, {
-            yPercent: 100,
-            scale: 1,
-            duration: 0.9,
-            ease: "expo.out",
-          });
+          tl.to(
+            c,
+            {
+              yPercent: 100,
+              scale: 1,
+              duration: 0.7,
+              ease: "power3.inOut",
+            },
+            0,
+          );
           if (dim) {
-            gsap.to(dim, {
-              opacity: 0,
-              duration: 0.9,
-              ease: "expo.out",
-            });
+            tl.to(
+              dim,
+              {
+                opacity: 0,
+                duration: 0.7,
+                ease: "power3.inOut",
+              },
+              0,
+            );
           }
         } else if (i === to) {
-          gsap.to(c, {
-            yPercent: 0,
-            scale: 1,
-            duration: 0.9,
-            ease: "expo.out",
-          });
+          tl.to(
+            c,
+            {
+              yPercent: 0,
+              scale: 1,
+              duration: 0.7,
+              ease: "power3.inOut",
+            },
+            0,
+          );
           if (dim) {
-            gsap.to(dim, {
-              opacity: 0,
-              duration: 0.9,
-              ease: "expo.out",
-            });
+            tl.to(
+              dim,
+              {
+                opacity: 0,
+                duration: 0.7,
+                ease: "power3.inOut",
+              },
+              0,
+            );
           }
         } else {
           const depth = to - i;
@@ -1346,23 +1400,31 @@ export function PageWorks({
           const targetYPercent = -4 * depth;
           const targetDim = Math.min(0.8, 0.45 * depth);
 
-          gsap.to(c, {
-            yPercent: targetYPercent,
-            scale: targetScale,
-            duration: 0.9,
-            ease: "expo.out",
-          });
+          tl.to(
+            c,
+            {
+              yPercent: targetYPercent,
+              scale: targetScale,
+              duration: 0.7,
+              ease: "power3.inOut",
+            },
+            0,
+          );
           if (dim) {
-            gsap.to(dim, {
-              opacity: targetDim,
-              duration: 0.9,
-              ease: "expo.out",
-            });
+            tl.to(
+              dim,
+              {
+                opacity: targetDim,
+                duration: 0.7,
+                ease: "power3.inOut",
+              },
+              0,
+            );
           }
         }
       });
     }
-  }, [sub, paged]);
+  }, [sub, paged, active]);
 
   return (
     <div
@@ -1370,20 +1432,25 @@ export function PageWorks({
       style={{ background: "var(--cream)", color: "var(--ink)" }}
     >
       {/* Progress indicator row */}
-      <div className="flex items-center justify-end gap-2 pb-2" data-fade>
-        {works.projects.map((p, idx) => (
-          <button
-            key={p.id}
-            type="button"
-            onClick={() => onSelectSub?.(idx)}
-            aria-label={`Go to ${p.title}`}
-            className="inline-block h-[3px] rounded-full transition-all duration-500 ease-out cursor-pointer p-0 border-0 outline-none focus-visible:ring-1 focus-visible:ring-[#1F5A3A]"
-            style={{
-              width: !paged || sub === idx ? 32 : 12,
-              backgroundColor: !paged || sub === idx ? "var(--accent-green)" : "var(--line)",
-            }}
-          />
-        ))}
+      <div className="flex items-center justify-between pb-2" data-fade>
+        <span className="mono text-[10px] sm:text-[11px] text-[#6B645A] tracking-wider truncate mr-2">
+          Additional projects: Build Track Pro · Fresh Cart · Drop for Life
+        </span>
+        <div className="flex items-center gap-2 shrink-0">
+          {works.projects.map((p, idx) => (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => onSelectSub?.(idx)}
+              aria-label={`Go to ${p.title}`}
+              className="inline-block h-[3px] rounded-full transition-all duration-500 ease-out cursor-pointer p-0 border-0 outline-none focus-visible:ring-1 focus-visible:ring-[#1F5A3A]"
+              style={{
+                width: !paged || sub === idx ? 32 : 12,
+                backgroundColor: !paged || sub === idx ? "var(--accent-green)" : "var(--line)",
+              }}
+            />
+          ))}
+        </div>
       </div>
 
       <h2 className="sr-only">{works.heading}</h2>
@@ -1404,6 +1471,7 @@ export function PageWorks({
               cardRefs.current[i] = el;
             }}
             data-card
+            data-active={i === sub ? "true" : undefined}
             className={
               paged
                 ? "absolute inset-0 origin-top overflow-hidden flex flex-col justify-center rounded-t-[24px]"
@@ -1413,8 +1481,10 @@ export function PageWorks({
               background: "var(--cream)",
               color: "var(--ink)",
               zIndex: paged ? (i + 1) * 10 : undefined,
-              boxShadow: paged ? "0 -8px 32px rgba(11, 11, 11, 0.12)" : undefined,
-              borderTop: paged ? "1px solid rgba(11, 11, 11, 0.08)" : undefined,
+              contain: paged ? "layout" : undefined,
+              borderTop: paged ? "1px solid rgba(11, 11, 11, 0.12)" : undefined,
+              boxShadow: paged ? "0 -8px 24px rgba(11, 11, 11, 0.08)" : undefined,
+              visibility: !active ? "hidden" : paged && i > sub ? "hidden" : undefined,
             }}
             aria-hidden={paged && i !== sub}
             inert={paged && i !== sub ? true : undefined}

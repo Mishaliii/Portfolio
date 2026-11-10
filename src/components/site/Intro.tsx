@@ -1,12 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { gsap } from "gsap";
 import {
   INTRO_KEY,
   MIN_HOLD_MS,
-  ASSET_TIMEOUT_MS,
   HARD_LIMIT_MS,
   REDUCED_FADE_MS,
-  readyToSwitchOn,
+  LOADER_WEIGHTS,
+  type LoaderPart,
 } from "@/lib/intro";
 import { reduced } from "@/lib/motion";
 import { stage } from "@/lib/stage";
@@ -16,12 +16,19 @@ import { ddssImages, ddssThumbs } from "./ScreenshotGallery";
 import { headlineInstances, headlineReady } from "./HeadlineDissolve";
 
 /**
- * "Lights on" loading screen:
- * - Full-screen ink #0B0B0B with centered inline SVG pendant lamp.
- * - Soft irregular bulb flicker while hero poster/video + fonts load.
- * - Cord pull (y +16, elastic return) -> bulb switches on with warm gold glow.
- * - Circular clip-path reveal expands from bulb to full viewport, revealing hero underneath.
- * - Overlay unmounts from DOM. Total screen time capped at <=2.4s.
+ * NeoLeaf MISHAL Liquid Loading Screen
+ *
+ * 1) Dark ink #0B0B0B full screen. Centered wordmark MISHAL in Anton display font
+ *    (~40-45 vw wide) in dim ghost cream (16% opacity). Fades in with 36px rise (0.6s power3.out).
+ *    Tiny mono caption "LOADING... 0 %" sits right-aligned under wordmark at 70% cream.
+ * 2) Liquid fill: Wordmark fills with solid cream from bottom to top with a wavy liquid surface
+ *    (two sine waves of different frequencies moving sideways), strongest at 50% and flat at 0% / 100%.
+ *    Fill level follows real loading progress (smoothed, never goes backwards).
+ *    At 100%, clip switches to inset(0%) covering every glyph pixel.
+ * 3) At 100%: 0.25s hold, then filled MISHAL travels with FLIP to the top-left nav logo (1.0s, power3.inOut).
+ *    At the same time, hero circular reveal expands from center (circle(0) to circle(150vmax), 1.0s, power2.inOut)
+ *    and hero settles scale 1.08 -> 1 (1.4s, power3.out). Headline lines slide up once circle is half open.
+ *    Nav logo swaps in one frame when flight ends.
  */
 export function Intro({
   mode = "full",
@@ -33,18 +40,46 @@ export function Intro({
   onDone: () => void;
 }) {
   const overlayRef = useRef<HTMLDivElement>(null);
-  const pullCordRef = useRef<SVGGElement>(null);
-  const bulbRef = useRef<SVGCircleElement>(null);
-  const filamentRef = useRef<SVGPathElement>(null);
-  const glowHaloRef = useRef<SVGCircleElement>(null);
-  const glowRingRef = useRef<SVGCircleElement>(null);
-  const revealCircleRef = useRef<SVGCircleElement>(null);
-  const lampGroupRef = useRef<SVGGElement>(null);
+  const maskCircleRef = useRef<SVGCircleElement>(null);
+  const wordmarkWrapRef = useRef<HTMLDivElement>(null);
+  const ghostRef = useRef<HTMLDivElement>(null);
+  const fillRef = useRef<HTMLDivElement>(null);
+  const captionRef = useRef<HTMLDivElement>(null);
+  const skipBtnRef = useRef<HTMLButtonElement>(null);
 
-  const [lampPos, setLampPos] = useState({ cx: 600, cy: 400 });
+  const [counterText, setCounterText] = useState("0");
+
+  const topRatioRef = useRef(0.18);
+  const bottomRatioRef = useRef(0.82);
+
+  const measureGlyphs = useCallback(() => {
+    if (typeof document === "undefined") return;
+    const fillEl = fillRef.current;
+    if (!fillEl) return;
+    const cs = window.getComputedStyle(fillEl);
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+    const m = ctx.measureText("MISHAL");
+
+    const fontAscent = m.fontBoundingBoxAscent || m.actualBoundingBoxAscent * 1.25;
+    const fontDescent = m.fontBoundingBoxDescent || m.actualBoundingBoxDescent * 0.25 || 12;
+    const totalH = Math.max(1, fontAscent + fontDescent);
+
+    const glyphTop = fontAscent - m.actualBoundingBoxAscent;
+    const glyphBottom = fontAscent + m.actualBoundingBoxDescent;
+    const glyphH = Math.max(1, glyphBottom - glyphTop);
+
+    // 3% safety margin above and below
+    const safeTop = Math.max(0, glyphTop - 0.03 * glyphH);
+    const safeBottom = Math.min(totalH, glyphBottom + 0.03 * glyphH);
+
+    topRatioRef.current = safeTop / totalH;
+    bottomRatioRef.current = safeBottom / totalH;
+  }, []);
 
   useEffect(() => {
-    // Skip if already seen or deep link
     if (mode === "none") {
       onReveal();
       onDone();
@@ -52,424 +87,512 @@ export function Intro({
     }
 
     let alive = true;
-    let switched = false;
+    let flightStarted = false;
     let completed = false;
     const t0 = performance.now();
 
-    // Calculate center coordinates
-    const updateCenter = () => {
-      if (typeof window !== "undefined") {
-        setLampPos({
-          cx: Math.round(window.innerWidth / 2),
-          cy: Math.round(window.innerHeight / 2),
-        });
-      }
-    };
-    updateCenter();
-    window.addEventListener("resize", updateCenter);
-
     stage.controls = false;
-    // Set stage uniforms so hero is fully lit and ready under the overlay
     Object.assign(stage, { zoom: 1, light: 1, radius: 0.22 });
+    if (typeof window !== "undefined") {
+      (window as any).__loaderStartTime = t0;
+      (window as any).__loaderFrameDeltas = [];
+    }
 
     const finish = () => {
       if (completed) return;
       completed = true;
       alive = false;
+      if (typeof window !== "undefined") {
+        (window as any).__loaderDoneTime = performance.now();
+        (window as any).__loaderTotalMs = performance.now() - t0;
+      }
       stage.controls = true;
       try {
         sessionStorage.setItem(INTRO_KEY, "1");
       } catch {
-        /* storage optional */
+        /* ignore */
       }
       onDone();
     };
 
-    // 1. Soft irregular bulb flicker
-    let flickerTimer: number;
-    const flicker = () => {
-      if (!alive || switched || !bulbRef.current || !filamentRef.current) return;
-      const targetOpacity = 0.15 + Math.random() * 0.35; // 0.15 to 0.5
-      const duration = 0.08 + Math.random() * 0.15;
-      gsap.to([bulbRef.current, filamentRef.current], {
-        opacity: targetOpacity,
-        duration,
-        ease: "power1.inOut",
-        overwrite: "auto",
-        onComplete: () => {
-          if (alive && !switched) {
-            flickerTimer = window.setTimeout(flicker, Math.random() * 100);
-          }
-        },
-      });
-    };
-    flicker();
-
-    // 2. Comprehensive Loader Gate: fonts, hero video, portraits, project stills, headline canvases, buddy idle
-    let assetsReady = false;
-    const t0Gate = performance.now();
-    const gateTimings = {
-      fonts: 0,
-      heroVideo: 0,
-      aboutPortraits: 0,
-      projectStills: 0,
-      headlineDissolve: 0,
-      buddyIdle: 0,
-      allReady: 0,
-    };
-    (window as any).__gateTimings = gateTimings;
-
-    const decodeOne = (src: string) => {
-      const img = new Image();
-      img.src = src;
-      return img.decode().catch(() => {});
-    };
-
-    // A. document.fonts.ready
-    const fontsPromise = (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => {
-      gateTimings.fonts = Math.round(performance.now() - t0Gate);
-    });
-
-    // B. Hero video: readyState >= 3 / canplay and first frame painted (stage.frameUploaded or fallback)
-    const heroVideoPromise = new Promise<void>((resolve) => {
-      const check = () => {
-        const v = document.querySelector<HTMLVideoElement>(".scene-video");
-        const videoCanPlay = Boolean(v && v.readyState >= 3);
-        const framePainted = stage.frameUploaded || stage.fallback;
-        if (videoCanPlay && framePainted) {
-          gateTimings.heroVideo = Math.round(performance.now() - t0Gate);
-          resolve();
-          return true;
-        }
-        return false;
-      };
-      if (check()) return;
-      const onStageEvent = () => {
-        if (check()) {
-          window.removeEventListener("stage-fallback", onStageEvent);
-          window.removeEventListener("stage-frame-uploaded", onStageEvent);
-        }
-      };
-      window.addEventListener("stage-fallback", onStageEvent);
-      window.addEventListener("stage-frame-uploaded", onStageEvent);
-      const iv = setInterval(() => {
-        if (check()) clearInterval(iv);
-      }, 30);
-    });
-
-    // C. Both About portrait images decoded
-    const aboutPortraitsPromise = Promise.all([decodeOne(sideImg), decodeOne(frontImg)]).then(() => {
-      gateTimings.aboutPortraits = Math.round(performance.now() - t0Gate);
-    });
-
-    // D. First DDSS stage image and first still of each project decoded
-    const ddssFirst = ddssImages["ddss"] || ddssImages["ddss-screen"] || Object.values(ddssImages)[0];
-    const projectStills = [
-      ddssFirst,
-      "/hero/poster.webp",
-      ddssThumbs["ddss-2"] || ddssImages["ddss-2"],
-    ].filter(Boolean);
-    const projectStillsPromise = Promise.all(projectStills.map(decodeOne)).then(() => {
-      gateTimings.projectStills = Math.round(performance.now() - t0Gate);
-    });
-
-    // E. HeadlineDissolve canvases measured bounds and drawn first frame
-    const headlinePromise = new Promise<void>((resolve) => {
-      const check = () => {
-        if (headlineInstances.size > 0 && headlineReady.size >= headlineInstances.size) {
-          gateTimings.headlineDissolve = Math.round(performance.now() - t0Gate);
-          resolve();
-          return true;
-        }
-        return false;
-      };
-      if (check()) return;
-      const onFrame = () => {
-        if (check()) window.removeEventListener("headline-first-frame", onFrame);
-      };
-      window.addEventListener("headline-first-frame", onFrame);
-      const iv = setInterval(() => {
-        if (check()) clearInterval(iv);
-      }, 25);
-    });
-
-    // F. Buddy idle sprite decoded
-    const buddyIdlePromise = decodeOne("/buddy/idle.webp").then(() => {
-      gateTimings.buddyIdle = Math.round(performance.now() - t0Gate);
-    });
-
-    // Parallel gate resolution
-    Promise.all([
-      fontsPromise,
-      heroVideoPromise,
-      aboutPortraitsPromise,
-      projectStillsPromise,
-      headlinePromise,
-      buddyIdlePromise,
-    ]).then(() => {
-      gateTimings.allReady = Math.round(performance.now() - t0Gate);
-      assetsReady = true;
-    });
-
-    // 3. Switch-on reveal sequence
-    const triggerSwitchOn = () => {
-      if (switched || !alive) return;
-      switched = true;
-      clearTimeout(flickerTimer);
-      gsap.killTweensOf([bulbRef.current, filamentRef.current]);
-
-      // Allow clicks through overlay as soon as reveal initiates
+    // Prefers reduced motion: plain 0.3s fade
+    const isReduced =
+      reduced() ||
+      (typeof window !== "undefined" &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    if (isReduced) {
+      onReveal();
+      window.dispatchEvent(new CustomEvent("intro-end"));
+      window.dispatchEvent(new CustomEvent("hero-assemble"));
       if (overlayRef.current) {
-        overlayRef.current.style.pointerEvents = "none";
-      }
-
-      // Reduced motion: simple 200ms fade
-      const isReduced = reduced() || (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-      if (isReduced) {
-        onReveal();
         gsap.to(overlayRef.current, {
           opacity: 0,
           duration: REDUCED_FADE_MS / 1000,
           ease: "power1.out",
           onComplete: finish,
         });
-        return;
-      }
-
-      const w = window.innerWidth, h = window.innerHeight;
-      const maxR = Math.ceil(Math.hypot(w, h));
-      const tl = gsap.timeline({ onComplete: finish });
-
-      // Pull the cord (cord y +16 with elastic return)
-      if (pullCordRef.current) {
-        tl.to(pullCordRef.current, { y: 16, duration: 0.14, ease: "power2.in" }, 0);
-        tl.to(pullCordRef.current, { y: 0, duration: 0.38, ease: "elastic.out(1.2, 0.4)" }, 0.14);
-      }
-
-      // Bulb switches on with warm gold glow at the bottom of the pull
-      if (bulbRef.current && filamentRef.current && glowHaloRef.current) {
-        tl.set(bulbRef.current, { fill: "#FFE898", opacity: 1 }, 0.14);
-        tl.set(filamentRef.current, { stroke: "#FFFFFF", opacity: 1 }, 0.14);
-        tl.to(glowHaloRef.current, { opacity: 1, duration: 0.12, ease: "power2.out" }, 0.14);
-      }
-
-      // Circular clip-path / mask reveal expands from bulb to full viewport
-      const cx = w / 2;
-      const cy = h / 2 + 6; // bulb center offset
-
-      if (revealCircleRef.current) {
-        tl.fromTo(
-          revealCircleRef.current,
-          { attr: { r: 0 } },
-          { attr: { r: maxR }, duration: 0.65, ease: "power2.inOut" },
-          0.2
-        );
-      }
-
-      if (glowRingRef.current) {
-        tl.fromTo(
-          glowRingRef.current,
-          { attr: { r: 0 }, opacity: 0.85 },
-          { attr: { r: maxR }, opacity: 0, duration: 0.65, ease: "power2.inOut" },
-          0.2
-        );
-      }
-
-      // Lamp fades out as light floods the screen
-      if (lampGroupRef.current) {
-        tl.to(lampGroupRef.current, { opacity: 0, duration: 0.25, ease: "power2.in" }, 0.38);
-      }
-
-      // CSS clip-path sync on overlay container
-      if (overlayRef.current) {
-        const obj = { r: 0 };
-        tl.to(
-          obj,
-          {
-            r: 150,
-            duration: 0.65,
-            ease: "power2.inOut",
-            onUpdate: () => {
-              if (overlayRef.current) {
-                overlayRef.current.style.clipPath = `circle(${150 - obj.r}% at ${cx}px ${cy}px)`;
-              }
-            },
-          },
-          0.2
-        );
-      }
-
-      // Reveal hero entrance mid-expansion
-      tl.add(() => onReveal(), 0.38);
-    };
-
-    // 4. Polling loop: checks readiness, 900ms min hold, 1600ms fallback, 2400ms hard ceiling
-    const checkInterval = window.setInterval(() => {
-      if (!alive) {
-        clearInterval(checkInterval);
-        return;
-      }
-      const elapsed = performance.now() - t0;
-      if (!switched) {
-        const frameReady = stage.frameUploaded || stage.fallback;
-        const isReady = assetsReady || frameReady;
-        if (readyToSwitchOn(isReady, elapsed)) {
-          triggerSwitchOn();
-        }
-      }
-      if (elapsed >= HARD_LIMIT_MS) {
-        clearInterval(checkInterval);
+      } else {
         finish();
       }
-    }, 25);
+      return;
+    }
 
-    // Hard ceiling safety timeout (2.4s)
-    const safetyTimer = window.setTimeout(() => {
-      finish();
-    }, HARD_LIMIT_MS);
+    // Measure glyph bounds after fonts load
+    if (typeof document !== "undefined" && document.fonts) {
+      document.fonts.ready.then(() => {
+        if (alive) measureGlyphs();
+      });
+    }
+    measureGlyphs();
+    window.addEventListener("resize", measureGlyphs);
+
+    // 1. Initial fade-in of wordmark
+    if (wordmarkWrapRef.current) {
+      if (mode === "short") {
+        gsap.set(wordmarkWrapRef.current, { opacity: 1, y: 0 });
+      } else {
+        gsap.fromTo(
+          wordmarkWrapRef.current,
+          { opacity: 0, y: 36 },
+          { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" },
+        );
+      }
+    }
+
+    // Skip button appears after 1.2s on full mode
+    if (mode === "full" && skipBtnRef.current) {
+      gsap.fromTo(
+        skipBtnRef.current,
+        { opacity: 0, y: 10 },
+        { opacity: 1, y: 0, duration: 0.35, ease: "power2.out", delay: 1.2 },
+      );
+    }
+
+    // 2. Real asset loading tracker
+    const partsLoaded: Partial<Record<LoaderPart, number>> = {};
+    let rawProgress = 0;
+    let targetProgress = 0;
+    let displayProgress = 0;
+    let isSkipped = false;
+
+    const decodeImg = (src: string) => {
+      const img = new Image();
+      img.src = src;
+      return img.decode().catch(() => {});
+    };
+
+    const markPart = (k: LoaderPart, val = LOADER_WEIGHTS[k]) => {
+      if (!alive) return;
+      partsLoaded[k] = val;
+      let sum = 0;
+      for (const [key, w] of Object.entries(LOADER_WEIGHTS)) {
+        if (partsLoaded[key as LoaderPart]) sum += w;
+      }
+      rawProgress = sum;
+    };
+
+    // A. Fonts 20%
+    if (typeof document !== "undefined" && document.fonts) {
+      document.fonts.ready.then(() => markPart("fonts"));
+    } else {
+      markPart("fonts");
+    }
+
+    // B. Hero Video 30% (first frame uploaded or readyState >= 3)
+    const checkVideo = () => {
+      const v = document.querySelector<HTMLVideoElement>(".scene-video");
+      const videoReady = Boolean(v && v.readyState >= 3);
+      const framePainted = stage.frameUploaded || stage.fallback;
+      if (videoReady || framePainted) {
+        markPart("heroVideo");
+        return true;
+      }
+      return false;
+    };
+    if (!checkVideo()) {
+      const onStageEvt = () => {
+        if (checkVideo()) {
+          window.removeEventListener("stage-frame-uploaded", onStageEvt);
+          window.removeEventListener("stage-fallback", onStageEvt);
+        }
+      };
+      window.addEventListener("stage-frame-uploaded", onStageEvt);
+      window.addEventListener("stage-fallback", onStageEvt);
+    }
+
+    // C. About portraits 15%
+    Promise.all([decodeImg(sideImg), decodeImg(frontImg)]).then(() => markPart("aboutPortraits"));
+
+    // D. Project stills 15%
+    const ddssFirst =
+      ddssImages["ddss"] || ddssImages["ddss-screen"] || Object.values(ddssImages)[0];
+    const projectStills = [
+      ddssFirst,
+      "/hero/poster.webp",
+      ddssThumbs["ddss-2"] || ddssImages["ddss-2"],
+    ].filter(Boolean);
+    Promise.all(projectStills.map(decodeImg)).then(() => markPart("projectStills"));
+
+    // E. Headline canvases 10%
+    const checkHeadlines = () => {
+      if (headlineInstances.size > 0 && headlineReady.size >= headlineInstances.size) {
+        markPart("headlineCanvases");
+        return true;
+      }
+      return false;
+    };
+    if (!checkHeadlines()) {
+      const onHlFrame = () => {
+        if (checkHeadlines()) window.removeEventListener("headline-first-frame", onHlFrame);
+      };
+      window.addEventListener("headline-first-frame", onHlFrame);
+    }
+
+    // F. Sprout 10%
+    decodeImg("/buddy/idle.webp").then(() => markPart("sprout"));
+
+    // 3. FLIP Flight and Hero Reveal execution
+    const triggerFlightAndReveal = () => {
+      if (flightStarted || !alive) return;
+      flightStarted = true;
+      if (typeof window !== "undefined") {
+        (window as any).__loaderRevealTime = performance.now();
+        (window as any).__loaderDurationMs = performance.now() - t0;
+      }
+
+      if (overlayRef.current) {
+        overlayRef.current.style.pointerEvents = "none";
+      }
+
+      // Hide skip button and caption
+      if (skipBtnRef.current) {
+        gsap.to(skipBtnRef.current, { opacity: 0, duration: 0.2 });
+      }
+      if (captionRef.current) {
+        gsap.to(captionRef.current, { opacity: 0, duration: 0.2 });
+      }
+
+      // Fire events at the start of reveal
+      onReveal();
+      window.dispatchEvent(new CustomEvent("intro-end"));
+      window.dispatchEvent(new CustomEvent("hero-assemble"));
+
+      // Start navbar fade immediately at the reveal start so no frame shows hero without navbar
+      const headerEl = document.querySelector("header");
+      if (headerEl) {
+        gsap.fromTo(
+          headerEl,
+          { opacity: 0, y: 0, visibility: "visible" },
+          { opacity: 1, duration: 0.65, ease: "power2.out" },
+        );
+      }
+
+      const flightDuration = mode === "short" ? 0.45 : 1.25;
+
+      // A. Wordmark FLIP flight to top-left nav logo
+      const targetNavBrand = document.querySelector(
+        '[data-brand="wordmark"], header a[href="#overview"] .display',
+      ) as HTMLElement | null;
+      if (wordmarkWrapRef.current && targetNavBrand) {
+        const startR = wordmarkWrapRef.current.getBoundingClientRect();
+        const targetR = targetNavBrand.getBoundingClientRect();
+
+        const scale = targetR.height / Math.max(1, startR.height);
+        const dx = targetR.left - startR.left;
+        const dy = targetR.top - startR.top;
+
+        targetNavBrand.style.opacity = "0";
+
+        // Elevate wordmark over expanding hero and navbar
+        wordmarkWrapRef.current.style.zIndex = "75";
+
+        gsap.to(wordmarkWrapRef.current, {
+          x: dx,
+          y: dy,
+          scale,
+          transformOrigin: "top left",
+          duration: flightDuration,
+          ease: "power3.inOut",
+          onComplete: () => {
+            targetNavBrand.style.opacity = "1";
+            if (wordmarkWrapRef.current) {
+              wordmarkWrapRef.current.style.opacity = "0";
+            }
+            finish();
+          },
+        });
+      } else {
+        gsap.delayedCall(flightDuration, finish);
+      }
+
+      // B. Expanding circular hero reveal from center
+      const w = window.innerWidth,
+        h = window.innerHeight;
+      const maxR = Math.ceil(Math.hypot(w, h));
+
+      if (maskCircleRef.current) {
+        gsap.fromTo(
+          maskCircleRef.current,
+          { attr: { r: 0 } },
+          { attr: { r: maxR }, duration: mode === "short" ? 0.45 : 1.25, ease: "power2.inOut" },
+        );
+      }
+
+      // C. Hero scale settle removed per release-14-hero-wide (NO zoom)
+
+      // D. Headline lines slide up once circle is half open (~0.6s into reveal)
+      gsap.fromTo(
+        ".hero-title [data-hline]",
+        { yPercent: 100 },
+        {
+          yPercent: 0,
+          duration: 0.9,
+          stagger: 0.1,
+          ease: "power3.out",
+          delay: 0.62,
+          clearProps: "transform",
+        },
+      );
+    };
+
+    // 4. Wave ticker & smooth progress loop
+    let phase1 = 0;
+    let phase2 = 0;
+    let holdStartTime = 0;
+    let lastTick = performance.now();
+
+    const tick = () => {
+      if (!alive) return;
+      const now = performance.now();
+      const frameDelta = now - lastTick;
+      const dt = Math.min(0.05, frameDelta / 1000);
+      lastTick = now;
+
+      if (typeof window !== "undefined" && !flightStarted) {
+        const win = window as unknown as { __loaderFrameDeltas?: number[] };
+        if (!win.__loaderFrameDeltas) win.__loaderFrameDeltas = [];
+        win.__loaderFrameDeltas.push(frameDelta);
+      }
+
+      const elapsed = now - t0;
+
+      // Pacing calculation:
+      if (isSkipped) {
+        targetProgress = 100;
+      } else if (mode === "short") {
+        targetProgress = Math.min(100, (elapsed / 450) * 100);
+      } else {
+        // Enforce 2.3s minimum total time pacing ceiling
+        const timeCappedTarget = Math.min(100, (elapsed / MIN_HOLD_MS) * 100);
+        targetProgress = Math.min(rawProgress, timeCappedTarget);
+
+        const isManual =
+          typeof window !== "undefined" &&
+          typeof (window as unknown as { __loaderManualProgress?: number })
+            .__loaderManualProgress === "number";
+
+        if (!isManual) {
+          // Force 100% if hard ceiling reached or all assets ready past min hold
+          if (elapsed >= HARD_LIMIT_MS || (rawProgress >= 100 && elapsed >= MIN_HOLD_MS)) {
+            targetProgress = 100;
+          }
+        }
+      }
+
+      // Smooth progress: monotonic increase with maximum 8% jump per frame
+      if (displayProgress < targetProgress) {
+        const smoothRate = isSkipped ? 25 : mode === "short" ? 20 : 12.0;
+        let step = (targetProgress - displayProgress) * Math.min(1, dt * smoothRate);
+        step = Math.min(step, 8.0);
+        if (typeof window !== "undefined") {
+          const win = window as any;
+          if (step > (win.__loaderMaxStep || 0)) win.__loaderMaxStep = step;
+        }
+        displayProgress += step;
+        if (
+          targetProgress >= 100 &&
+          100 - displayProgress < 0.25 &&
+          (elapsed >= MIN_HOLD_MS || mode === "short" || isSkipped)
+        ) {
+          displayProgress = 100;
+        }
+      }
+
+      const isManual =
+        typeof window !== "undefined" &&
+        typeof (window as unknown as { __loaderManualProgress?: number }).__loaderManualProgress ===
+          "number";
+      if (isManual) {
+        displayProgress = (window as unknown as { __loaderManualProgress: number })
+          .__loaderManualProgress;
+        if (displayProgress < 100) {
+          holdStartTime = 0;
+        }
+      }
+
+      displayProgress = Math.min(100, Math.max(0, displayProgress));
+
+      // Update counter text
+      const pctInt = Math.floor(displayProgress);
+      setCounterText(String(pctInt));
+
+      // Advance wave phases
+      phase1 += dt * 3.4;
+      phase2 += dt * 4.9;
+
+      // Update liquid clip-path
+      if (fillRef.current && !flightStarted) {
+        const p = displayProgress / 100;
+        if (p >= 1.0) {
+          fillRef.current.style.clipPath = "inset(0%)";
+        } else if (p <= 0) {
+          fillRef.current.style.clipPath = "polygon(0% 100%, 100% 100%, 100% 100%, 0% 100%)";
+        } else {
+          const topR = topRatioRef.current;
+          const botR = bottomRatioRef.current;
+          const yBase = (botR - p * (botR - topR)) * 100;
+          const amp = 4.2 * Math.sin(Math.PI * p);
+
+          const N = 28;
+          const poly: string[] = ["0% 100%"];
+          for (let i = 0; i <= N; i++) {
+            const u = i / N;
+            const x = (u * 100).toFixed(2);
+            const wave =
+              0.65 * Math.sin(u * Math.PI * 3.6 + phase1) +
+              0.35 * Math.sin(u * Math.PI * 6.4 + phase2);
+            const y = (yBase + amp * wave).toFixed(2);
+            poly.push(`${x}% ${y}%`);
+          }
+          poly.push("100% 100%");
+          fillRef.current.style.clipPath = `polygon(${poly.join(", ")})`;
+        }
+      }
+
+      // Check for 100% reached -> hold before flight (0.45s full mode, 0.2s short mode)
+      if (displayProgress >= 100 && !flightStarted) {
+        if (holdStartTime === 0) {
+          holdStartTime = now;
+        } else {
+          const holdTarget = mode === "short" ? 180 : 450;
+          if (now - holdStartTime >= holdTarget) {
+            triggerFlightAndReveal();
+          }
+        }
+      }
+
+      if (!flightStarted) {
+        requestAnimationFrame(tick);
+      }
+    };
+
+    const rafId = requestAnimationFrame(tick);
+
+    // Keyboard ESC & custom event listener for skip
+    const onSkipTrigger = () => {
+      isSkipped = true;
+      targetProgress = 100;
+      displayProgress = 100;
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onSkipTrigger();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("loader-skip", onSkipTrigger);
 
     return () => {
       alive = false;
-      window.removeEventListener("resize", updateCenter);
-            clearInterval(checkInterval);
-      clearTimeout(flickerTimer);
-      clearTimeout(safetyTimer);
+      cancelAnimationFrame(rafId);
+      window.removeEventListener("resize", measureGlyphs);
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("loader-skip", onSkipTrigger);
     };
-  }, [mode, onReveal, onDone]);
+  }, [mode, onReveal, onDone, measureGlyphs]);
+
+  const handleSkip = () => {
+    window.dispatchEvent(new CustomEvent("loader-skip"));
+  };
 
   if (mode === "none") return null;
 
   return (
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-[60] bg-[#0B0B0B] overflow-hidden select-none pointer-events-auto"
-      style={{
-        clipPath: "circle(150% at center)",
-      }}
+      data-loader="overlay"
+      className="fixed inset-0 z-[60] overflow-hidden select-none pointer-events-auto flex flex-col items-center justify-center"
       aria-hidden="true"
     >
+      {/* Expanding circular cutout reveal mask */}
       <svg
         className="absolute inset-0 h-full w-full pointer-events-none"
         xmlns="http://www.w3.org/2000/svg"
       >
         <defs>
-          {/* Mask that cuts an expanding circular hole in the dark overlay */}
-          <mask id="lamp-reveal-mask">
+          <mask id="hero-circle-mask">
             <rect width="100%" height="100%" fill="white" />
             <circle
-              ref={revealCircleRef}
-              cx={lampPos.cx}
-              cy={lampPos.cy + 6}
+              ref={maskCircleRef}
+              data-loader="circle-mask"
+              cx="50%"
+              cy="50%"
               r="0"
               fill="black"
             />
           </mask>
-
-          {/* Warm bulb glow gradient */}
-          <radialGradient id="bulb-warm-glow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#FFE898" stopOpacity="0.95" />
-            <stop offset="40%" stopColor="#C5A15B" stopOpacity="0.5" />
-            <stop offset="100%" stopColor="#C5A15B" stopOpacity="0" />
-          </radialGradient>
-
-          <filter id="glow-blur" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur in="SourceGraphic" stdDeviation="5" />
-          </filter>
         </defs>
-
-        {/* Full-screen dark ink rectangle with expanding opening */}
-        <rect
-          width="100%"
-          height="100%"
-          fill="#0B0B0B"
-          mask="url(#lamp-reveal-mask)"
-        />
-
-        {/* Expanding warm gold light ring on edge of reveal */}
-        <circle
-          ref={glowRingRef}
-          cx={lampPos.cx}
-          cy={lampPos.cy + 6}
-          r="0"
-          fill="none"
-          stroke="#C5A15B"
-          strokeWidth="6"
-          opacity="0"
-        />
-
-        {/* Pendant lamp positioned in center */}
-        <g
-          ref={lampGroupRef}
-          transform={`translate(${lampPos.cx - 60}, ${lampPos.cy - 90})`}
-        >
-          {/* Thin ceiling cord */}
-          <line
-            x1="60"
-            y1="-400"
-            x2="60"
-            y2="70"
-            stroke="#EAE0D0"
-            strokeWidth="1.5"
-            strokeOpacity="0.85"
-          />
-
-          {/* Pull cord with bead (pulled down by 16px with elastic return) */}
-          <g ref={pullCordRef}>
-            <line
-              x1="68"
-              y1="84"
-              x2="68"
-              y2="124"
-              stroke="#EAE0D0"
-              strokeWidth="1.2"
-              strokeDasharray="2.5 2.5"
-              strokeOpacity="0.75"
-            />
-            <circle cx="68" cy="127" r="2.6" fill="#EAE0D0" />
-          </g>
-
-          {/* Half-round cream shade */}
-          <path
-            d="M 28 84 A 32 32 0 0 1 92 84 Z"
-            fill="#EAE0D0"
-            stroke="#171615"
-            strokeWidth="1"
-          />
-          {/* Brass socket cap */}
-          <rect x="55" y="68" width="10" height="4" rx="1" fill="#C5A15B" />
-
-          {/* Warm gold halo glow */}
-          <circle
-            ref={glowHaloRef}
-            cx="60"
-            cy="96"
-            r="28"
-            fill="url(#bulb-warm-glow)"
-            filter="url(#glow-blur)"
-            opacity="0"
-          />
-
-          {/* The bulb under the shade */}
-          <circle
-            ref={bulbRef}
-            cx="60"
-            cy="96"
-            r="8.5"
-            fill="#F0E6D8"
-            opacity="0.3"
-          />
-
-          {/* Filament inside bulb */}
-          <path
-            ref={filamentRef}
-            d="M 57.5 93 Q 60 90.5 62.5 93"
-            fill="none"
-            stroke="#C5A15B"
-            strokeWidth="1"
-            opacity="0.4"
-          />
-        </g>
+        <rect width="100%" height="100%" fill="#0B0B0B" mask="url(#hero-circle-mask)" />
       </svg>
+
+      {/* Wordmark Container (40-45vw wide) */}
+      <div
+        ref={wordmarkWrapRef}
+        data-loader="wordmark-wrap"
+        className="relative z-[70] inline-block text-center will-change-transform"
+        style={{ width: "clamp(260px, 42vw, 680px)" }}
+      >
+        {/* Dim ghost copy: cream at 16% opacity */}
+        <div
+          ref={ghostRef}
+          data-loader="ghost"
+          className="display text-[#E8DED0]/[0.16] tracking-tight leading-none select-none text-[clamp(44px,11vw,180px)]"
+          aria-hidden="true"
+        >
+          MISHAL
+        </div>
+
+        {/* Solid cream copy with liquid wavy clip-path */}
+        <div
+          ref={fillRef}
+          data-loader="fill"
+          className="display text-[#E8DED0] tracking-tight leading-none select-none text-[clamp(44px,11vw,180px)] absolute inset-0 pointer-events-none"
+          style={{ clipPath: "polygon(0% 100%, 100% 100%, 100% 100%, 0% 100%)" }}
+          aria-hidden="true"
+        >
+          MISHAL
+        </div>
+
+        {/* Tiny mono caption: LOADING... 0 %, right-aligned, cream at 70% */}
+        <div
+          ref={captionRef}
+          data-loader="caption"
+          className="mono text-right text-[clamp(9px,0.85vw,12px)] tracking-[0.16em] text-[#E8DED0]/70 mt-3 select-none"
+        >
+          LOADING... {counterText} %
+        </div>
+      </div>
+
+      {/* Skip [ESC] pill appears after 0.8s */}
+      {mode === "full" && (
+        <button
+          ref={skipBtnRef}
+          data-loader="skip"
+          type="button"
+          onClick={handleSkip}
+          className="mono absolute bottom-8 right-8 z-[75] rounded-full border border-[#E8DED0]/25 bg-[#0B0B0B]/80 px-3.5 py-1.5 text-[10px] tracking-[0.14em] text-[#E8DED0]/80 opacity-0 transition-opacity hover:border-[#E8DED0]/60 hover:text-[#E8DED0]"
+        >
+          Skip [ESC]
+        </button>
+      )}
     </div>
   );
 }

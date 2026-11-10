@@ -114,4 +114,3 @@ describe("Wheel capture registry", () => {
     expect(getWheelCapture("about")).toBeUndefined();
   });
 });
-
