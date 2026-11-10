@@ -11,7 +11,7 @@ export const site = {
   github: "https://github.com/Mishaliii",
   linkedin: "https://www.linkedin.com/in/muhammedmishal13/",
   cv: "/cv.pdf",
-  availability: "Open to roles in Kerala, UAE or remote",
+  availability: "Open to roles in Kerala, India, GCC or remote",
   timezone: "Asia/Kolkata",
 };
 
@@ -113,7 +113,7 @@ export const about = {
       label: "STACK",
       text: "Python, FastAPI, Supabase PostgreSQL, pgvector, PyTorch, FAISS, scikit-learn, Streamlit",
     },
-    { label: "STATUS", bold: "Open to work, 2026", text: " · Kerala, UAE or remote", live: true },
+    { label: "STATUS", bold: "Open to work, 2026", text: " · Kerala, India, GCC or remote", live: true },
   ],
 };
 
@@ -376,7 +376,7 @@ export const works = {
       problem:
         "Predicts employee productivity and roles, reaching approximately 87% classification accuracy.",
       approach:
-        "Random Forest and Logistic Regression models evaluated with cross-validation and served through Streamlit.",
+        "Random Forest and Logistic Regression models trained with model evaluation and served through Streamlit.",
       stack: ["scikit-learn", "Streamlit", "joblib", "Python", "pandas"],
     },
     {
@@ -654,7 +654,7 @@ export const journey = {
       year: "2026",
       role: "AI / ML Engineer",
       place: "Open to work",
-      line: "Building Python machine learning and computer vision applications, open to work in Kerala, UAE or remote.",
+      line: "Building Python machine learning and computer vision applications, open to work in Kerala, India, GCC or remote.",
       tag: "Available",
     },
   ] as JourneyStop[],
@@ -745,7 +745,7 @@ export const roleCaseStudy: CaseStudyData = {
         },
         {
           name: "Model Evaluation & Persistence",
-          desc: "Rigorous cross-validation, feature importance ranking, and serialization with joblib for instant deployment.",
+          desc: "Model evaluation, feature importance ranking, and serialization with joblib for instant deployment.",
         },
         {
           name: "Streamlit App Deployment",
@@ -764,7 +764,7 @@ export const roleCaseStudy: CaseStudyData = {
       title: "Stack and architecture",
       text: "Built in Python using established machine learning and data science libraries:",
       points: [
-        "scikit-learn: Powers Random Forest, Logistic Regression, model evaluation, and cross-validation pipelines.",
+        "scikit-learn: Powers Random Forest, Logistic Regression, and model evaluation pipelines.",
         "Streamlit: Delivers the interactive front-end application for real-time model scoring and visualization.",
         "joblib: Serializes trained machine learning pipelines for lightweight, fast-loading inference.",
         "pandas & NumPy: Handles exploratory data analysis, data cleaning, and feature engineering transformations.",

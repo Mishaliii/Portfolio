@@ -624,7 +624,7 @@ export function matchBuddyIntent(
   if (/\b(location|where (is he|does he live)|city|country|based)\b/i.test(normalized)) {
     return {
       intent: "location",
-      text: `${site.name} is based in **Kollam, Kerala, India** (${site.location}), open to roles locally, in the UAE, or remote worldwide.`,
+      text: `${site.name} is based in **Kollam, Kerala, India** (${site.location}), open to roles locally, across India, GCC, or remote worldwide.`,
       mood: "happy",
       reaction: "Location!",
       followUps: ["Is he available?", "Why hire him?", "Contact"],
@@ -682,7 +682,7 @@ export function matchBuddyIntent(
   ) {
     return {
       intent: "hiring",
-      text: `Status: **${site.availability}**! ${site.name} is ready for AI/ML engineering roles across Kerala, UAE, or remote worldwide.`,
+      text: `Status: **${site.availability}**! ${site.name} is ready for AI/ML engineering roles across Kerala, India, GCC, or remote worldwide.`,
       mood: "excited",
       reaction: "Available!",
       followUps: ["Why hire him?", "Download CV", "Contact"],

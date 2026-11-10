@@ -12,6 +12,7 @@ import { useEffect, useState, lazy, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportError } from "../lib/error";
+import { SITE_URL } from "../lib/site-url";
 
 const DevPerfOverlay = import.meta.env.DEV
   ? lazy(() =>
@@ -94,14 +95,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       // Open Graph
       { property: "og:type", content: "website" },
       { property: "og:site_name", content: "Muhammed Mishal" },
-      { property: "og:url", content: "https://mishal.dev/" },
+      { property: "og:url", content: `${SITE_URL}/` },
       { property: "og:title", content: "Muhammed Mishal — AI / ML Engineer" },
       {
         property: "og:description",
         content:
           "Portfolio of Muhammed Mishal, AI/ML engineer building computer vision diagnostics, multimodal systems, and agent pipelines.",
       },
-      { property: "og:image", content: "https://mishal.dev/og-image.png" },
+      { property: "og:image", content: `${SITE_URL}/og-image.png` },
       { property: "og:image:width", content: "1200" },
       { property: "og:image:height", content: "630" },
       { property: "og:image:alt", content: "Muhammed Mishal — AI / ML Engineer" },
@@ -113,11 +114,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         content:
           "Portfolio of Muhammed Mishal, AI/ML engineer building computer vision diagnostics, multimodal systems, and agent pipelines.",
       },
-      { name: "twitter:image", content: "https://mishal.dev/og-image.png" },
+      { name: "twitter:image", content: `${SITE_URL}/og-image.png` },
       { name: "twitter:image:alt", content: "Muhammed Mishal — AI / ML Engineer" },
     ],
     links: [
-      { rel: "canonical", href: "https://mishal.dev/" },
+      { rel: "canonical", href: `${SITE_URL}/` },
       { rel: "preload", as: "image", href: "/hero/poster.webp", type: "image/webp" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
@@ -145,8 +146,8 @@ const personJsonLd = {
   "@type": "Person",
   name: "Muhammed Mishal",
   jobTitle: "AI / ML Engineer",
-  url: "https://mishal.dev/",
-  image: "https://mishal.dev/og-image.png",
+  url: `${SITE_URL}/`,
+  image: `${SITE_URL}/og-image.png`,
   sameAs: ["https://github.com/Mishaliii", "https://www.linkedin.com/in/muhammedmishal13/"],
   knowsAbout: [
     "Artificial Intelligence",

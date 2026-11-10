@@ -1,5 +1,3 @@
-// TanStack Start configuration:
-// Includes devtools, tanstackStart, viteReact, tailwindcss, tsConfigPaths, nitro, and @ alias.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 export default defineConfig({
