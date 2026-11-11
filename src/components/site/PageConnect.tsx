@@ -83,7 +83,7 @@ export function PageConnect({
         <ElasticLine stroke="var(--line-inv)" />
       </div>
       <div
-        className="mono flex justify-between pt-3 max-sm:pb-14 max-sm:flex-wrap max-sm:gap-2"
+        className="mono flex justify-between pt-3 max-sm:pb-28 max-sm:flex-wrap max-sm:items-start max-sm:gap-2"
         style={{ paddingLeft: "clamp(0px, 15vw, 175px)", paddingRight: "clamp(88px, 8vw, 120px)" }}
         data-fade
       >
@@ -91,7 +91,7 @@ export function PageConnect({
         <button onClick={() => go("overview")} className="underline-offset-4 hover:underline">
           {ui.backToOverview}
         </button>
-        <span className="muted">{ui.paletteHint}</span>
+        <span className="muted ctrl-k-hint max-[900px]:hidden">{ui.paletteHint}</span>
       </div>
     </div>
   );

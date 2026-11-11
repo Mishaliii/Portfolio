@@ -192,6 +192,7 @@ html.paged .page {
   inset: 0;
   height: 100vh;
   height: 100dvh;
+  height: 100svh;
   overflow: hidden;
   visibility: hidden;
 }
@@ -2308,3 +2309,93 @@ html.paged .page:not(.is-active) [data-card] {
   line-height: 1;
   vertical-align: baseline;
 }
+
+/* ==========================================================================
+   Release 24: Mobile Polish & Safety Rules
+   Scoped strictly to @media (max-width: 900px) and @media (hover: none)
+   ========================================================================== */
+
+.expertise-intro-touch {
+  display: none;
+}
+
+@media (hover: none) {
+  .ctrl-k-hint {
+    display: none !important;
+  }
+  .expertise-intro-desktop {
+    display: none !important;
+  }
+  .expertise-intro-touch {
+    display: inline !important;
+  }
+}
+
+@media (max-width: 900px) {
+  /* 3. Hero character portrait positioning: keep Mishal and laptop visible below headline */
+  .scene-poster,
+  .scene-video {
+    object-position: 84% 50% !important;
+  }
+
+  /* 4. Hero headline top spacing so availability chip never overlaps headings */
+  .hero-top {
+    top: calc(var(--nav-h, 57px) + 48px) !important;
+  }
+
+  /* 9. Hide "OPEN TO WORK" pill outside the hero */
+  body:not(:has(#overview.is-active)) .hero-chip-tr {
+    display: none !important;
+  }
+
+  /* 5. Mobile page transitions & layering: only active page visible & interactive */
+  html.paged .page.is-active {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  html.paged .page:not(.is-active) {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    opacity: 0 !important;
+  }
+
+  /* 6. Minimum readable sizes on mobile: >= 14px, contrast >= 4.5:1 */
+  .about-wheel-body,
+  .about-wheel-secondary,
+  .about-role,
+  .about-fact dd,
+  .about-fact-secondary,
+  .about-bio {
+    font-size: 14px !important;
+    line-height: 1.5 !important;
+    color: #0B0B0B !important;
+  }
+  .about-fact dt {
+    font-size: 12px !important;
+    color: #1F5A3A !important;
+  }
+  .journey-stop-place,
+  .journey-stop-line,
+  .journey-stop-tag,
+  .journey-card {
+    font-size: 14px !important;
+    color: #0B0B0B !important;
+  }
+  .expertise-block .muted,
+  .expertise-detail .muted,
+  .expertise-block p,
+  .expertise-item-desc {
+    font-size: 14px !important;
+    color: #0B0B0B !important;
+  }
+
+  /* 8. Sprout bubbles on mobile: smaller, never overflow */
+  .buddy-bubble {
+    max-width: min(240px, calc(100vw - 48px)) !important;
+    padding: 6px 10px !important;
+    font-size: 12px !important;
+    line-height: 1.4 !important;
+  }
+}
+

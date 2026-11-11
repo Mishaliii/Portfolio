@@ -58,11 +58,7 @@ const idx = (id: string) =>
 function useMode() {
   const [paged, setPaged] = useState<boolean | null>(null);
   useEffect(() => {
-    const m = window.matchMedia("(min-width: 1024px) and (min-height: 600px)");
-    const f = () => setPaged(m.matches);
-    f();
-    m.addEventListener("change", f);
-    return () => m.removeEventListener("change", f);
+    setPaged(true);
   }, []);
   return paged;
 }
@@ -587,7 +583,7 @@ export function Site() {
     window.addEventListener("wheel", onWheel, { passive: true, capture: true });
     const obs = Observer.create({
       target: window,
-      type: "wheel,touch",
+      type: "wheel",
       ignore: "[data-pull]",
       wheelSpeed: -1,
       tolerance: 40,
@@ -1135,7 +1131,7 @@ export function Site() {
 
       {booted && (
         <span
-          className={`hero-chip hero-chip-tr mono ${!inv ? "hero-chip-light" : ""} ${cur === 3 ? "hero-chip-works" : ""} ${cur === 5 ? "pointer-events-none opacity-0 invisible" : ""}`}
+          className={`hero-chip hero-chip-tr mono ${!inv ? "hero-chip-light" : ""} ${cur !== 0 ? "max-[900px]:!hidden" : ""} ${cur === 3 ? "hero-chip-works" : ""} ${cur === 5 ? "pointer-events-none opacity-0 invisible" : ""}`}
           aria-label="Open to work"
         >
           <span className="live-dot" aria-hidden />

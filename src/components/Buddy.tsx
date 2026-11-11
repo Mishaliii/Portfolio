@@ -284,6 +284,8 @@ export function Buddy() {
 
   // DOM Refs
   const walkerRef = useRef<HTMLDivElement>(null);
+  const doorRef = useRef<HTMLButtonElement>(null);
+  const chatPanelRef = useRef<HTMLElement>(null);
   const spriteWrapRef = useRef<HTMLDivElement>(null);
   const doorLeafRef = useRef<SVGGElement>(null);
   const mouthRef = useRef<HTMLDivElement>(null);
@@ -991,8 +993,12 @@ export function Buddy() {
       const currentPage = window.location.hash.slice(1) || "overview";
       const hour = new Date().getHours();
 
+      // Never show spontaneous / idle bubbles over Works cards or if chat is open
+      if (currentPage === "works" || chatOpen) return;
+
       // Find suitable candidate from pool
       let candidates = IDLE_BUBBLES_POOL.filter((item) => {
+        if (currentPage === "works" && (item.id === "s1" || item.id === "s2")) return false;
         if (item.page && item.page !== currentPage) return false;
         if (item.timeContext === "morning" && hour >= 12) return false;
         if (item.timeContext === "night" && hour >= 6 && hour < 20) return false;
@@ -1244,7 +1250,7 @@ export function Buddy() {
     window.addEventListener("pointerup", onUp);
   };
 
-  const closeChat = useCallback(() => {
+  const closeChat = useCallback((restoreFocus = true) => {
     if (activeTypingRef.current) activeTypingRef.current.cancel();
     if (talkInterval.current) clearInterval(talkInterval.current);
     isTalking.current = false;
@@ -1253,18 +1259,65 @@ export function Buddy() {
     setBubbleText(null);
     setBubbleAction(null);
     if (bubbleFadeTimeout.current) clearTimeout(bubbleFadeTimeout.current);
+    if (restoreFocus) {
+      setTimeout(() => {
+        walkerRef.current?.focus();
+      }, 50);
+    }
   }, []);
 
-  // Keyboard accessibility
+  // Keyboard accessibility & outside pointerdown dismissal
   useEffect(() => {
+    if (!chatOpen) return;
+
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && chatOpen) {
-        closeChat();
+      if (e.key === "Escape") {
+        e.preventDefault();
+        closeChat(true);
       }
     };
+
+    const onPointerDown = (e: PointerEvent) => {
+      const target = e.target;
+      if (!target || !(target instanceof Node)) {
+        closeChat(true);
+        return;
+      }
+
+      const el = target instanceof Element ? target : target.parentElement;
+
+      // Do NOT close when clicking inside the chat panel
+      if (chatPanelRef.current?.contains(target) || el?.closest(".buddy-chat-panel")) {
+        return;
+      }
+
+      // Do NOT close when clicking the Sprout character / walker
+      if (walkerRef.current?.contains(target) || el?.closest(".buddy-walker")) {
+        return;
+      }
+
+      // Do NOT close when clicking Sprout's door or any launcher element
+      if (
+        doorRef.current?.contains(target) ||
+        el?.closest(".buddy-door, [data-sprout-launcher]")
+      ) {
+        return;
+      }
+
+      // Outside pointerdown -> close and return focus to launcher
+      closeChat(true);
+    };
+
+    document.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("pointerdown", onPointerDown);
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [chatOpen]);
+
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [chatOpen, closeChat]);
 
   // Submit query & handle conversation flow
   const handleQuery = useCallback(
@@ -1497,6 +1550,8 @@ export function Buddy() {
     <div className="buddy-layer" aria-hidden={false}>
       {/* Little Door in bottom-right corner */}
       <button
+        ref={doorRef}
+        data-sprout-launcher="true"
         type="button"
         className="buddy-door"
         onClick={onDoorClick}
@@ -1553,6 +1608,7 @@ export function Buddy() {
       {/* Sprout Sprite Walker */}
       <div
         ref={walkerRef}
+        data-sprout-launcher="true"
         role="button"
         className="buddy-walker"
         onClick={onBuddyClick}
@@ -1651,9 +1707,18 @@ export function Buddy() {
         >
           <div
             ref={bubbleRef}
-            className="buddy-bubble"
+            className="buddy-bubble cursor-pointer"
             role="status"
             aria-live="polite"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!isAsleep) {
+                setBubbleVisible(false);
+                setBubbleAction(null);
+                setBubbleText(null);
+                if (bubbleFadeTimeout.current) clearTimeout(bubbleFadeTimeout.current);
+              }
+            }}
             onPointerEnter={() => {
               if (!isAsleep) {
                 setBubbleVisible(false);
@@ -1692,7 +1757,12 @@ export function Buddy() {
 
       {/* Conversation Panel (STAYS OPEN across answers) */}
       {chatOpen && (
-        <aside className="buddy-chat-panel" role="dialog" aria-label="Conversation with Sprout">
+        <aside
+          ref={chatPanelRef}
+          className="buddy-chat-panel"
+          role="dialog"
+          aria-label="Conversation with Sprout"
+        >
           <div className="buddy-chat-header">
             <span className="buddy-chat-title">
               <span className="buddy-chat-dot" />
@@ -1710,7 +1780,7 @@ export function Buddy() {
               <button
                 type="button"
                 className="buddy-chat-close"
-                onClick={closeChat}
+                onClick={() => closeChat(true)}
                 aria-label="Close chat"
               >
                 ×

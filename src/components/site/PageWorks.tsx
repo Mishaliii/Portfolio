@@ -1432,8 +1432,8 @@ export function PageWorks({
       style={{ background: "var(--cream)", color: "var(--ink)" }}
     >
       {/* Progress indicator row */}
-      <div className="flex items-center justify-between pb-2" data-fade>
-        <span className="mono text-[10px] sm:text-[11px] text-[#6B645A] tracking-wider truncate mr-2">
+      <div className="flex flex-wrap items-center justify-between gap-1 pb-2" data-fade>
+        <span className="mono text-[10px] sm:text-[11px] text-[#0B0B0B]/80 tracking-wider mr-2 leading-relaxed">
           Additional projects: Build Track Pro · Fresh Cart · Drop for Life
         </span>
         <div className="flex items-center gap-2 shrink-0">

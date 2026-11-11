@@ -287,7 +287,7 @@ export function Intro({
         );
       }
 
-      const flightDuration = mode === "short" ? 0.45 : 1.25;
+      const flightDuration = mode === "short" ? 0.35 : 1.25;
 
       // A. Wordmark FLIP flight to top-left nav logo
       const targetNavBrand = document.querySelector(
@@ -334,7 +334,7 @@ export function Intro({
         gsap.fromTo(
           maskCircleRef.current,
           { attr: { r: 0 } },
-          { attr: { r: maxR }, duration: mode === "short" ? 0.45 : 1.25, ease: "power2.inOut" },
+          { attr: { r: maxR }, duration: mode === "short" ? 0.35 : 1.25, ease: "power2.inOut" },
         );
       }
 
@@ -380,7 +380,7 @@ export function Intro({
       if (isSkipped) {
         targetProgress = 100;
       } else if (mode === "short") {
-        targetProgress = Math.min(100, (elapsed / 450) * 100);
+        targetProgress = Math.min(100, (elapsed / 380) * 100);
       } else {
         // Enforce 2.3s minimum total time pacing ceiling
         const timeCappedTarget = Math.min(100, (elapsed / MIN_HOLD_MS) * 100);
@@ -474,7 +474,7 @@ export function Intro({
         if (holdStartTime === 0) {
           holdStartTime = now;
         } else {
-          const holdTarget = mode === "short" ? 180 : 450;
+          const holdTarget = mode === "short" ? 100 : 450;
           if (now - holdStartTime >= holdTarget) {
             triggerFlightAndReveal();
           }

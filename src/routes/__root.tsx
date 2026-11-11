@@ -163,6 +163,7 @@ function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <head>
+        <style dangerouslySetInnerHTML={{ __html: "html,body{background:#0B0B0B;}" }} />
         <HeadContent />
         <script
           type="application/ld+json"

@@ -129,7 +129,11 @@ export function PageExpertise({
       qx = e.clientX - r.left;
       qy = e.clientY - r.top;
       input();
-      const hitRadius = e.pointerType === "touch" ? 44 : 26;
+      const isTouch =
+        e.pointerType === "touch" ||
+        (typeof window !== "undefined" && window.matchMedia("(hover: none)").matches) ||
+        W < 500;
+      const hitRadius = isTouch ? 44 : 26;
       const i = nearest(hitRadius);
       if (i >= 0) {
         pinned.current = pinned.current === i ? -1 : i;
@@ -255,6 +259,7 @@ export function PageExpertise({
           ctx.stroke();
         }
       }
+      const placedLabelRects: { x1: number; y1: number; x2: number; y2: number }[] = [];
       for (let i = 0; i < N; i++) {
         const s = skills[i],
           bright =
@@ -304,12 +309,51 @@ export function PageExpertise({
           ctx.stroke();
         }
         ctx.font = `${i === f ? 700 : 500} ${W < 500 ? 11 : 13}px Manrope, sans-serif`;
-        const width = ctx.measureText(s.name).width,
-          labelX = Math.min(W - width - 8, px[i] + 9);
+        const width = ctx.measureText(s.name).width;
+        let labelX = Math.min(W - width - 8, px[i] + 9);
+        let labelY = py[i] + 4;
+        let bgY = py[i] - 9;
+
+        if (W < 500) {
+          const candidates = [
+            { lx: px[i] + 9, ly: py[i] + 4, by: py[i] - 9, r: { x1: px[i] + 7, y1: py[i] - 9, x2: px[i] + 9 + width + 2, y2: py[i] + 8 } },
+            { lx: Math.max(4, Math.min(W - width - 4, px[i] - width / 2)), ly: py[i] - 10, by: py[i] - 23, r: { x1: Math.max(2, px[i] - width / 2 - 2), y1: py[i] - 23, x2: Math.max(4, px[i] - width / 2) + width + 2, y2: py[i] - 6 } },
+            { lx: Math.max(4, Math.min(W - width - 4, px[i] - width / 2)), ly: py[i] + 17, by: py[i] + 5, r: { x1: Math.max(2, px[i] - width / 2 - 2), y1: py[i] + 5, x2: Math.max(4, px[i] - width / 2) + width + 2, y2: py[i] + 21 } },
+            { lx: px[i] - width - 9, ly: py[i] + 4, by: py[i] - 9, r: { x1: px[i] - width - 11, y1: py[i] - 9, x2: px[i] - 7, y2: py[i] + 8 } },
+          ];
+
+          const collides = (r1: { x1: number; y1: number; x2: number; y2: number }, r2: { x1: number; y1: number; x2: number; y2: number }) =>
+            !(r1.x2 < r2.x1 || r1.x1 > r2.x2 || r1.y2 < r2.y1 || r1.y1 > r2.y2);
+
+          const collidesWithNodes = (r: { x1: number; y1: number; x2: number; y2: number }) => {
+            for (let j = 0; j < N; j++) {
+              if (j === i) continue;
+              if (px[j] >= r.x1 - 3 && px[j] <= r.x2 + 3 && py[j] >= r.y1 - 3 && py[j] <= r.y2 + 3) return true;
+            }
+            return false;
+          };
+
+          for (const c of candidates) {
+            if (c.r.x1 < 2 || c.r.x2 > W - 2 || c.r.y1 < 2 || c.r.y2 > H - 2) continue;
+            if (collidesWithNodes(c.r)) continue;
+            let hit = false;
+            for (const placed of placedLabelRects) {
+              if (collides(c.r, placed)) { hit = true; break; }
+            }
+            if (!hit) {
+              labelX = c.lx;
+              labelY = c.ly;
+              bgY = c.by;
+              placedLabelRects.push(c.r);
+              break;
+            }
+          }
+        }
+
         ctx.fillStyle = paper;
-        ctx.fillRect(labelX - 2, py[i] - 9, width + 4, 17);
+        ctx.fillRect(labelX - 2, bgY, width + 4, 17);
         ctx.fillStyle = bright ? ink : muted;
-        ctx.fillText(s.name, labelX, py[i] + 4);
+        ctx.fillText(s.name, labelX, labelY);
       }
       ctx.globalAlpha = 1;
       ctx.font = "500 11px 'JetBrains Mono', monospace";
@@ -346,6 +390,13 @@ export function PageExpertise({
         .filter(Boolean)
     : [];
 
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
+  useEffect(() => {
+    setIsTouchDevice(
+      window.matchMedia("(hover: none)").matches || window.innerWidth < 640,
+    );
+  }, []);
+
   return (
     <div className="page-inner">
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-[3vw] lg:grid-cols-[minmax(0,.85fr)_minmax(0,1.15fr)]">
@@ -361,7 +412,7 @@ export function PageExpertise({
             </h2>
           </Liquid>
           <p className="mt-[2vh] max-w-[34ch] text-[15px] leading-relaxed" data-lines>
-            {expertise.intro}
+            {isTouchDevice ? "Tap a skill to see where I used it." : expertise.intro}
           </p>
 
           <div className="expertise-detail" aria-live="polite" data-fade>
@@ -425,7 +476,9 @@ export function PageExpertise({
                 </p>
               </div>
             ) : (
-              <div className="muted text-[15px]">{expertise.idle}</div>
+              <div className="muted text-[15px]">
+                {isTouchDevice ? "Tap a skill" : expertise.idle}
+              </div>
             )}
           </div>
 
