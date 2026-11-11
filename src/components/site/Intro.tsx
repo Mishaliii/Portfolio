@@ -13,7 +13,7 @@ import { stage } from "@/lib/stage";
 import sideImg from "@/assets/portrait-side-composited.webp";
 import frontImg from "@/assets/portrait-front-composited.webp";
 import { ddssImages, ddssThumbs } from "./ScreenshotGallery";
-import { headlineInstances, headlineReady } from "./HeadlineDissolve";
+import { headlineInstances, headlineReady } from "@/lib/headline-registry";
 
 /**
  * NeoLeaf MISHAL Liquid Loading Screen

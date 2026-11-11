@@ -1,5 +1,44 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Site } from "@/components/site/Site";
+import { useState, useEffect, lazy, Suspense } from "react";
+
+const DesktopSite = lazy(() =>
+  import("@/components/site/Site").then((m) => ({ default: m.Site })),
+);
+const MobileSite = lazy(() =>
+  import("@/components/mobile/MobileSite").then((m) => ({ default: m.MobileSite })),
+);
+
+const MOBILE_QUERY = "(max-width: 820px), (pointer: coarse) and (max-width: 1024px)";
+
+function App() {
+  const [mode, setMode] = useState<"desktop" | "mobile" | "pending">("pending");
+
+  useEffect(() => {
+    const mql = window.matchMedia(MOBILE_QUERY);
+    const update = () => setMode(mql.matches ? "mobile" : "desktop");
+    update();
+    mql.addEventListener("change", update);
+    return () => mql.removeEventListener("change", update);
+  }, []);
+
+  if (mode === "mobile") {
+    return (
+      <Suspense fallback={null}>
+        <MobileSite />
+      </Suspense>
+    );
+  }
+
+  if (mode === "desktop") {
+    return (
+      <Suspense fallback={null}>
+        <DesktopSite />
+      </Suspense>
+    );
+  }
+
+  return null;
+}
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -20,5 +59,5 @@ export const Route = createFileRoute("/")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: Site,
+  component: App,
 });

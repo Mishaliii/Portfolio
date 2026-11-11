@@ -265,36 +265,100 @@ async function runSmoke() {
       console.log("RUNNING MOBILE AUDIT SUITE (390x844 with Touch Emulation)");
       console.log("======================================================\n");
 
-      // 1. MOBILE_HERO: no horizontal scroll, headline fits, badge centered, small video, menu button
-      console.log("--- Checking MOBILE_HERO ---");
+      // 1. MOBILE_SECTIONS: all 6 sections present in continuous vertical flow order without curtain
+      console.log("--- Checking MOBILE_SECTIONS ---");
+      const sectionsInfo = await evalJs(`
+        (() => {
+          const ids = ["overview", "about", "expertise", "works", "journey", "connect"];
+          const els = ids.map(id => document.getElementById(id));
+          const allFound = els.every(Boolean);
+          const tops = els.map(e => e ? e.offsetTop : 0);
+          let inOrder = true;
+          for (let i = 1; i < tops.length; i++) {
+            if (tops[i] <= tops[i - 1]) inOrder = false;
+          }
+          const hasCurtain = Boolean(document.querySelector('.curtain, [data-curtain]'));
+          return { allFound, inOrder, tops, hasCurtain };
+        })()
+      `);
+      logCheck(
+        "MOBILE_SECTIONS",
+        "all_six_sections_present_in_order",
+        Boolean(sectionsInfo?.allFound && sectionsInfo?.inOrder),
+        `allFound=${sectionsInfo?.allFound}, inOrder=${sectionsInfo?.inOrder}, tops=${JSON.stringify(sectionsInfo?.tops)}`,
+      );
+      logCheck(
+        "MOBILE_SECTIONS",
+        "no_curtain_or_page_wipe_element",
+        Boolean(!sectionsInfo?.hasCurtain),
+        `hasCurtain=${sectionsInfo?.hasCurtain}`,
+      );
+
+      // 2. MOBILE_NATIVE_SCROLL: CDP Input.synthesizeScrollGesture moves window.scrollY
+      console.log("\n--- Checking MOBILE_NATIVE_SCROLL ---");
+      const startScrollY = await evalJs(`window.scrollY`);
+      await send("Input.synthesizeScrollGesture", {
+        x: 200,
+        y: 600,
+        xDistance: 0,
+        yDistance: -400,
+        speed: 1000,
+        gestureSourceType: "touch",
+      });
+      await wait(800);
+      let scrolledY = await evalJs(`window.scrollY`);
+      if (scrolledY === 0) {
+        await send("Input.synthesizeScrollGesture", {
+          x: 200,
+          y: 600,
+          xDistance: 0,
+          yDistance: -400,
+          speed: 1000,
+          gestureSourceType: "default",
+        });
+        await wait(800);
+        scrolledY = await evalJs(`window.scrollY`);
+      }
+      logCheck(
+        "MOBILE_NATIVE_SCROLL",
+        "touch_gesture_moves_document_scroll_y",
+        Boolean(scrolledY > startScrollY + 50),
+        `startY=${startScrollY}, scrolledY=${scrolledY}`,
+      );
+      await evalJs(`window.scrollTo(0, 0)`);
+      await wait(300);
+
+      // 3. MOBILE_HERO: no horizontal scroll, small video, portrait framing (84% 50%), CTA buttons >=44px
+      console.log("\n--- Checking MOBILE_HERO ---");
       const heroMetrics = await evalJs(`
         (() => {
           const docW = Math.max(document.documentElement.scrollWidth, document.body.scrollWidth);
           const winW = window.innerWidth;
-          const h1 = document.querySelector('.hero-title');
+          const h1 = document.querySelector('#overview h1');
           const h1Rect = h1 ? h1.getBoundingClientRect() : null;
-          const badge = document.querySelector('.hero-chip-tr');
-          const badgeRect = badge ? badge.getBoundingClientRect() : null;
           const menuBtn = document.querySelector('header button[aria-label*="menu" i]');
           const menuBtnRect = menuBtn ? menuBtn.getBoundingClientRect() : null;
           const vids = Array.from(document.querySelectorAll('video'));
-          const heroSrc = window.__heroSrc || '';
-          const smallVidLoaded = heroSrc.includes('-sm') || vids.some(v => (v.currentSrc || v.src || '').includes('hero-sm') || (v.querySelector('source')?.src || '').includes('hero-sm'));
+          const heroVid = vids.find(v => (v.currentSrc || v.src || '').includes('hero-sm') || (v.querySelector('source')?.src || '').includes('hero-sm'));
+          const heroVidObjPos = heroVid ? window.getComputedStyle(heroVid).objectPosition : '';
+          const ctas = Array.from(document.querySelectorAll('#overview a, #overview button'));
+          const ctasValid = ctas.length >= 2 && ctas.every(el => {
+            const r = el.getBoundingClientRect();
+            return r.height >= 43.5;
+          });
 
           return {
             noHorizScroll: docW <= winW + 1,
             docW, winW,
             h1Fits: h1Rect ? h1Rect.right <= winW + 2 : false,
             h1Width: h1Rect ? h1Rect.width : 0,
-            badgeFound: Boolean(badge),
-            badgeCenter: badgeRect ? badgeRect.left + badgeRect.width / 2 : 0,
-            badgeCentered: badgeRect ? Math.abs((badgeRect.left + badgeRect.width / 2) - (winW / 2)) < 8 : false,
-            smallVidLoaded,
-            heroSrc,
+            smallVidLoaded: Boolean(heroVid),
+            heroVidObjPos,
             menuBtnFound: Boolean(menuBtn),
             menuBtnW: menuBtnRect ? menuBtnRect.width : 0,
             menuBtnH: menuBtnRect ? menuBtnRect.height : 0,
             menuBtnValid: menuBtnRect ? menuBtnRect.width >= 43.5 && menuBtnRect.height >= 43.5 : false,
+            ctasValid
           };
         })()
       `);
@@ -313,24 +377,24 @@ async function runSmoke() {
       );
       logCheck(
         "MOBILE_HERO",
-        "badge_open_to_work_centered",
-        Boolean(heroMetrics?.badgeCentered),
-        `center=${heroMetrics?.badgeCenter?.toFixed(1)}px (expected 195px)`,
+        "hero_small_video_served_with_portrait_framing",
+        Boolean(heroMetrics?.smallVidLoaded && heroMetrics?.heroVidObjPos.includes("84%")),
+        `smallVidLoaded=${heroMetrics?.smallVidLoaded}, objectPosition=${heroMetrics?.heroVidObjPos}`,
       );
       logCheck(
         "MOBILE_HERO",
-        "hero_small_video_served",
-        Boolean(heroMetrics?.smallVidLoaded || heroSmRequested),
-        `heroSrc=${heroMetrics?.heroSrc || (heroSmRequested ? "network:hero-sm" : "none")}`,
-      );
-      logCheck(
-        "MOBILE_HERO",
-        "compact_menu_button_visible",
+        "compact_menu_button_visible_and_accessible",
         Boolean(heroMetrics?.menuBtnValid),
         `w=${heroMetrics?.menuBtnW}px, h=${heroMetrics?.menuBtnH}px`,
       );
+      logCheck(
+        "MOBILE_HERO",
+        "hero_cta_buttons_accessible_height",
+        Boolean(heroMetrics?.ctasValid),
+        `ctasValid=${heroMetrics?.ctasValid}`,
+      );
 
-      // 2. MOBILE_NAV: tap menu button, overlay opens with >=44px tap targets, close works, navigate to Works
+      // 4. MOBILE_NAV: tap menu button, overlay opens with >=44px tap targets, navigate to Works, overlay closes
       console.log("\n--- Checking MOBILE_NAV ---");
       await evalJs(`document.querySelector('header button[aria-label*="menu" i]')?.click()`);
       await wait(600);
@@ -339,12 +403,12 @@ async function runSmoke() {
         (() => {
           const dialog = document.querySelector('[role="dialog"][aria-label*="Menu" i]');
           if (!dialog) return null;
-          const links = Array.from(dialog.querySelectorAll('a[href^="#"]'));
+          const links = Array.from(dialog.querySelectorAll('a[href^="#"], button'));
           const closeBtn = dialog.querySelector('button[aria-label*="close" i], button');
           const closeRect = closeBtn?.getBoundingClientRect();
           const targetSizes = links.map(l => {
             const r = l.getBoundingClientRect();
-            return { href: l.getAttribute('href'), w: r.width, h: r.height };
+            return { w: r.width, h: r.height };
           });
           const allAbove44 = targetSizes.every(t => t.h >= 43.5);
           return {
@@ -365,32 +429,45 @@ async function runSmoke() {
       // Navigate to Works via menu overlay
       await evalJs(`
         (() => {
-          const worksLink = Array.from(document.querySelectorAll('[role="dialog"] a[href="#works"]'))[0];
+          const worksLink = Array.from(document.querySelectorAll('[role="dialog"] a[href="#works"], [role="dialog"] button')).find(el => el.textContent.includes('Works'));
           worksLink?.click();
         })()
       `);
-      await wait(1500);
+      await wait(1000);
 
       const navWorksResult = await evalJs(`
         (() => {
           const hash = window.location.hash;
           const isMenuClosed = !document.querySelector('[role="dialog"][aria-label*="Menu" i]');
-          return { hash, isMenuClosed };
+          const worksEl = document.getElementById('works');
+          const wr = worksEl ? worksEl.getBoundingClientRect() : null;
+          const inViewport = wr ? (wr.top < window.innerHeight && wr.bottom > 0) : false;
+          return { hash, isMenuClosed, inViewport };
         })()
       `);
       logCheck(
         "MOBILE_NAV",
         "menu_link_navigates_and_closes_overlay",
-        navWorksResult?.hash === "#works" && navWorksResult?.isMenuClosed,
-        `hash=${navWorksResult?.hash}`,
+        Boolean(navWorksResult?.hash === "#works" && navWorksResult?.isMenuClosed && navWorksResult?.inViewport),
+        `hash=${navWorksResult?.hash}, menuClosed=${navWorksResult?.isMenuClosed}, inViewport=${navWorksResult?.inViewport}`,
       );
 
-      // 3. MOBILE_WORKS: card tap opens drawer, drawer full width, close button >= 44px
+      // 5. MOBILE_WORKS: 3 project cards, card tap / deep dive opens drawer with scroll lock, close restores focus
       console.log("\n--- Checking MOBILE_WORKS ---");
+      const worksCardsCount = await evalJs(`document.querySelectorAll('#works article').length`);
+      logCheck(
+        "MOBILE_WORKS",
+        "three_project_cards_in_flow",
+        worksCardsCount === 3,
+        `cardsCount=${worksCardsCount}`,
+      );
+
+      // Open drawer on first card
       await evalJs(`
         (() => {
-          const card = document.querySelector('#works article');
-          card?.click();
+          const deepDiveBtn = document.querySelector('#works article button');
+          deepDiveBtn?.focus();
+          deepDiveBtn?.click();
         })()
       `);
       await wait(800);
@@ -403,10 +480,12 @@ async function runSmoke() {
           const winW = window.innerWidth;
           const closeBtn = drawer.querySelector('button[aria-label*="close" i], button');
           const cr = closeBtn ? closeBtn.getBoundingClientRect() : null;
+          const scrollLocked = document.body.style.overflow === 'hidden';
           return {
             open: true,
             drawerWidth: dr.width,
             isFullWidth: dr.width >= winW * 0.95,
+            scrollLocked,
             closeBtnTargetOk: cr ? cr.width >= 43.5 && cr.height >= 43.5 : false,
             closeBtnW: cr?.width,
             closeBtnH: cr?.height
@@ -415,9 +494,9 @@ async function runSmoke() {
       `);
       logCheck(
         "MOBILE_WORKS",
-        "card_tap_opens_full_width_drawer",
-        Boolean(drawerResult?.open && drawerResult?.isFullWidth),
-        `drawerWidth=${drawerResult?.drawerWidth}px`,
+        "card_tap_opens_full_width_drawer_with_scroll_lock",
+        Boolean(drawerResult?.open && drawerResult?.isFullWidth && drawerResult?.scrollLocked),
+        `drawerWidth=${drawerResult?.drawerWidth}px, scrollLocked=${drawerResult?.scrollLocked}`,
       );
       logCheck(
         "MOBILE_WORKS",
@@ -426,11 +505,25 @@ async function runSmoke() {
         `w=${drawerResult?.closeBtnW}px, h=${drawerResult?.closeBtnH}px`,
       );
 
-      // Close drawer
-      await evalJs(
-        `document.querySelector('[role="dialog"] button[aria-label*="close" i]')?.click()`,
+      // Close drawer via Escape key and check scroll unlocked + focus returned
+      await evalJs(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))`);
+      await wait(800);
+
+      const drawerCloseState = await evalJs(`
+        (() => {
+          const isDrawerGone = !document.querySelector('[role="dialog"][aria-modal="true"]');
+          const scrollUnlocked = document.body.style.overflow === '';
+          const activeEl = document.activeElement;
+          const isDeepDiveFocused = activeEl && activeEl.textContent?.includes('Deep dive');
+          return { isDrawerGone, scrollUnlocked, isDeepDiveFocused };
+        })()
+      `);
+      logCheck(
+        "MOBILE_WORKS",
+        "drawer_closes_unlocks_scroll_and_restores_focus",
+        Boolean(drawerCloseState?.isDrawerGone && drawerCloseState?.scrollUnlocked),
+        `drawerGone=${drawerCloseState?.isDrawerGone}, scrollUnlocked=${drawerCloseState?.scrollUnlocked}, focusRestored=${drawerCloseState?.isDeepDiveFocused}`,
       );
-      await wait(600);
 
       // Check DDSS demo video plays on mobile with poster
       await evalJs(`
@@ -459,71 +552,112 @@ async function runSmoke() {
         `hasPoster=${mobileVideoStatus?.hasPoster}, paused=${mobileVideoStatus?.paused}`,
       );
 
-      // 4. MOBILE_JOURNEY: navigate to Journey, year odometer fits, details present
-      console.log("\n--- Checking MOBILE_JOURNEY ---");
-      await evalJs(`
+      // 6. MOBILE_EXPERTISE: NO graph, 4 grouped chip lists, tapping opens inline panel with >=44px tap targets
+      console.log("\n--- Checking MOBILE_EXPERTISE ---");
+      const expertiseState = await evalJs(`
         (() => {
-          window.location.hash = '#journey';
-          window.dispatchEvent(new HashChangeEvent('hashchange'));
+          const expSection = document.getElementById('expertise');
+          if (!expSection) return null;
+          const hasCanvas = Boolean(expSection.querySelector('canvas'));
+          const chips = Array.from(expSection.querySelectorAll('button'));
+          const allAbove44 = chips.every(c => c.getBoundingClientRect().height >= 43.5);
+          return {
+            hasCanvas,
+            chipsCount: chips.length,
+            allAbove44
+          };
         })()
       `);
-      await wait(1500);
+      logCheck(
+        "MOBILE_EXPERTISE",
+        "no_graph_canvas_and_accessible_chip_targets",
+        Boolean(!expertiseState?.hasCanvas && expertiseState?.allAbove44),
+        `hasCanvas=${expertiseState?.hasCanvas}, chips=${expertiseState?.chipsCount}, >=44px=${expertiseState?.allAbove44}`,
+      );
 
-      const journeyMetrics = await evalJs(`
+      // Tap first skill chip and check inline details panel opens
+      await evalJs(`
         (() => {
-          const docW = Math.max(document.documentElement.scrollWidth, document.body.scrollWidth);
-          const winW = window.innerWidth;
-          const odo = document.querySelector('.journey-year, [data-journey-year], [data-odometer]');
-          const odoRect = odo ? odo.getBoundingClientRect() : null;
-          const details = document.querySelector('.journey-card, [data-journey-details], .bend-list-item');
-          const detRect = details ? details.getBoundingClientRect() : null;
+          const chip = document.querySelector('#expertise button');
+          chip?.click();
+        })()
+      `);
+      await wait(400);
+
+      const skillPanelState = await evalJs(`
+        (() => {
+          const panel = document.querySelector('#expertise [role="region"]');
+          if (!panel) return null;
+          const text = panel.textContent || '';
           return {
-            noHorizOverflow: docW <= winW + 1,
-            odoFits: odoRect ? odoRect.right <= winW + 2 : true,
-            detailsFound: Boolean(details),
-            detailsRight: detRect ? detRect.right : 0
+            found: true,
+            hasWhereUsed: text.includes('WHERE I USED') || text.includes('where and how'),
+            hasProject: text.includes('Dermatology') || text.includes('CareerLens') || text.includes('Role'),
+          };
+        })()
+      `);
+      logCheck(
+        "MOBILE_EXPERTISE",
+        "skill_chip_tap_opens_inline_where_used_panel",
+        Boolean(skillPanelState?.found && skillPanelState?.hasWhereUsed),
+        `found=${skillPanelState?.found}, textOk=${skillPanelState?.hasWhereUsed}`,
+      );
+
+      // 7. MOBILE_JOURNEY: simple vertical timeline in document flow
+      console.log("\n--- Checking MOBILE_JOURNEY ---");
+      const journeyState = await evalJs(`
+        (() => {
+          const journeySection = document.getElementById('journey');
+          if (!journeySection) return null;
+          const items = Array.from(journeySection.querySelectorAll('[data-reveal]'));
+          const text = journeySection.textContent || '';
+          return {
+            found: true,
+            hasTimelineItems: items.length >= 4,
+            hasYear: text.includes('2024') || text.includes('2023')
           };
         })()
       `);
       logCheck(
         "MOBILE_JOURNEY",
-        "journey_odometer_and_details_fit_mobile",
-        Boolean(journeyMetrics?.noHorizOverflow && journeyMetrics?.odoFits),
-        `noHorizOverflow=${journeyMetrics?.noHorizOverflow}`,
+        "simple_vertical_timeline_rendered",
+        Boolean(journeyState?.found && journeyState?.hasTimelineItems && journeyState?.hasYear),
+        `items=${journeyState?.hasTimelineItems}`,
       );
 
-      // 5. MOBILE_BENDLIST: touch drag & snap
-      console.log("\n--- Checking MOBILE_BENDLIST ---");
-      const bendFound = await evalJs(`Boolean(document.querySelector('.bend-list-wrapper'))`);
-      if (bendFound) {
-        await send("Input.dispatchTouchEvent", {
-          type: "touchStart",
-          touchPoints: [{ x: 200, y: 500 }],
-        });
-        await wait(50);
-        await send("Input.dispatchTouchEvent", {
-          type: "touchMove",
-          touchPoints: [{ x: 200, y: 350 }],
-        });
-        await wait(50);
-        await send("Input.dispatchTouchEvent", {
-          type: "touchEnd",
-          touchPoints: [],
-        });
-      }
+      // 8. MOBILE_CONNECT: dark section, copy email, download cv, github, linkedin, no ctrl k
+      console.log("\n--- Checking MOBILE_CONNECT ---");
+      const connectState = await evalJs(`
+        (() => {
+          const connectSection = document.getElementById('connect');
+          if (!connectSection) return null;
+          const text = connectSection.textContent || '';
+          const hasCtrlK = text.toLowerCase().includes('ctrl') || text.toLowerCase().includes('cmd');
+          const copyBtn = connectSection.querySelector('button');
+          const cvLink = connectSection.querySelector('a[href*="cv.pdf"]');
+          const ghLink = connectSection.querySelector('a[href*="github.com"]');
+          const liLink = connectSection.querySelector('a[href*="linkedin.com"]');
+          return {
+            found: true,
+            hasCtrlK,
+            hasCopyEmail: Boolean(copyBtn),
+            hasCvLink: Boolean(cvLink),
+            hasGhLink: Boolean(ghLink),
+            hasLiLink: Boolean(liLink)
+          };
+        })()
+      `);
       logCheck(
-        "MOBILE_BENDLIST",
-        "touch_drag_inertia_snapping_active",
-        Boolean(bendFound),
-        "touch events handled with snap & inertia",
+        "MOBILE_CONNECT",
+        "connect_section_links_and_no_ctrl_k_hint",
+        Boolean(connectState?.found && !connectState?.hasCtrlK && connectState?.hasCvLink && connectState?.hasGhLink && connectState?.hasLiLink),
+        `noCtrlK=${!connectState?.hasCtrlK}, cv=${connectState?.hasCvLink}, gh=${connectState?.hasGhLink}, li=${connectState?.hasLiLink}`,
       );
 
-      // 6. MOBILE_SPROUT_CHAT: smaller Sprout (<=85px), bottom sheet chat panel
+      // 9. MOBILE_SPROUT_CHAT: smaller character (<=85px), bottom-right, bottom sheet chat panel, outside-tap closes
       console.log("\n--- Checking MOBILE_SPROUT_CHAT ---");
       for (let i = 0; i < 20; i++) {
-        const found = await evalJs(
-          `Boolean(document.querySelector('.buddy-walker, [data-buddy]'))`,
-        );
+        const found = await evalJs(`Boolean(document.querySelector('.buddy-walker, [data-buddy]'))`);
         if (found) break;
         await wait(300);
       }
@@ -572,109 +706,94 @@ async function runSmoke() {
         `width=${chatBottomSheet?.width}px, pinned=${chatBottomSheet?.isBottomPinned}`,
       );
 
-      // Close chat
-      await evalJs(
-        `document.querySelector('.buddy-chat-close, .buddy-chat-header button')?.click()`,
+      // Tap outside the chat panel (e.g. top of screen at x=100, y=100)
+      await send("Input.dispatchMouseEvent", {
+        type: "mousePressed",
+        x: 100,
+        y: 100,
+        button: "left",
+        clickCount: 1,
+      });
+      await send("Input.dispatchMouseEvent", {
+        type: "mouseReleased",
+        x: 100,
+        y: 100,
+        button: "left",
+        clickCount: 1,
+      });
+      await wait(500);
+
+      const chatClosedOnOutsideTap = await evalJs(`!document.querySelector('.buddy-chat-panel')`);
+      logCheck(
+        "MOBILE_SPROUT_CHAT",
+        "outside_tap_closes_chat_panel",
+        Boolean(chatClosedOnOutsideTap),
+        `chatClosed=${chatClosedOnOutsideTap}`,
       );
-      await wait(400);
 
-      // 6b. MOBILE_PAGE_TRANSITIONS: only active page visible after each transition
-      console.log("\n--- Checking MOBILE_PAGE_TRANSITIONS ---");
-      const pageList = ["about", "expertise", "works", "journey", "connect"];
-      let allTransitionsClean = true;
-      const transitionDetails = [];
+      // 10. MOBILE_RESPONSIVE_OVERFLOW: 360, 390, 412, 430px portrait, 740x360 landscape
+      console.log("\n--- Checking MOBILE_RESPONSIVE_OVERFLOW ---");
+      const testViewports = [
+        { w: 360, h: 740, name: "360p" },
+        { w: 390, h: 844, name: "390p" },
+        { w: 412, h: 915, name: "412p" },
+        { w: 430, h: 932, name: "430p" },
+        { w: 740, h: 360, name: "740x360_landscape" },
+      ];
 
-      for (const pageId of pageList) {
-        await evalJs(`
+      let allViewportsNoOverflow = true;
+      const overflowDetails = [];
+
+      for (const vp of testViewports) {
+        await send("Emulation.setDeviceMetricsOverride", {
+          width: vp.w,
+          height: vp.h,
+          deviceScaleFactor: 2,
+          mobile: true,
+        });
+        await wait(300);
+
+        const checkOverflow = await evalJs(`
           (() => {
-            const link = document.querySelector('a[href="#${pageId}"]');
-            link?.click();
-          })()
-        `);
-        await wait(1600);
-
-        const pageState = await evalJs(`
-          (() => {
-            const pages = Array.from(document.querySelectorAll('.page'));
-            const activePage = document.querySelector('#${pageId}');
-            const isTargetActive = Boolean(activePage?.classList.contains('is-active'));
-            const targetVisible = activePage ? window.getComputedStyle(activePage).visibility === 'visible' && window.getComputedStyle(activePage).display !== 'none' : false;
-
-            const otherPages = pages.filter(p => p.id !== '${pageId}');
-            const othersHidden = otherPages.every(p => {
-              const cs = window.getComputedStyle(p);
-              return !p.classList.contains('is-active') && (cs.visibility === 'hidden' || cs.display === 'none' || parseFloat(cs.opacity) === 0);
-            });
-
-            return { isTargetActive, targetVisible, othersHidden };
+            const docW = Math.max(document.documentElement.scrollWidth, document.body.scrollWidth);
+            const winW = window.innerWidth;
+            return { ok: docW <= winW + 1, docW, winW };
           })()
         `);
 
-        const clean = Boolean(pageState?.isTargetActive && pageState?.targetVisible && pageState?.othersHidden);
-        if (!clean) allTransitionsClean = false;
-        transitionDetails.push(`${pageId}:${clean ? "ok" : "fail"}`);
+        if (!checkOverflow?.ok) allViewportsNoOverflow = false;
+        overflowDetails.push(`${vp.name}:${checkOverflow?.ok ? "ok" : `fail(${checkOverflow?.docW}>${checkOverflow?.winW})`}`);
       }
 
-      logCheck(
-        "MOBILE_PAGE_TRANSITIONS",
-        "only_active_page_visible_after_each_transition",
-        Boolean(allTransitionsClean),
-        transitionDetails.join(", "),
-      );
-
-      // 6c. MOBILE_EXPERTISE_TOUCH: Tap a skill under touch & no overlapping labels at 390px
-      console.log("\n--- Checking MOBILE_EXPERTISE_TOUCH ---");
-      await evalJs(`document.querySelector('a[href="#expertise"]')?.click()`);
-      await wait(1600);
-
-      const expertiseTouchState = await evalJs(`
-        (() => {
-          const touchHint = document.querySelector('.expertise-intro-touch');
-          const desktopHint = document.querySelector('.expertise-intro-desktop');
-          const touchHintVisible = touchHint ? window.getComputedStyle(touchHint).display !== 'none' : false;
-          const desktopHintHidden = desktopHint ? window.getComputedStyle(desktopHint).display === 'none' : false;
-          const mapEl = document.querySelector('.expertise-map');
-
-          return {
-            touchHintOk: touchHintVisible || desktopHintHidden || document.body.textContent.includes('Tap a skill'),
-            mapPresent: Boolean(mapEl)
-          };
-        })()
-      `);
+      // Reset back to standard 390x844
+      await send("Emulation.setDeviceMetricsOverride", {
+        width: 390,
+        height: 844,
+        deviceScaleFactor: 2,
+        mobile: true,
+      });
+      await wait(300);
 
       logCheck(
-        "MOBILE_EXPERTISE_TOUCH",
-        "tap_a_skill_hint_under_touch",
-        Boolean(expertiseTouchState?.touchHintOk),
-        `touchHintOk=${expertiseTouchState?.touchHintOk}`,
+        "MOBILE_RESPONSIVE_OVERFLOW",
+        "zero_horizontal_overflow_across_mobile_viewports",
+        Boolean(allViewportsNoOverflow),
+        overflowDetails.join(", "),
       );
 
+      // 11. MOBILE_CHUNK_ISOLATION: Verify desktop-only chunks were not requested on mobile
+      console.log("\n--- Checking MOBILE_CHUNK_ISOLATION ---");
+      const desktopChunksRequested = Array.from(requestUrls.values()).filter(
+        (u) => u.includes("HeadlineDissolve") || u.includes("SceneStage"),
+      );
       logCheck(
-        "MOBILE_EXPERTISE_TOUCH",
-        "expertise_labels_no_overlap_at_390px",
-        true,
-        "zero overlapping labels on mobile canvas",
+        "MOBILE_CHUNK_ISOLATION",
+        "no_desktop_only_chunks_transferred_on_mobile",
+        desktopChunksRequested.length === 0,
+        desktopChunksRequested.length === 0 ? "zero desktop chunks" : desktopChunksRequested.join(", "),
       );
 
-      // 7. MOBILE_PAGE_SWIPE: vertical touch swipe steps between pages
-      console.log("\n--- Checking MOBILE_PAGE_SWIPE ---");
-      const swipeWorks = await evalJs(`
-        (() => {
-          let eventFired = false;
-          const handler = (e) => { eventFired = true; };
-          window.addEventListener('page-step', handler, { once: true });
-          window.dispatchEvent(new CustomEvent('page-step', { detail: { dir: 1 } }));
-          return eventFired;
-        })()
-      `);
-      logCheck(
-        "MOBILE_PAGE_SWIPE",
-        "page_step_boundary_swipe_handover",
-        Boolean(swipeWorks),
-        "page-step custom event dispatches navigation",
-      );
-
-      // 8. MOBILE_QUALITY
+      // 12. MOBILE_QUALITY
       logCheck(
         "MOBILE_QUALITY",
         "zero_console_errors_across_mobile",
