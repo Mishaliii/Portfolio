@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { gsap } from "gsap";
 import {
   site,
@@ -17,6 +17,9 @@ import {
 import { Intro } from "@/components/site/Intro";
 import { introMode } from "@/lib/intro";
 import { CaseStudy } from "@/components/site/CaseStudy";
+import sideImg from "@/assets/portrait-side-composited.webp";
+import frontImg from "@/assets/portrait-front-composited.webp";
+import { ABOUT_IMAGE_INTERVAL_MS, ABOUT_IMAGE_FADE_MS } from "@/lib/about-portrait";
 import ddssScreenImg from "@/assets/ddss-screen.webp";
 import ddss2ScreenImg from "@/assets/ddss-2-screen.webp";
 import ddss3ScreenImg from "@/assets/ddss-3-screen.webp";
@@ -56,6 +59,15 @@ export function MobileSite() {
   const [activeVideoDemo, setActiveVideoDemo] = useState(false);
   const [copiedEmail, setCopiedEmail] = useState(false);
 
+  // Rotating portrait refs
+  const portraitImgA = useRef<HTMLImageElement>(null);
+  const portraitImgB = useRef<HTMLImageElement>(null);
+  const portraitTl = useRef<gsap.core.Timeline | null>(null);
+
+  // Scroll progress and hero drift refs
+  const progressBarRef = useRef<HTMLDivElement>(null);
+  const heroDriftRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     document.documentElement.classList.remove("paged");
     document.body.style.overflow = "";
@@ -74,40 +86,153 @@ export function MobileSite() {
     }
   }, []);
 
-  // Setup GSAP light scroll reveals
+  // Setup GSAP light scroll reveals (line-reveal for titles, fade+rise for cards)
   const containerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!booted || !containerRef.current) return;
     const isReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const revealEls = containerRef.current.querySelectorAll<HTMLElement>("[data-reveal]");
 
+    // 1. Title line reveal (rise from overflow-hidden mask)
+    const titleEls = containerRef.current.querySelectorAll<HTMLElement>("[data-reveal-title]");
     if (isReduced) {
-      revealEls.forEach((el) => {
+      titleEls.forEach((el) => {
+        el.style.transform = "none";
+      });
+    } else {
+      const titleObserver = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              const target = entry.target as HTMLElement;
+              gsap.fromTo(
+                target,
+                { yPercent: 105 },
+                { yPercent: 0, duration: 0.7, ease: "power3.out" },
+              );
+              titleObserver.unobserve(target);
+            }
+          });
+        },
+        { threshold: 0.1, rootMargin: "0px 0px -20px 0px" },
+      );
+      titleEls.forEach((el) => {
+        gsap.set(el, { yPercent: 105 });
+        titleObserver.observe(el);
+      });
+    }
+
+    // 2. Card enter (opacity + 24px rise)
+    const cardEls = containerRef.current.querySelectorAll<HTMLElement>("[data-reveal-card]");
+    if (isReduced) {
+      cardEls.forEach((el) => {
         el.style.opacity = "1";
         el.style.transform = "none";
       });
+    } else {
+      const cardObserver = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              const target = entry.target as HTMLElement;
+              gsap.fromTo(
+                target,
+                { opacity: 0, y: 24 },
+                { opacity: 1, y: 0, duration: 0.65, ease: "power2.out", clearProps: "transform" },
+              );
+              cardObserver.unobserve(target);
+            }
+          });
+        },
+        { threshold: 0.08, rootMargin: "0px 0px -30px 0px" },
+      );
+      cardEls.forEach((el) => {
+        gsap.set(el, { opacity: 0, y: 24 });
+        cardObserver.observe(el);
+      });
+    }
+  }, [booted]);
+
+  // Rotating portrait in About section (2.5s hold, 700ms crossfade, GSAP timeline)
+  useEffect(() => {
+    if (!booted || !portraitImgA.current || !portraitImgB.current) return;
+    const isReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (isReduced) {
+      gsap.set(portraitImgA.current, { opacity: 1 });
+      gsap.set(portraitImgB.current, { opacity: 0 });
       return;
     }
 
+    const intervalS = ABOUT_IMAGE_INTERVAL_MS / 1000;
+    const fadeS = ABOUT_IMAGE_FADE_MS / 1000;
+
+    const tl = gsap.timeline({ repeat: -1, paused: true });
+    portraitTl.current = tl;
+
+    tl.to(
+      portraitImgA.current,
+      { opacity: 0, duration: fadeS, ease: "power2.inOut" },
+      `+=${intervalS}`,
+    );
+    tl.to(
+      portraitImgB.current,
+      { opacity: 1, duration: fadeS, ease: "power2.inOut" },
+      `<`,
+    );
+
+    tl.to(
+      portraitImgB.current,
+      { opacity: 0, duration: fadeS, ease: "power2.inOut" },
+      `+=${intervalS}`,
+    );
+    tl.to(
+      portraitImgA.current,
+      { opacity: 1, duration: fadeS, ease: "power2.inOut" },
+      `<`,
+    );
+
     const observer = new IntersectionObserver(
       (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const target = entry.target as HTMLElement;
-            gsap.fromTo(
-              target,
-              { opacity: 0, y: 16 },
-              { opacity: 1, y: 0, duration: 0.6, ease: "power2.out", clearProps: "transform" },
-            );
-            observer.unobserve(target);
+        entries.forEach((e) => {
+          if (e.isIntersecting) {
+            tl.play();
+          } else {
+            tl.pause();
           }
         });
       },
-      { threshold: 0.08, rootMargin: "0px 0px -40px 0px" },
+      { threshold: 0.1 },
     );
 
-    revealEls.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
+    const parent = portraitImgA.current.parentElement;
+    if (parent) observer.observe(parent);
+
+    return () => {
+      observer.disconnect();
+      tl.kill();
+    };
+  }, [booted]);
+
+  // Scroll Progress Bar + Hero Drift (transform & opacity only)
+  useEffect(() => {
+    if (!booted) return;
+    const isReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    const onScroll = () => {
+      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+      const progress = maxScroll > 0 ? window.scrollY / maxScroll : 0;
+      if (progressBarRef.current) {
+        gsap.set(progressBarRef.current, { scaleX: Math.min(Math.max(progress, 0), 1) });
+      }
+
+      if (!isReduced && heroDriftRef.current && window.scrollY < window.innerHeight) {
+        const drift = Math.min(12, (window.scrollY / window.innerHeight) * 12);
+        gsap.set(heroDriftRef.current, { y: drift });
+      }
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
   }, [booted]);
 
   // Section visibility tracker for location.hash
@@ -246,6 +371,14 @@ export function MobileSite() {
             {ui.sayHello}
           </button>
         </div>
+
+        {/* Thin Gold Scroll Progress Bar under Top Bar */}
+        <div
+          ref={progressBarRef}
+          className="absolute bottom-0 left-0 h-[2px] bg-[#C9A24A] origin-left pointer-events-none"
+          style={{ width: "100%", transform: "scaleX(0)", willChange: "transform" }}
+          aria-hidden="true"
+        />
       </header>
 
       {/* 3. Full-Screen Menu Overlay */}
@@ -320,11 +453,11 @@ export function MobileSite() {
         <section
           id="overview"
           aria-label="Overview"
-          className="relative w-full bg-[#0B0B0B] text-[#E8DED0] flex flex-col justify-end pt-16 pb-12 px-5 sm:px-8"
+          className="relative w-full bg-[#0B0B0B] text-[#E8DED0] flex flex-col justify-end pt-24 pb-12 px-5 sm:px-8"
           style={{ height: "100svh", minHeight: "100dvh" }}
         >
-          {/* Portrait Video & Poster Background */}
-          <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+          {/* Portrait Video & Poster Background with subtle scroll drift */}
+          <div ref={heroDriftRef} className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
             <video
               className="scene-video w-full h-full object-cover pointer-events-none"
               style={{ objectPosition: "84% 50%" }}
@@ -335,27 +468,33 @@ export function MobileSite() {
               poster="/hero/poster.webp"
               src="/hero/hero-sm.mp4"
             />
-            {/* Scrim overlay for crisp text readability */}
-            <div className="absolute inset-0 bg-gradient-to-t from-[#0B0B0B] via-[#0B0B0B]/60 to-transparent pointer-events-none" />
+            {/* Soft bottom gradient behind the text & CTA block only — Mishal's face stays un-shaded & bright */}
+            <div
+              className="hero-shade absolute inset-0 pointer-events-none"
+              style={{
+                background:
+                  "linear-gradient(to bottom, transparent 0%, transparent 58%, rgba(11, 11, 11, 0.45) 78%, rgba(11, 11, 11, 0.96) 100%)",
+              }}
+            />
           </div>
 
-          {/* Hero Content */}
-          <div className="relative z-10 w-full max-w-xl mx-auto flex flex-col gap-4">
+          {/* Hero Content (strictly 24px gap rhythm) */}
+          <div className="relative z-10 w-full max-w-xl mx-auto flex flex-col gap-6">
             {/* Availability Pill */}
             <div className="inline-flex items-center gap-2 self-start px-3.5 py-1.5 rounded-full bg-[#0B0B0B]/90 border border-[#E8DED0]/20 font-mono text-[12px] tracking-wider text-[#E8DED0]">
               <span className="w-2 h-2 rounded-full bg-[#1F5A3A] animate-pulse" aria-hidden="true" />
               <span>{hero.status}</span>
             </div>
 
-            {/* Display Headline */}
-            <h1 className="font-anton text-[46px] sm:text-[56px] leading-[1.05] tracking-wider text-[#E8DED0] m-0">
+            {/* Display Headline: Anton font, uppercase, tight tracking, fluid size */}
+            <h1 className="font-display uppercase tracking-[-0.01em] text-[clamp(44px,12vw,62px)] leading-[0.92] text-[#E8DED0] m-0">
               AI / ML
               <br />
               ENGINEER.
             </h1>
 
             {/* Subtitle */}
-            <p className="font-sans text-[17px] sm:text-[19px] leading-relaxed text-[#E8DED0]/90 max-w-md">
+            <p className="font-sans text-[17px] sm:text-[19px] leading-relaxed text-[#E8DED0]/90 max-w-md pr-6 sm:pr-0">
               {hero.sub}
             </p>
 
@@ -388,29 +527,82 @@ export function MobileSite() {
         <section
           id="about"
           aria-label="About"
-          className="w-full bg-[#E8DED0] text-[#0B0B0B] py-16 px-5 sm:px-8 border-b border-[#0B0B0B]/10"
+          className="w-full bg-[#E8DED0] text-[#0B0B0B] py-24 px-5 sm:px-8 border-b border-[#0B0B0B]/10"
         >
-          <div className="w-full max-w-xl mx-auto flex flex-col gap-8">
-            <div data-reveal className="flex items-baseline justify-between border-b border-[#0B0B0B]/15 pb-3">
-              <h2 className="font-anton text-[38px] sm:text-[46px] tracking-wider text-[#0B0B0B] m-0">
-                ABOUT ME.
-              </h2>
-              <span className="font-mono text-[14px] text-[#1F5A3A] tracking-widest font-bold">
-                01
+          <div className="w-full max-w-xl mx-auto flex flex-col gap-12">
+            {/* Section Header: 01 ABOUT, gold rule, big display heading */}
+            <div data-reveal data-reveal-header className="flex flex-col gap-2 pt-2 border-t border-[#C9A24A]/40">
+              <span className="font-mono text-[12px] uppercase tracking-widest text-[#1F5A3A] font-bold">
+                01 ABOUT
               </span>
+              <div className="overflow-hidden">
+                <h2 data-reveal-title className="font-display uppercase tracking-[-0.01em] text-[clamp(36px,10vw,48px)] leading-[0.92] text-[#0B0B0B] m-0">
+                  ABOUT ME.
+                </h2>
+              </div>
+            </div>
+
+            {/* Rotating Portrait + Giant "MISHAL." Wordmark */}
+            <div data-reveal data-reveal-card className="relative flex flex-col">
+              {/* Large Image Container */}
+              <div
+                className="relative w-full aspect-[4/5] sm:aspect-square rounded-2xl overflow-hidden bg-[#171615] shadow-md"
+                aria-label={about.portraitAlt}
+                role="img"
+              >
+                <img
+                  ref={portraitImgA}
+                  src={sideImg}
+                  alt=""
+                  decoding="async"
+                  aria-hidden="true"
+                  className="absolute inset-0 w-full h-full object-cover transition-opacity"
+                  style={{ willChange: "opacity" }}
+                />
+                <img
+                  ref={portraitImgB}
+                  src={frontImg}
+                  alt=""
+                  decoding="async"
+                  aria-hidden="true"
+                  className="absolute inset-0 w-full h-full object-cover transition-opacity"
+                  style={{ opacity: 0, willChange: "opacity" }}
+                />
+                {/* Soft gradient fade over bottom edge */}
+                <div
+                  className="absolute inset-x-0 bottom-0 h-28 pointer-events-none"
+                  style={{
+                    background:
+                      "linear-gradient(to bottom, transparent 0%, rgba(232, 222, 208, 0.4) 50%, #E8DED0 100%)",
+                  }}
+                  aria-hidden="true"
+                />
+              </div>
+
+              {/* Giant Overlapping Wordmark */}
+              <div className="relative -mt-10 sm:-mt-14 z-10 px-2 flex flex-col">
+                <div className="font-display uppercase tracking-tight text-[clamp(52px,16vw,84px)] leading-[0.86] text-[#0B0B0B]">
+                  {about.name}
+                  <span className="text-[#1F5A3A]">{about.period}</span>
+                </div>
+                <div className="font-mono text-[11px] sm:text-[12px] uppercase tracking-widest text-[#1F5A3A] font-bold mt-1">
+                  {about.fullName} · {about.role}
+                </div>
+              </div>
             </div>
 
             {/* Short Bio */}
-            <p data-reveal className="font-sans text-[17px] leading-relaxed text-[#0B0B0B]/90">
+            <p data-reveal data-reveal-card className="font-sans text-[17px] leading-relaxed text-[#0B0B0B]/90 pr-8 sm:pr-0">
               {about.bio}
             </p>
 
-            {/* Stacked Readable Blocks */}
-            <div className="flex flex-col gap-4">
+            {/* Stacked Readable Blocks (strictly 24px gap rhythm) */}
+            <div className="flex flex-col gap-6">
               {/* Education Block */}
               <div
                 data-reveal
-                className="p-4 rounded-xl bg-[#0B0B0B]/[0.03] border border-[#0B0B0B]/10 flex flex-col gap-1.5"
+                data-reveal-card
+                className="p-5 rounded-xl bg-[#0B0B0B]/[0.03] border border-[#0B0B0B]/10 flex flex-col gap-1.5 pr-8 sm:pr-5"
               >
                 <span className="font-mono text-[12px] uppercase tracking-widest text-[#1F5A3A] font-bold">
                   {about.facts[0].label}
@@ -431,7 +623,8 @@ export function MobileSite() {
               {/* Experience Block */}
               <div
                 data-reveal
-                className="p-4 rounded-xl bg-[#0B0B0B]/[0.03] border border-[#0B0B0B]/10 flex flex-col gap-1.5"
+                data-reveal-card
+                className="p-5 rounded-xl bg-[#0B0B0B]/[0.03] border border-[#0B0B0B]/10 flex flex-col gap-1.5 pr-8 sm:pr-5"
               >
                 <span className="font-mono text-[12px] uppercase tracking-widest text-[#1F5A3A] font-bold">
                   {about.facts[1].label}
@@ -452,7 +645,8 @@ export function MobileSite() {
               {/* Certifications Block */}
               <div
                 data-reveal
-                className="p-4 rounded-xl bg-[#0B0B0B]/[0.03] border border-[#0B0B0B]/10 flex flex-col gap-1.5"
+                data-reveal-card
+                className="p-5 rounded-xl bg-[#0B0B0B]/[0.03] border border-[#0B0B0B]/10 flex flex-col gap-1.5 pr-8 sm:pr-5"
               >
                 <span className="font-mono text-[12px] uppercase tracking-widest text-[#1F5A3A] font-bold">
                   {about.facts[2].label}
@@ -468,7 +662,8 @@ export function MobileSite() {
               {/* Additional Projects Block */}
               <div
                 data-reveal
-                className="p-4 rounded-xl bg-[#0B0B0B]/[0.03] border border-[#0B0B0B]/10 flex flex-col gap-1.5"
+                data-reveal-card
+                className="p-5 rounded-xl bg-[#0B0B0B]/[0.03] border border-[#0B0B0B]/10 flex flex-col gap-1.5 pr-8 sm:pr-5"
               >
                 <span className="font-mono text-[12px] uppercase tracking-widest text-[#1F5A3A] font-bold">
                   {about.facts[3].label}
@@ -484,7 +679,8 @@ export function MobileSite() {
               {/* Status / Availability Block */}
               <div
                 data-reveal
-                className="p-4 rounded-xl bg-[#1F5A3A]/10 border border-[#1F5A3A]/20 flex flex-col gap-1.5"
+                data-reveal-card
+                className="p-5 rounded-xl bg-[#1F5A3A]/10 border border-[#1F5A3A]/20 flex flex-col gap-1.5 pr-8 sm:pr-5"
               >
                 <span className="font-mono text-[12px] uppercase tracking-widest text-[#1F5A3A] font-bold flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-[#1F5A3A]" aria-hidden="true" />
@@ -507,23 +703,26 @@ export function MobileSite() {
         <section
           id="expertise"
           aria-label="Expertise"
-          className="w-full bg-[#E8DED0] text-[#0B0B0B] py-16 px-5 sm:px-8 border-b border-[#0B0B0B]/10"
+          className="w-full bg-[#E8DED0] text-[#0B0B0B] py-24 px-5 sm:px-8 border-b border-[#0B0B0B]/10"
         >
-          <div className="w-full max-w-xl mx-auto flex flex-col gap-8">
-            <div data-reveal className="flex items-baseline justify-between border-b border-[#0B0B0B]/15 pb-3">
-              <h2 className="font-anton text-[38px] sm:text-[46px] tracking-wider text-[#0B0B0B] m-0">
-                {expertise.heading}
-              </h2>
-              <span className="font-mono text-[14px] text-[#1F5A3A] tracking-widest font-bold">
-                02
+          <div className="w-full max-w-xl mx-auto flex flex-col gap-12">
+            {/* Section Header: 02 EXPERTISE, gold rule, big display heading */}
+            <div data-reveal data-reveal-header className="flex flex-col gap-2 pt-2 border-t border-[#C9A24A]/40">
+              <span className="font-mono text-[12px] uppercase tracking-widest text-[#1F5A3A] font-bold">
+                02 EXPERTISE
               </span>
+              <div className="overflow-hidden">
+                <h2 data-reveal-title className="font-display uppercase tracking-[-0.01em] text-[clamp(36px,10vw,48px)] leading-[0.92] text-[#0B0B0B] m-0">
+                  {expertise.heading}
+                </h2>
+              </div>
             </div>
 
-            <p data-reveal className="font-sans text-[16px] text-[#0B0B0B]/80 -mt-3">
+            <p data-reveal data-reveal-card className="font-sans text-[16px] text-[#0B0B0B]/80 -mt-6 pr-8 sm:pr-0">
               Tap a skill chip to see where and how I used it in production:
             </p>
 
-            {/* 4 Grouped Skill Chip Lists */}
+            {/* 4 Grouped Skill Chip Lists (strictly 24px gap rhythm) */}
             <div className="flex flex-col gap-6">
               {expertise.clusters.map((clusterName, clusterIdx) => {
                 const clusterSkills = expertise.skills.filter((s) => s.cluster === clusterIdx);
@@ -532,7 +731,8 @@ export function MobileSite() {
                   <div
                     key={clusterName}
                     data-reveal
-                    className="p-4 rounded-2xl bg-[#0B0B0B]/[0.03] border border-[#0B0B0B]/10 flex flex-col gap-3"
+                    data-reveal-card
+                    className="p-5 rounded-2xl bg-[#0B0B0B]/[0.03] border border-[#0B0B0B]/10 flex flex-col gap-3 pr-8 sm:pr-5"
                   >
                     <span className="font-mono text-[12px] uppercase tracking-widest text-[#1F5A3A] font-bold">
                       {clusterName}
@@ -629,23 +829,27 @@ export function MobileSite() {
         <section
           id="works"
           aria-label="Works"
-          className="w-full bg-[#0B0B0B] text-[#E8DED0] py-16 px-5 sm:px-8 border-b border-[#E8DED0]/15"
+          className="w-full bg-[#0B0B0B] text-[#E8DED0] py-24 px-5 sm:px-8 border-b border-[#E8DED0]/15"
         >
-          <div className="w-full max-w-xl mx-auto flex flex-col gap-8">
-            <div data-reveal className="flex items-baseline justify-between border-b border-[#E8DED0]/15 pb-3">
-              <h2 className="font-anton text-[38px] sm:text-[46px] tracking-wider text-[#E8DED0] m-0">
-                {works.heading}
-              </h2>
-              <span className="font-mono text-[14px] text-[#C9A24A] tracking-widest font-bold">
-                03
+          <div className="w-full max-w-xl mx-auto flex flex-col gap-12">
+            {/* Section Header: 03 WORKS, gold rule, big display heading */}
+            <div data-reveal data-reveal-header className="flex flex-col gap-2 pt-2 border-t border-[#C9A24A]/40">
+              <span className="font-mono text-[12px] uppercase tracking-widest text-[#C9A24A] font-bold">
+                03 WORKS
               </span>
+              <div className="overflow-hidden">
+                <h2 data-reveal-title className="font-display uppercase tracking-[-0.01em] text-[clamp(36px,10vw,48px)] leading-[0.92] text-[#E8DED0] m-0">
+                  {works.heading}
+                </h2>
+              </div>
             </div>
 
-            {/* 3 Project Cards in normal flow */}
-            <div className="flex flex-col gap-8">
+            {/* 3 Project Cards with display titles and 48px gap */}
+            <div className="flex flex-col gap-12">
               {/* Card 1: Dermatology Decision Support */}
               <article
                 data-reveal
+                data-reveal-card
                 className="rounded-2xl overflow-hidden bg-[#161616] border border-[#E8DED0]/15 flex flex-col"
               >
                 <div className="relative w-full aspect-video bg-[#000] overflow-hidden">
@@ -661,7 +865,7 @@ export function MobileSite() {
                 </div>
 
                 <div className="p-5 flex flex-col gap-3">
-                  <h3 className="font-anton text-[24px] tracking-wide text-[#E8DED0] m-0">
+                  <h3 className="font-display uppercase tracking-[-0.01em] text-[clamp(22px,6vw,28px)] leading-[1.05] text-[#E8DED0] m-0">
                     {works.projects[0].title}
                   </h3>
 
@@ -725,6 +929,7 @@ export function MobileSite() {
               {/* Card 2: Productivity & Role Prediction */}
               <article
                 data-reveal
+                data-reveal-card
                 className="rounded-2xl overflow-hidden bg-[#161616] border border-[#E8DED0]/15 flex flex-col"
               >
                 <div className="relative w-full aspect-video bg-[#000] overflow-hidden">
@@ -740,7 +945,7 @@ export function MobileSite() {
                 </div>
 
                 <div className="p-5 flex flex-col gap-3">
-                  <h3 className="font-anton text-[24px] tracking-wide text-[#E8DED0] m-0">
+                  <h3 className="font-display uppercase tracking-[-0.01em] text-[clamp(22px,6vw,28px)] leading-[1.05] text-[#E8DED0] m-0">
                     {works.projects[1].title}
                   </h3>
 
@@ -780,6 +985,7 @@ export function MobileSite() {
               {/* Card 3: CareerLens AI */}
               <article
                 data-reveal
+                data-reveal-card
                 className="rounded-2xl overflow-hidden bg-[#161616] border border-[#E8DED0]/15 flex flex-col"
               >
                 <div className="relative w-full aspect-video bg-[#000] overflow-hidden">
@@ -795,7 +1001,7 @@ export function MobileSite() {
                 </div>
 
                 <div className="p-5 flex flex-col gap-3">
-                  <h3 className="font-anton text-[24px] tracking-wide text-[#E8DED0] m-0">
+                  <h3 className="font-display uppercase tracking-[-0.01em] text-[clamp(22px,6vw,28px)] leading-[1.05] text-[#E8DED0] m-0">
                     {works.projects[2].title}
                   </h3>
 
@@ -841,22 +1047,25 @@ export function MobileSite() {
         <section
           id="journey"
           aria-label="Journey"
-          className="w-full bg-[#E8DED0] text-[#0B0B0B] py-16 px-5 sm:px-8 border-b border-[#0B0B0B]/10"
+          className="w-full bg-[#E8DED0] text-[#0B0B0B] py-24 px-5 sm:px-8 border-b border-[#0B0B0B]/10"
         >
-          <div className="w-full max-w-xl mx-auto flex flex-col gap-8">
-            <div data-reveal className="flex items-baseline justify-between border-b border-[#0B0B0B]/15 pb-3">
-              <h2 className="font-anton text-[38px] sm:text-[46px] tracking-wider text-[#0B0B0B] m-0">
-                {journey.heading}
-              </h2>
-              <span className="font-mono text-[14px] text-[#1F5A3A] tracking-widest font-bold">
-                04
+          <div className="w-full max-w-xl mx-auto flex flex-col gap-12">
+            {/* Section Header: 04 JOURNEY, gold rule, big display heading */}
+            <div data-reveal data-reveal-header className="flex flex-col gap-2 pt-2 border-t border-[#C9A24A]/40">
+              <span className="font-mono text-[12px] uppercase tracking-widest text-[#1F5A3A] font-bold">
+                04 JOURNEY
               </span>
+              <div className="overflow-hidden">
+                <h2 data-reveal-title className="font-display uppercase tracking-[-0.01em] text-[clamp(36px,10vw,48px)] leading-[0.92] text-[#0B0B0B] m-0">
+                  {journey.heading}
+                </h2>
+              </div>
             </div>
 
-            {/* Vertical Timeline */}
-            <div className="relative pl-6 flex flex-col gap-8 before:content-[''] before:absolute before:left-2.5 before:top-3 before:bottom-3 before:w-0.5 before:bg-[#1F5A3A]/30">
+            {/* Vertical Timeline with strictly 24px gap between stops */}
+            <div className="relative pl-6 flex flex-col gap-6 before:content-[''] before:absolute before:left-2.5 before:top-3 before:bottom-3 before:w-0.5 before:bg-[#1F5A3A]/30 pr-8 sm:pr-0">
               {journey.stops.map((stop, idx) => (
-                <div key={`${stop.year}-${idx}`} data-reveal className="relative flex flex-col gap-1.5">
+                <div key={`${stop.year}-${idx}`} data-reveal data-reveal-card className="relative flex flex-col gap-1.5">
                   {/* Timeline Dot */}
                   <div
                     className="absolute -left-[27px] top-1.5 w-3.5 h-3.5 rounded-full bg-[#1F5A3A] border-2 border-[#E8DED0] shadow-sm"
@@ -897,24 +1106,27 @@ export function MobileSite() {
         <section
           id="connect"
           aria-label="Connect"
-          className="w-full bg-[#0B0B0B] text-[#E8DED0] py-16 px-5 sm:px-8 pb-32"
+          className="w-full bg-[#0B0B0B] text-[#E8DED0] pt-24 pb-32 px-5 sm:px-8"
         >
-          <div className="w-full max-w-xl mx-auto flex flex-col gap-8">
-            <div data-reveal className="flex items-baseline justify-between border-b border-[#E8DED0]/15 pb-3">
-              <h2 className="font-anton text-[38px] sm:text-[46px] tracking-wider text-[#E8DED0] m-0">
-                {connect.heading.join(" ")}
-              </h2>
-              <span className="font-mono text-[14px] text-[#C9A24A] tracking-widest font-bold">
-                05
+          <div className="w-full max-w-xl mx-auto flex flex-col gap-12">
+            {/* Section Header: 05 CONNECT, gold rule, big display heading */}
+            <div data-reveal data-reveal-header className="flex flex-col gap-2 pt-2 border-t border-[#C9A24A]/40">
+              <span className="font-mono text-[12px] uppercase tracking-widest text-[#C9A24A] font-bold">
+                05 CONNECT
               </span>
+              <div className="overflow-hidden">
+                <h2 data-reveal-title className="font-display uppercase tracking-[-0.01em] text-[clamp(36px,10vw,48px)] leading-[0.92] text-[#E8DED0] m-0">
+                  {connect.heading.join(" ")}
+                </h2>
+              </div>
             </div>
 
-            <p data-reveal className="font-sans text-[17px] leading-relaxed text-[#E8DED0]/90 m-0">
+            <p data-reveal data-reveal-card className="font-sans text-[17px] leading-relaxed text-[#E8DED0]/90 m-0 pr-8 sm:pr-0">
               {connect.sub}
             </p>
 
-            {/* Email Display & Action Cards */}
-            <div data-reveal className="p-5 rounded-2xl bg-[#161616] border border-[#E8DED0]/15 flex flex-col gap-4">
+            {/* Email Display & Action Cards (strictly 24px gap rhythm) */}
+            <div data-reveal data-reveal-card className="p-5 rounded-2xl bg-[#161616] border border-[#E8DED0]/15 flex flex-col gap-4">
               <span className="font-mono text-[12px] uppercase tracking-widest text-[#C9A24A] font-semibold">
                 Direct Email:
               </span>
@@ -953,7 +1165,7 @@ export function MobileSite() {
             </div>
 
             {/* Social Links & External Profiles */}
-            <div data-reveal className="flex flex-col gap-3">
+            <div data-reveal data-reveal-card className="flex flex-col gap-3">
               <span className="font-mono text-[12px] uppercase tracking-widest text-[#E8DED0]/60 font-semibold">
                 Profiles:
               </span>
@@ -981,7 +1193,7 @@ export function MobileSite() {
             </div>
 
             {/* Multilingual Greetings Strip */}
-            <div data-reveal className="flex items-center gap-4 py-2 border-t border-[#E8DED0]/10 text-[#E8DED0]/60 text-[14px]">
+            <div data-reveal data-reveal-card className="flex items-center gap-4 py-2 border-t border-[#E8DED0]/10 text-[#E8DED0]/60 text-[14px]">
               {connect.greetings.map((g) => (
                 <span key={g.lang} dir={g.dir} className="font-medium">
                   {g.text}

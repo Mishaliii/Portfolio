@@ -500,7 +500,10 @@ export function Buddy() {
       setBubbleText(text);
       setBubbleVisible(true);
 
-      const fadeTime = 6000;
+      const isMobile =
+        typeof window !== "undefined" &&
+        window.matchMedia("(max-width: 820px), (pointer: coarse) and (max-width: 1024px)").matches;
+      const fadeTime = isMobile ? 5000 : 6000;
       bubbleFadeTimeout.current = window.setTimeout(() => {
         setBubbleVisible(false);
         setBubbleAction(null);
@@ -957,6 +960,40 @@ export function Buddy() {
         scrollTimeout = window.setTimeout(() => {
           isFastScrolling.current = false;
         }, 1500);
+
+        // Check if we should trigger fast scroll bubble (at most once per session in sessionStorage)
+        const now = Date.now();
+        const isMobile =
+          typeof window !== "undefined" &&
+          window.matchMedia("(max-width: 820px), (pointer: coarse) and (max-width: 1024px)").matches;
+        const minInterval = isMobile ? 90000 : 45000;
+        let fastScrollSeen = false;
+        try {
+          fastScrollSeen = sessionStorage.getItem("sprout_fast_scroll_seen") === "1";
+        } catch {}
+
+        if (
+          !fastScrollSeen &&
+          now - mountTime.current >= 10000 &&
+          now - lastIdleBubbleTime.current >= minInterval &&
+          !chatOpen &&
+          !isAsleep &&
+          !bubbleVisible
+        ) {
+          const currentPage = window.location.hash.slice(1) || "overview";
+          if (currentPage !== "works") {
+            try {
+              sessionStorage.setItem("sprout_fast_scroll_seen", "1");
+            } catch {}
+            lastIdleBubbleTime.current = now;
+            idleBubbleCount.current++;
+            speakReaction(
+              "Scrolling fast! Looking for anything specific?",
+              "happy",
+              { label: "Show projects", query: "What has Mishal built?" },
+            );
+          }
+        }
       }
     };
 
@@ -965,7 +1002,7 @@ export function Buddy() {
       window.removeEventListener("scroll", onScroll);
       clearTimeout(scrollTimeout);
     };
-  }, []);
+  }, [bubbleVisible, chatOpen, isAsleep, speakReaction]);
 
   // Idle Bubble Scheduler (Problem 4)
   useEffect(() => {
@@ -985,8 +1022,12 @@ export function Buddy() {
       const now = Date.now();
       // First idle bubble no earlier than 14 s after buddy appears
       if (now - mountTime.current < 14000) return;
-      // At most one per 45 s
-      if (now - lastIdleBubbleTime.current < 45000) return;
+      // At most one per 45 s on desktop, 90 s on mobile
+      const isMobile =
+        typeof window !== "undefined" &&
+        window.matchMedia("(max-width: 820px), (pointer: coarse) and (max-width: 1024px)").matches;
+      const minInterval = isMobile ? 90000 : 45000;
+      if (now - lastIdleBubbleTime.current < minInterval) return;
       // At most 4 per session unless visitor has chatted
       if (idleBubbleCount.current >= 4 && !hasChatted.current) return;
 
@@ -996,9 +1037,16 @@ export function Buddy() {
       // Never show spontaneous / idle bubbles over Works cards or if chat is open
       if (currentPage === "works" || chatOpen) return;
 
+      // Fast scroll bubble is allowed at most once per session
+      let fastScrollSeen = false;
+      try {
+        fastScrollSeen = sessionStorage.getItem("sprout_fast_scroll_seen") === "1";
+      } catch {}
+
       // Find suitable candidate from pool
       let candidates = IDLE_BUBBLES_POOL.filter((item) => {
         if (currentPage === "works" && (item.id === "s1" || item.id === "s2")) return false;
+        if (fastScrollSeen && (item.id === "s1" || item.id === "s2")) return false;
         if (item.page && item.page !== currentPage) return false;
         if (item.timeContext === "morning" && hour >= 12) return false;
         if (item.timeContext === "night" && hour >= 6 && hour < 20) return false;
@@ -1006,10 +1054,18 @@ export function Buddy() {
       });
 
       if (candidates.length === 0)
-        candidates = IDLE_BUBBLES_POOL.filter((item) => !item.page && !item.timeContext);
+        candidates = IDLE_BUBBLES_POOL.filter(
+          (item) => !item.page && !item.timeContext && !(fastScrollSeen && (item.id === "s1" || item.id === "s2")),
+        );
 
       const picked = candidates[Math.floor(Math.random() * candidates.length)];
       if (!picked) return;
+
+      if (picked.id === "s1" || picked.id === "s2") {
+        try {
+          sessionStorage.setItem("sprout_fast_scroll_seen", "1");
+        } catch {}
+      }
 
       lastIdleBubbleTime.current = now;
       idleBubbleCount.current++;

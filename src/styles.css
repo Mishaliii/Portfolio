@@ -69,6 +69,9 @@ html.has-cursor * {
   line-height: 0.86;
   font-weight: 400;
 }
+[data-drawer-content] .display {
+  line-height: 1.15 !important;
+}
 .mono {
   font-family: var(--font-mono);
   font-size: 11px;
@@ -2390,12 +2393,40 @@ html.paged .page:not(.is-active) [data-card] {
     color: #0B0B0B !important;
   }
 
-  /* 8. Sprout bubbles on mobile: smaller, never overflow */
+  /* 8. Sprout on mobile: small door, compact walker, 2-line bubble anchored near Sprout */
+  .buddy-door {
+    width: 32px !important;
+    height: 52px !important;
+    right: calc(8px + env(safe-area-inset-right)) !important;
+    bottom: calc(8px + env(safe-area-inset-bottom)) !important;
+  }
+  .buddy-walker {
+    width: 50px !important;
+    height: 68px !important;
+    right: calc(10px + env(safe-area-inset-right)) !important;
+    bottom: calc(8px + env(safe-area-inset-bottom)) !important;
+  }
+  .buddy-bubble-wrap {
+    left: auto !important;
+    right: 0 !important;
+    transform: none !important;
+    bottom: calc(100% + 8px) !important;
+  }
   .buddy-bubble {
-    max-width: min(240px, calc(100vw - 48px)) !important;
+    max-width: min(220px, calc(100vw - 48px)) !important;
     padding: 6px 10px !important;
     font-size: 12px !important;
-    line-height: 1.4 !important;
+    line-height: 1.35 !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+  .buddy-bubble-tail {
+    left: auto !important;
+    right: 22px !important;
+    transform: none !important;
   }
 }
 

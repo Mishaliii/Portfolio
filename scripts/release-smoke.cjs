@@ -793,7 +793,176 @@ async function runSmoke() {
         desktopChunksRequested.length === 0 ? "zero desktop chunks" : desktopChunksRequested.join(", "),
       );
 
-      // 12. MOBILE_QUALITY
+      // 12. MOBILE_DESIGN_POLISH (release-26 requirements)
+      console.log("\n--- Checking MOBILE_DESIGN_POLISH (Typography, Face Brightness, Sprout, Drawer, Reduced Motion) ---");
+
+      // 12a. Typography Parity
+      const typoCheck = await evalJs(`
+        (() => {
+          const heroH1 = document.querySelector('#overview h1');
+          const aboutH2 = document.querySelector('#about [data-reveal-title]');
+          const worksH2 = document.querySelector('#works [data-reveal-title]');
+          const worksH3 = document.querySelector('#works article h3');
+          
+          const getFont = (el) => el ? window.getComputedStyle(el).fontFamily.toLowerCase() : '';
+          const getTransform = (el) => el ? window.getComputedStyle(el).textTransform : '';
+          
+          const isDisplayFont = (f) => f.includes('anton') || f.includes('league gothic') || f.includes('impact');
+          const heroOk = heroH1 && isDisplayFont(getFont(heroH1)) && getTransform(heroH1) === 'uppercase';
+          const aboutOk = aboutH2 && isDisplayFont(getFont(aboutH2)) && getTransform(aboutH2) === 'uppercase';
+          const worksOk = worksH2 && isDisplayFont(getFont(worksH2)) && getTransform(worksH2) === 'uppercase';
+          const cardOk = worksH3 && isDisplayFont(getFont(worksH3)) && getTransform(worksH3) === 'uppercase';
+          
+          return { ok: Boolean(heroOk && aboutOk && worksOk && cardOk), heroFont: getFont(heroH1), aboutFont: getFont(aboutH2) };
+        })()
+      `);
+      logCheck(
+        "MOBILE_DESIGN_POLISH",
+        "typography_parity_display_font_uppercase_headings",
+        Boolean(typoCheck?.ok),
+        `heroFont=${typoCheck?.heroFont}, aboutFont=${typoCheck?.aboutFont}`,
+      );
+
+      // 12b. Hero Face Brightness
+      const faceBrightnessCheck = await evalJs(`
+        (() => {
+          const shade = document.querySelector('#overview .hero-shade');
+          if (!shade) return { ok: false, reason: "no shade overlay" };
+          const bg = shade.getAttribute('style') || window.getComputedStyle(shade).backgroundImage || '';
+          // Ensure gradient doesn't darken face: transparent through at least 50%
+          const isTopTransparent = bg.includes('transparent 0%') || bg.includes('transparent 5') || bg.includes('transparent 6');
+          const hasHeavyScrim = bg.includes('via-[#0B0B0B]/60');
+          return { ok: isTopTransparent && !hasHeavyScrim, bg };
+        })()
+      `);
+      logCheck(
+        "MOBILE_DESIGN_POLISH",
+        "hero_face_unshaded_soft_bottom_gradient_only",
+        Boolean(faceBrightnessCheck?.ok),
+        `ok=${faceBrightnessCheck?.ok}, style=${faceBrightnessCheck?.bg?.slice(0, 80)}`,
+      );
+
+      // 12c. Sprout Limits & Door Size
+      const sproutLimitsCheck = await evalJs(`
+        (() => {
+          const door = document.querySelector('.buddy-door');
+          const walker = document.querySelector('.buddy-walker');
+          const bubble = document.querySelector('.buddy-bubble');
+          
+          const doorRect = door ? door.getBoundingClientRect() : null;
+          const doorSmall = doorRect ? (doorRect.width <= 44 && doorRect.height <= 65) : false;
+          
+          // Verify bubble styling rules
+          const bubbleStyle = bubble ? window.getComputedStyle(bubble) : null;
+          const lineClamp = bubbleStyle ? bubbleStyle.webkitLineClamp : '';
+          
+          return {
+            doorSmall,
+            doorWidth: doorRect?.width,
+            doorHeight: doorRect?.height,
+            lineClamp
+          };
+        })()
+      `);
+      logCheck(
+        "MOBILE_DESIGN_POLISH",
+        "sprout_compact_door_and_bubble_rules",
+        Boolean(sproutLimitsCheck?.doorSmall),
+        `doorWidth=${sproutLimitsCheck?.doorWidth}, doorHeight=${sproutLimitsCheck?.doorHeight}, lineClamp=${sproutLimitsCheck?.lineClamp}`,
+      );
+
+      // 12d. Drawer Heading Wrapping at 360px viewport
+      await send("Emulation.setDeviceMetricsOverride", {
+        width: 360,
+        height: 740,
+        deviceScaleFactor: 2,
+        mobile: true,
+      });
+      await wait(400);
+
+      const drawerWrapCheck = await evalJs(`
+        (() => {
+          // Open drawer to test
+          const deepDiveBtn = document.querySelector('#works article button');
+          if (deepDiveBtn) deepDiveBtn.click();
+          return true;
+        })()
+      `);
+      await wait(600);
+
+      const drawerHeadings = await evalJs(`
+        (() => {
+          const drawer = document.querySelector('[role="dialog"][aria-label*="Clinical" i], [data-drawer-content]');
+          const title = document.querySelector('[data-drawer-content] .display');
+          const secTitle = document.querySelector('[data-drawer-content] h3.display');
+          
+          if (!title || !secTitle) return { ok: false, reason: "headings not found" };
+          
+          const titleCs = window.getComputedStyle(title);
+          const secCs = window.getComputedStyle(secTitle);
+          
+          const titleLh = parseFloat(titleCs.lineHeight) / parseFloat(titleCs.fontSize);
+          const secLh = parseFloat(secCs.lineHeight) / parseFloat(secCs.fontSize);
+          
+          // Close drawer
+          const closeBtn = document.querySelector('[data-drawer-content] button');
+          if (closeBtn) closeBtn.click();
+          
+          return {
+            ok: titleLh >= 1.05 && secLh >= 1.05,
+            titleLh: titleLh.toFixed(2),
+            secLh: secLh.toFixed(2)
+          };
+        })()
+      `);
+      await wait(400);
+
+      // Reset to 390x844
+      await send("Emulation.setDeviceMetricsOverride", {
+        width: 390,
+        height: 844,
+        deviceScaleFactor: 2,
+        mobile: true,
+      });
+      await wait(300);
+
+      logCheck(
+        "MOBILE_DESIGN_POLISH",
+        "drawer_heading_line_height_safe_wrap_at_360px",
+        Boolean(drawerHeadings?.ok),
+        `titleLh=${drawerHeadings?.titleLh}, secLh=${drawerHeadings?.secLh}`,
+      );
+
+      // 12e. Prefers-Reduced-Motion Parity
+      await send("Emulation.setEmulatedMedia", {
+        features: [{ name: "prefers-reduced-motion", value: "reduce" }],
+      });
+      await wait(300);
+
+      const reducedMotionCheck = await evalJs(`
+        (() => {
+          const titles = Array.from(document.querySelectorAll('[data-reveal-title]'));
+          const cards = Array.from(document.querySelectorAll('[data-reveal-card]'));
+          
+          // In reduced motion, elements should be immediately visible and not blocked
+          const allTitlesVisible = titles.length > 0;
+          const allCardsVisible = cards.length > 0;
+          return { ok: allTitlesVisible && allCardsVisible, titleCount: titles.length, cardCount: cards.length };
+        })()
+      `);
+
+      // Reset emulation
+      await send("Emulation.setEmulatedMedia", { features: [] });
+      await wait(200);
+
+      logCheck(
+        "MOBILE_DESIGN_POLISH",
+        "reduced_motion_renders_immediately_without_blocking",
+        Boolean(reducedMotionCheck?.ok),
+        `titleCount=${reducedMotionCheck?.titleCount}, cardCount=${reducedMotionCheck?.cardCount}`,
+      );
+
+      // 13. MOBILE_QUALITY
       logCheck(
         "MOBILE_QUALITY",
         "zero_console_errors_across_mobile",

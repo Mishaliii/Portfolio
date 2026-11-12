@@ -356,13 +356,16 @@ export function CaseStudy({
           data-drawer-content
           className="flex items-center justify-between border-b border-[#0B0B0B]/15 px-6 sm:px-10 py-5 shrink-0 bg-[#E8DED0]"
         >
-          <div className="flex items-baseline gap-3">
-            <span className="display text-[22px] tracking-tight text-[#0B0B0B]">
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 min-w-0 pr-2">
+            <span
+              className="display text-[20px] sm:text-[22px] leading-[1.15] tracking-tight text-[#0B0B0B] break-words"
+              style={{ lineHeight: 1.15 }}
+            >
               {Array.isArray(c.title) ? c.title.join(" ") : c.title}
             </span>
-            <span className="mono text-[11px] text-[#6B645A]">{badgeText}</span>
+            <span className="mono text-[11px] text-[#6B645A] shrink-0">{badgeText}</span>
             {"galleryLabel" in c && c.galleryLabel && (
-              <span className="mono text-[11px] text-[#1F5A3A] hidden sm:inline-block border-l border-[#0B0B0B]/15 pl-3">
+              <span className="mono text-[11px] text-[#1F5A3A] hidden sm:inline-block border-l border-[#0B0B0B]/15 pl-3 shrink-0">
                 PRODUCT SCREENS / <Odometer value="10" active={drawerOpened} /> CAPTURES
               </span>
             )}
@@ -422,11 +425,14 @@ export function CaseStudy({
                 className="scroll-mt-6 pb-12 border-b border-[#0B0B0B]/10 last:border-b-0"
               >
                 <div className="border-t border-[#0B0B0B]/15 pt-4 mb-3">
-                  <h3 className="display text-[26px] sm:text-[32px] tracking-tight text-[#0B0B0B] flex items-baseline gap-2">
-                    <span className="mono text-[16px] sm:text-[18px] text-[#1F5A3A] font-normal">
+                  <h3
+                    className="display text-[24px] sm:text-[32px] leading-[1.15] tracking-tight text-[#0B0B0B] flex flex-wrap items-baseline gap-2 break-words"
+                    style={{ lineHeight: 1.15 }}
+                  >
+                    <span className="mono text-[16px] sm:text-[18px] text-[#1F5A3A] font-normal shrink-0">
                       0<Odometer value={sec.num} active={drawerOpened} />
                     </span>
-                    <span>{sec.title}</span>
+                    <span className="break-words">{sec.title}</span>
                   </h3>
                 </div>
 
