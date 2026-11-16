@@ -998,6 +998,101 @@ async function runSmoke() {
         `titleCount=${reducedMotionCheck?.titleCount}, cardCount=${reducedMotionCheck?.cardCount}`,
       );
 
+      // 12f. STEP 28 POLISH: Menu cream sheet, Hero split headline, Journey dot-line, Chevron bottom-left
+      console.log("\n--- Checking STEP 28 POLISH ---");
+      // Check Hero split headline & location line
+      const heroR28Check = await evalJs(`
+        (() => {
+          const lines = Array.from(document.querySelectorAll('.mobile-hero-line')).map(el => el.textContent.trim());
+          const locEl = document.querySelector('#overview p');
+          const locText = locEl ? locEl.textContent : '';
+          return {
+            hasSplitLines: lines.length >= 2,
+            lines,
+            hasLocation: locText.includes('Kollam, Kerala')
+          };
+        })()
+      `);
+      logCheck(
+        "MOBILE_POLISH_28",
+        "hero_split_headline_and_location_line",
+        Boolean(heroR28Check?.hasSplitLines && heroR28Check?.hasLocation),
+        `lines=${JSON.stringify(heroR28Check?.lines)}, location=${heroR28Check?.hasLocation}`,
+      );
+
+      // Check Menu: open menu, verify cream sheet #E8DED0 and ink text #0B0B0B, side-by-side bottom buttons
+      await evalJs(`document.querySelector('header button[aria-label*="menu" i]')?.click()`);
+      await wait(600);
+      const menuR28Check = await evalJs(`
+        (() => {
+          const dialog = document.querySelector('[role="dialog"][aria-label*="Menu" i]');
+          if (!dialog) return null;
+          const bg = window.getComputedStyle(dialog).backgroundColor;
+          const color = window.getComputedStyle(dialog).color;
+          const closeBtn = dialog.querySelector('button[aria-label*="close" i]');
+          const bottomBtns = dialog.querySelectorAll('div.grid button, div.grid a');
+          const isCream = bg.includes('232, 222, 208') || bg.includes('e8ded0');
+          const isInk = color.includes('11, 11, 11') || color.includes('0b0b0b');
+          return {
+            isCream,
+            isInk,
+            hasClose: Boolean(closeBtn),
+            bottomBtnCount: bottomBtns.length,
+            bg, color
+          };
+        })()
+      `);
+      logCheck(
+        "MOBILE_POLISH_28",
+        "menu_redesign_cream_sheet_and_side_by_side_buttons",
+        Boolean(menuR28Check?.isCream && menuR28Check?.isInk && menuR28Check?.hasClose && menuR28Check?.bottomBtnCount === 2),
+        `cream=${menuR28Check?.isCream}, ink=${menuR28Check?.isInk}, bottomBtns=${menuR28Check?.bottomBtnCount}`,
+      );
+      // Close menu
+      await evalJs(`document.querySelector('[role="dialog"] button[aria-label*="close" i]')?.click()`);
+      await wait(400);
+
+      // Check Journey: dot per entry, big year, stops count
+      const journeyR28Check = await evalJs(`
+        (() => {
+          const jSection = document.getElementById('journey');
+          if (!jSection) return null;
+          const stops = Array.from(jSection.querySelectorAll('[data-reveal-journey]'));
+          const hasDots = stops.length >= 4 && stops.every(s => Boolean(s.querySelector('.rounded-full')));
+          return {
+            stopsCount: stops.length,
+            hasDots
+          };
+        })()
+      `);
+      logCheck(
+        "MOBILE_POLISH_28",
+        "journey_thin_gold_line_dot_and_cards",
+        Boolean(journeyR28Check?.stopsCount >= 4 && journeyR28Check?.hasDots),
+        `stops=${journeyR28Check?.stopsCount}, dots=${journeyR28Check?.hasDots}`,
+      );
+
+      // Check Scroll-up Chevron: scroll down 1.5 screens and verify bottom-left chevron button
+      await evalJs(`window.scrollTo(0, window.innerHeight * 1.5)`);
+      await wait(400);
+      const chevronCheck = await evalJs(`
+        (() => {
+          const btn = document.querySelector('button[aria-label="Scroll to top"]');
+          if (!btn) return null;
+          const r = btn.getBoundingClientRect();
+          const isBottomLeft = r.left <= 40 && r.bottom <= window.innerHeight;
+          return { found: true, isBottomLeft, left: r.left, bottom: r.bottom };
+        })()
+      `);
+      logCheck(
+        "MOBILE_POLISH_28",
+        "scroll_up_chevron_visible_at_bottom_left",
+        Boolean(chevronCheck?.found && chevronCheck?.isBottomLeft),
+        `found=${chevronCheck?.found}, isBottomLeft=${chevronCheck?.isBottomLeft}, left=${chevronCheck?.left}px`,
+      );
+      await evalJs(`window.scrollTo(0, 0)`);
+      await wait(300);
+
       // 13. MOBILE_QUALITY
       logCheck(
         "MOBILE_QUALITY",

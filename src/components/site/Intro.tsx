@@ -288,12 +288,28 @@ export function Intro({
       }
 
       const flightDuration = mode === "short" ? 0.35 : 1.25;
+      const isMobile =
+        typeof window !== "undefined" &&
+        window.matchMedia("(max-width: 820px), (pointer: coarse) and (max-width: 1024px)").matches;
 
-      // A. Wordmark FLIP flight to top-left nav logo
+      // A. Wordmark FLIP flight to top-left nav logo (desktop) or clean fade out before circle opens (mobile)
       const targetNavBrand = document.querySelector(
         '[data-brand="wordmark"], header a[href="#overview"] .display',
       ) as HTMLElement | null;
-      if (wordmarkWrapRef.current && targetNavBrand) {
+
+      if (isMobile && wordmarkWrapRef.current) {
+        // Mobile hand-off: fade MISHAL wordmark out before circle opens so nothing overlaps face
+        wordmarkWrapRef.current.style.zIndex = "75";
+        gsap.to(wordmarkWrapRef.current, {
+          opacity: 0,
+          duration: 0.22,
+          ease: "power2.out",
+          onComplete: () => {
+            if (targetNavBrand) targetNavBrand.style.opacity = "1";
+          },
+        });
+        gsap.delayedCall(0.9, finish);
+      } else if (wordmarkWrapRef.current && targetNavBrand) {
         const startR = wordmarkWrapRef.current.getBoundingClientRect();
         const targetR = targetNavBrand.getBoundingClientRect();
 
@@ -334,7 +350,12 @@ export function Intro({
         gsap.fromTo(
           maskCircleRef.current,
           { attr: { r: 0 } },
-          { attr: { r: maxR }, duration: mode === "short" ? 0.35 : 1.25, ease: "power2.inOut" },
+          {
+            attr: { r: maxR },
+            duration: mode === "short" ? 0.35 : (isMobile ? 0.85 : 1.25),
+            delay: isMobile ? 0.2 : 0,
+            ease: "power2.inOut",
+          },
         );
       }
 

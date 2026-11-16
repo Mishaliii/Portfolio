@@ -2428,5 +2428,27 @@ html.paged .page:not(.is-active) [data-card] {
     right: 22px !important;
     transform: none !important;
   }
+
+  /* Step 28: Hide Sprout & bubbles while menu is open */
+  body.menu-open .buddy-layer {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    visibility: hidden !important;
+  }
+
+  /* Step 28: Hide Sprout walker, musical note, and green door while Journey is in view */
+  body.journey-in-view .buddy-walker,
+  body.journey-in-view .buddy-door,
+  body.journey-in-view .buddy-bubble-wrap {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    visibility: hidden !important;
+    transition: opacity 0.2s ease-out;
+  }
+
+  /* Sprout stays as a clean corner button when Journey is in view */
+  body.journey-in-view:not(.menu-open) .buddy-journey-corner-btn {
+    display: flex !important;
+  }
 }
 

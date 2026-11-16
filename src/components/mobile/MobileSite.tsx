@@ -218,13 +218,11 @@ export function MobileSite() {
   }>({ open: false });
   const [activeVideoDemo, setActiveVideoDemo] = useState(false);
   const [copiedEmail, setCopiedEmail] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
 
-  // Rotating portrait refs
-  const portraitImgA = useRef<HTMLImageElement>(null);
-  const portraitImgB = useRef<HTMLImageElement>(null);
-  const portraitTl = useRef<gsap.core.Timeline | null>(null);
-
-  // Scroll progress and hero drift refs
+  // Menu and scroll refs
+  const menuOverlayRef = useRef<HTMLDivElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
   const progressBarRef = useRef<HTMLDivElement>(null);
   const heroDriftRef = useRef<HTMLDivElement>(null);
 
@@ -246,7 +244,92 @@ export function MobileSite() {
     }
   }, []);
 
-  // Setup GSAP light scroll reveals (line-reveal for titles, fade+rise for cards)
+  // Viewport Jitter Safeguard: ignore resize events where height changes by < 120px and width is the same (URL-bar collapse/expand)
+  useEffect(() => {
+    let lastW = window.innerWidth;
+    let lastH = window.innerHeight;
+
+    const onResize = (e: UIEvent) => {
+      const curW = window.innerWidth;
+      const curH = window.innerHeight;
+      const dw = Math.abs(curW - lastW);
+      const dh = Math.abs(curH - lastH);
+
+      if (dw === 0 && dh < 120) {
+        e.stopImmediatePropagation?.();
+        return;
+      }
+
+      lastW = curW;
+      lastH = curH;
+    };
+
+    window.addEventListener("resize", onResize, { capture: true, passive: true });
+    return () => window.removeEventListener("resize", onResize, { capture: true });
+  }, []);
+
+  // Menu Scroll Lock & Class Toggle (Step 28: lock body scroll, hide Sprout)
+  useEffect(() => {
+    if (!menuOpen) return;
+    const prevOverflow = document.body.style.overflow;
+    const prevOverscroll = document.body.style.overscrollBehavior;
+    document.body.style.overflow = "hidden";
+    document.body.style.overscrollBehavior = "contain";
+    document.body.classList.add("menu-open");
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.body.style.overscrollBehavior = prevOverscroll;
+      document.body.classList.remove("menu-open");
+    };
+  }, [menuOpen]);
+
+  // Back gesture / Popstate closes menu
+  useEffect(() => {
+    const onPopState = () => {
+      if (menuOpen) {
+        setMenuOpen(false);
+        menuButtonRef.current?.focus();
+      }
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [menuOpen]);
+
+  // Menu Animation (Slides down from header with 0.45s power3.out, items stagger 0.05s)
+  useEffect(() => {
+    if (menuOpen && menuOverlayRef.current) {
+      const isReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (!isReduced) {
+        gsap.fromTo(
+          menuOverlayRef.current,
+          { yPercent: -100 },
+          { yPercent: 0, duration: 0.45, ease: "power3.out" },
+        );
+        gsap.fromTo(
+          menuOverlayRef.current.querySelectorAll(".mobile-menu-item"),
+          { opacity: 0, y: 16 },
+          { opacity: 1, y: 0, duration: 0.35, ease: "power2.out", stagger: 0.05, delay: 0.08 },
+        );
+      }
+    }
+  }, [menuOpen]);
+
+  // Hero Headline reveal (each line rises 24px with 0.6s power3.out, stagger 0.08s, starting 0.2s after loader finishes)
+  useEffect(() => {
+    if (!booted) return;
+    const isReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (isReduced) {
+      gsap.set(".mobile-hero-line", { y: 0, opacity: 1 });
+      return;
+    }
+    gsap.fromTo(
+      ".mobile-hero-line",
+      { y: 24, opacity: 0 },
+      { y: 0, opacity: 1, duration: 0.6, ease: "power3.out", stagger: 0.08, delay: 0.2 },
+    );
+  }, [booted]);
+
+  // Setup GSAP light scroll reveals (line-reveal for titles, fade+rise for cards, 0.35s/16px for journey)
   const containerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!booted || !containerRef.current) return;
@@ -310,84 +393,85 @@ export function MobileSite() {
         cardObserver.observe(el);
       });
     }
+
+    // 3. Journey enter (0.35s fade + 16px rise entering viewport once)
+    const journeyEls = containerRef.current.querySelectorAll<HTMLElement>("[data-reveal-journey]");
+    if (isReduced) {
+      journeyEls.forEach((el) => {
+        el.style.opacity = "1";
+        el.style.transform = "none";
+      });
+    } else {
+      const journeyObserver = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              const target = entry.target as HTMLElement;
+              gsap.fromTo(
+                target,
+                { opacity: 0, y: 16 },
+                { opacity: 1, y: 0, duration: 0.35, ease: "power2.out", clearProps: "transform" },
+              );
+              journeyObserver.unobserve(target);
+            }
+          });
+        },
+        { threshold: 0.08, rootMargin: "0px 0px -20px 0px" },
+      );
+      journeyEls.forEach((el) => {
+        gsap.set(el, { opacity: 0, y: 16 });
+        journeyObserver.observe(el);
+      });
+    }
   }, [booted]);
 
-  // Rotating portrait in About section (2.5s hold, 700ms crossfade, GSAP timeline)
+  // Track Journey visibility for body.journey-in-view (Hides Sprout walker, door, and notes on mobile)
   useEffect(() => {
-    if (!booted || !portraitImgA.current || !portraitImgB.current) return;
-    const isReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (isReduced) {
-      gsap.set(portraitImgA.current, { opacity: 1 });
-      gsap.set(portraitImgB.current, { opacity: 0 });
-      return;
-    }
-
-    const intervalS = ABOUT_IMAGE_INTERVAL_MS / 1000;
-    const fadeS = ABOUT_IMAGE_FADE_MS / 1000;
-
-    const tl = gsap.timeline({ repeat: -1, paused: true });
-    portraitTl.current = tl;
-
-    tl.to(
-      portraitImgA.current,
-      { opacity: 0, duration: fadeS, ease: "power2.inOut" },
-      `+=${intervalS}`,
-    );
-    tl.to(
-      portraitImgB.current,
-      { opacity: 1, duration: fadeS, ease: "power2.inOut" },
-      `<`,
-    );
-
-    tl.to(
-      portraitImgB.current,
-      { opacity: 0, duration: fadeS, ease: "power2.inOut" },
-      `+=${intervalS}`,
-    );
-    tl.to(
-      portraitImgA.current,
-      { opacity: 1, duration: fadeS, ease: "power2.inOut" },
-      `<`,
-    );
+    if (!booted) return;
+    const journeyEl = document.getElementById("journey");
+    if (!journeyEl) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((e) => {
           if (e.isIntersecting) {
-            tl.play();
+            document.body.classList.add("journey-in-view");
           } else {
-            tl.pause();
+            document.body.classList.remove("journey-in-view");
           }
         });
       },
-      { threshold: 0.1 },
+      { threshold: 0.05, rootMargin: "-10% 0px -10% 0px" },
     );
-
-    const parent = portraitImgA.current.parentElement;
-    if (parent) observer.observe(parent);
-
+    observer.observe(journeyEl);
     return () => {
       observer.disconnect();
-      tl.kill();
+      document.body.classList.remove("journey-in-view");
     };
   }, [booted]);
 
-  // Scroll Progress Bar + Hero Drift (transform & opacity only)
+  // Scroll Progress Bar + Hero Drift + Scroll-to-top chevron toggle
   useEffect(() => {
     if (!booted) return;
     const isReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     const onScroll = () => {
-      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-      const progress = maxScroll > 0 ? window.scrollY / maxScroll : 0;
+      const scrollY = window.scrollY;
+      const innerHeight = window.innerHeight || 700;
+      const maxScroll = document.documentElement.scrollHeight - innerHeight;
+      const progress = maxScroll > 0 ? scrollY / maxScroll : 0;
+
       if (progressBarRef.current) {
         gsap.set(progressBarRef.current, { scaleX: Math.min(Math.max(progress, 0), 1) });
       }
 
-      if (!isReduced && heroDriftRef.current && window.scrollY < window.innerHeight) {
-        const drift = Math.min(12, (window.scrollY / window.innerHeight) * 12);
+      if (!isReduced && heroDriftRef.current && scrollY < innerHeight) {
+        const drift = Math.min(12, (scrollY / innerHeight) * 12);
         gsap.set(heroDriftRef.current, { y: drift });
       }
+
+      // Show scroll-up chevron only after 1 screen scroll
+      setShowScrollTop(scrollY > innerHeight);
     };
 
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -432,16 +516,27 @@ export function MobileSite() {
     }
   }, [booted]);
 
+  // Menu Open/Close helpers
+  const openMenu = useCallback(() => {
+    setMenuOpen(true);
+    window.history.pushState({ mobileMenu: true }, "", window.location.href);
+  }, []);
+
+  const closeMenu = useCallback(() => {
+    setMenuOpen(false);
+    menuButtonRef.current?.focus();
+  }, []);
+
   // Smooth scroll helper
   const scrollTo = useCallback((id: string) => {
-    setMenuOpen(false);
+    closeMenu();
     const el = document.getElementById(id);
     if (el) {
       el.scrollIntoView({ behavior: "smooth" });
       window.history.replaceState(null, "", `#${id}`);
       setActiveHash(id);
     }
-  }, []);
+  }, [closeMenu]);
 
   // Copy email handler
   const handleCopyEmail = useCallback(() => {
@@ -471,13 +566,13 @@ export function MobileSite() {
         if (selectedCaseStudy.open) {
           closeDrawer();
         } else if (menuOpen) {
-          setMenuOpen(false);
+          closeMenu();
         }
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [selectedCaseStudy.open, menuOpen, closeDrawer]);
+  }, [selectedCaseStudy.open, menuOpen, closeDrawer, closeMenu]);
 
   return (
     <div
@@ -518,9 +613,10 @@ export function MobileSite() {
 
         <div className="flex items-center gap-2">
           <button
+            ref={menuButtonRef}
             type="button"
-            onClick={() => setMenuOpen(true)}
-            className="min-h-[44px] min-w-[44px] px-3.5 py-1.5 rounded-full border border-[#0B0B0B]/30 font-mono text-[12px] uppercase tracking-wider font-semibold text-[#0B0B0B] hover:bg-[#0B0B0B]/5 active:bg-[#0B0B0B]/10 flex items-center justify-center gap-1.5 transition-colors"
+            onClick={openMenu}
+            className="min-h-[44px] min-w-[44px] px-3.5 py-1.5 rounded-full border border-[#0B0B0B]/30 font-mono text-[12px] uppercase tracking-wider font-semibold text-[#0B0B0B] hover:bg-[#0B0B0B]/5 active:bg-[#0B0B0B]/10 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
             aria-label="Open navigation menu"
             aria-expanded={menuOpen}
           >
@@ -531,7 +627,7 @@ export function MobileSite() {
           <button
             type="button"
             onClick={() => scrollTo("connect")}
-            className="min-h-[44px] px-4 py-1.5 rounded-full bg-[#0B0B0B] text-[#E8DED0] font-mono text-[12px] uppercase tracking-wider font-semibold hover:bg-[#1F5A3A] transition-colors flex items-center justify-center shadow-sm"
+            className="min-h-[44px] px-4 py-1.5 rounded-full bg-[#0B0B0B] text-[#E8DED0] font-mono text-[12px] uppercase tracking-wider font-semibold hover:bg-[#1F5A3A] transition-colors flex items-center justify-center shadow-sm cursor-pointer"
           >
             {ui.sayHello}
           </button>
@@ -546,23 +642,25 @@ export function MobileSite() {
         />
       </header>
 
-      {/* 3. Full-Screen Menu Overlay */}
+      {/* 3. Full-Screen Menu Overlay (Cream sheet #E8DED0 with Ink text #0B0B0B) */}
       {menuOpen && (
         <div
+          ref={menuOverlayRef}
           role="dialog"
           aria-modal="true"
           aria-label="Navigation Menu"
-          className="fixed inset-0 z-50 bg-[#0B0B0B] text-[#E8DED0] flex flex-col justify-between p-6 sm:p-8 animate-in fade-in duration-200"
-          style={{ height: "100svh", minHeight: "100dvh" }}
+          className="fixed inset-0 z-50 bg-[#E8DED0] text-[#0B0B0B] flex flex-col justify-between p-5 sm:p-7 shadow-2xl"
+          style={{ width: "100%", height: "100%", willChange: "transform" }}
         >
-          <div className="flex items-center justify-between border-b border-[#E8DED0]/15 pb-4">
-            <span className="font-anton text-[24px] tracking-wider text-[#E8DED0]">
+          {/* Top Row: Wordmark and CLOSE button */}
+          <div className="flex items-center justify-between border-b border-[#0B0B0B]/15 pb-3">
+            <span className="font-display text-[26px] tracking-tight uppercase text-[#0B0B0B]">
               {site.wordmark}
             </span>
             <button
               type="button"
-              onClick={() => setMenuOpen(false)}
-              className="min-h-[44px] min-w-[44px] px-3.5 py-1.5 rounded-full border border-[#E8DED0]/30 font-mono text-[12px] uppercase tracking-wider text-[#E8DED0] hover:bg-[#E8DED0]/10 flex items-center justify-center gap-1.5"
+              onClick={closeMenu}
+              className="min-h-[44px] min-w-[44px] px-3.5 py-1.5 rounded-full border border-[#0B0B0B]/30 font-mono text-[12px] uppercase tracking-wider font-semibold text-[#0B0B0B] hover:bg-[#0B0B0B]/5 active:bg-[#0B0B0B]/10 flex items-center justify-center gap-1.5 cursor-pointer"
               aria-label="Close menu"
             >
               <X className="w-4 h-4" aria-hidden="true" />
@@ -570,31 +668,46 @@ export function MobileSite() {
             </button>
           </div>
 
-          <nav className="flex flex-col gap-3 py-6" aria-label="Mobile Navigation">
-            {NAV_ITEMS.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => scrollTo(item.id)}
-                className={`flex items-baseline justify-between text-left py-2.5 px-3 rounded-lg transition-colors min-h-[48px] ${
-                  activeHash === item.id ? "bg-[#E8DED0]/15 text-[#C9A24A]" : "text-[#E8DED0]/90 hover:bg-[#E8DED0]/10"
-                }`}
-              >
-                <span className="font-anton text-[28px] sm:text-[34px] tracking-wider">
-                  {item.label}
-                </span>
-                <span className="font-mono text-[13px] text-[#E8DED0]/50 tracking-widest">
-                  {item.num}
-                </span>
-              </button>
-            ))}
+          {/* Navigation Items: ~40px display font with mono index number, active item has forest-green dot */}
+          <nav className="flex flex-col gap-2 py-4 my-auto" aria-label="Mobile Navigation">
+            {NAV_ITEMS.map((item) => {
+              const isActive = activeHash === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => scrollTo(item.id)}
+                  className={`mobile-menu-item flex items-center justify-between text-left py-2 px-2.5 rounded-lg transition-colors min-h-[48px] cursor-pointer ${
+                    isActive ? "bg-[#0B0B0B]/5" : "hover:bg-[#0B0B0B]/5"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    {isActive ? (
+                      <span className="w-2.5 h-2.5 rounded-full bg-[#1F5A3A] shrink-0" aria-hidden="true" />
+                    ) : (
+                      <span className="w-2.5 h-2.5 shrink-0" aria-hidden="true" />
+                    )}
+                    <span className="font-display uppercase tracking-[-0.01em] text-[clamp(32px,8vw,40px)] leading-[1.0] text-[#0B0B0B]">
+                      {item.label}
+                    </span>
+                  </div>
+                  <span className="font-mono text-[13px] text-[#6B645A] tracking-widest font-semibold">
+                    {item.num}
+                  </span>
+                </button>
+              );
+            })}
           </nav>
 
-          <div className="flex flex-col gap-3 pt-4 border-t border-[#E8DED0]/15">
+          {/* Bottom Actions: Download CV (outline) and Say hello (ink fill) side by side */}
+          <div
+            className="grid grid-cols-2 gap-3 pt-3 border-t border-[#0B0B0B]/15"
+            style={{ paddingBottom: "max(16px, env(safe-area-inset-bottom))" }}
+          >
             <a
               href="/cv.pdf"
               download
-              className="min-h-[48px] px-6 py-3 rounded-full border border-[#E8DED0]/30 text-[#E8DED0] font-mono text-[13px] uppercase tracking-wider font-semibold hover:bg-[#E8DED0]/10 flex items-center justify-center gap-2 transition-colors"
+              className="min-h-[48px] px-4 py-2.5 rounded-full border border-[#0B0B0B]/40 text-[#0B0B0B] bg-transparent hover:bg-[#0B0B0B]/5 active:bg-[#0B0B0B]/10 font-mono text-[13px] uppercase tracking-wider font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer"
             >
               <Download className="w-4 h-4" aria-hidden="true" />
               <span>{ui.downloadCv}</span>
@@ -602,7 +715,7 @@ export function MobileSite() {
             <button
               type="button"
               onClick={() => scrollTo("connect")}
-              className="min-h-[48px] px-6 py-3 rounded-full bg-[#E8DED0] text-[#0B0B0B] font-mono text-[13px] uppercase tracking-wider font-semibold hover:bg-[#C9A24A] transition-colors flex items-center justify-center"
+              className="min-h-[48px] px-4 py-2.5 rounded-full bg-[#0B0B0B] text-[#E8DED0] hover:bg-[#1F5A3A] active:bg-[#17452c] font-mono text-[13px] uppercase tracking-wider font-bold transition-colors flex items-center justify-center cursor-pointer shadow-sm"
             >
               {ui.sayHello}
             </button>
@@ -622,7 +735,7 @@ export function MobileSite() {
           style={{ minHeight: "100svh" }}
         >
           {/* Top ~62svh Media Framing: Mishal's face clearly positioned and bright, clear of 56px header */}
-          <div className="relative w-full h-[62svh] min-h-[380px] overflow-hidden">
+          <div className="relative w-full h-[62svh] min-h-[360px] overflow-hidden">
             <div ref={heroDriftRef} className="w-full h-full">
               <video
                 className="scene-video w-full h-full object-cover pointer-events-none"
@@ -645,45 +758,53 @@ export function MobileSite() {
             />
           </div>
 
-          {/* Hero Content in solid ink area below media — nothing overlaps his face or torso */}
-          <div className="relative z-10 w-full max-w-xl mx-auto flex flex-col gap-6 px-5 sm:px-8 pt-4 pb-14">
+          {/* Hero Content in solid ink area below media — starts ~62svh from top */}
+          <div className="relative z-10 w-full max-w-xl mx-auto flex flex-col gap-4 px-5 sm:px-8 pt-3 pb-12">
             {/* Availability Pill */}
-            <div className="inline-flex items-center gap-2 self-start px-3.5 py-1.5 rounded-full bg-[#0B0B0B] border border-[#E8DED0]/20 font-mono text-[12px] tracking-wider text-[#E8DED0]">
+            <div className="inline-flex items-center gap-2 self-start px-3 py-1 rounded-full bg-[#0B0B0B] border border-[#E8DED0]/20 font-mono text-[11px] sm:text-[12px] tracking-wider text-[#E8DED0]">
               <span className="w-2 h-2 rounded-full bg-[#1F5A3A] animate-pulse" aria-hidden="true" />
               <span>{hero.status}</span>
             </div>
 
-            {/* Display Headline: Anton font, uppercase, tight tracking, fluid size */}
-            <h1 className="font-display uppercase tracking-[-0.01em] text-[clamp(44px,12vw,62px)] leading-[0.92] text-[#E8DED0] m-0">
-              AI / ML
-              <br />
-              ENGINEER.
+            {/* Role & Location line */}
+            <p className="font-mono text-[12px] sm:text-[13px] uppercase tracking-widest text-[#C9A24A] font-semibold m-0">
+              AI / ML Engineer · Kollam, Kerala
+            </p>
+
+            {/* Display Headline: "AI / ML engineer who ships." split into lines with 24px rise */}
+            <h1 className="font-display uppercase tracking-[-0.01em] text-[clamp(36px,10vw,54px)] leading-[0.94] text-[#E8DED0] m-0">
+              <span className="block overflow-hidden">
+                <span className="mobile-hero-line block">AI / ML</span>
+              </span>
+              <span className="block overflow-hidden">
+                <span className="mobile-hero-line block">ENGINEER WHO SHIPS.</span>
+              </span>
             </h1>
 
             {/* Subtitle */}
-            <p className="font-sans text-[17px] sm:text-[19px] leading-relaxed text-[#E8DED0]/90 max-w-md pr-6 sm:pr-0 m-0">
+            <p className="font-sans text-[16px] sm:text-[17px] leading-relaxed text-[#E8DED0]/90 max-w-md m-0">
               {hero.sub}
             </p>
 
-            {/* Solid High-Contrast CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+            {/* CTA Buttons: View projects and Download CV */}
+            <div className="flex flex-row gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => scrollTo("works")}
+                className="flex-1 min-h-[48px] px-5 py-2.5 rounded-full bg-[#0B0B0B] text-[#E8DED0] border border-[#E8DED0]/40 font-mono text-[13px] uppercase tracking-wider font-semibold hover:border-[#E8DED0] transition-colors flex items-center justify-center gap-1.5 shadow-md cursor-pointer"
+              >
+                <span>{ui.viewProjects}</span>
+                <span aria-hidden="true">↓</span>
+              </button>
+
               <a
                 href="/cv.pdf"
                 download
-                className="min-h-[48px] px-6 py-3 rounded-full bg-[#E8DED0] text-[#0B0B0B] font-mono text-[13px] uppercase tracking-wider font-bold hover:bg-[#C9A24A] transition-colors flex items-center justify-center gap-2 shadow-lg"
+                className="flex-1 min-h-[48px] px-5 py-2.5 rounded-full bg-[#E8DED0] text-[#0B0B0B] font-mono text-[13px] uppercase tracking-wider font-bold hover:bg-[#C9A24A] transition-colors flex items-center justify-center gap-2 shadow-md cursor-pointer"
               >
                 <Download className="w-4 h-4" aria-hidden="true" />
                 <span>{hero.cta1}</span>
               </a>
-
-              <button
-                type="button"
-                onClick={() => scrollTo("works")}
-                className="min-h-[48px] px-6 py-3 rounded-full bg-[#0B0B0B] text-[#E8DED0] border border-[#E8DED0]/40 font-mono text-[13px] uppercase tracking-wider font-semibold hover:border-[#E8DED0] transition-colors flex items-center justify-center gap-2 shadow-lg"
-              >
-                <span>{hero.cta2}</span>
-                <span aria-hidden="true">↓</span>
-              </button>
             </div>
           </div>
         </section>
@@ -694,9 +815,9 @@ export function MobileSite() {
         <section
           id="about"
           aria-label="About"
-          className="w-full bg-[#E8DED0] text-[#0B0B0B] py-24 px-5 sm:px-8 border-b border-[#0B0B0B]/10"
+          className="w-full bg-[#E8DED0] text-[#0B0B0B] py-20 px-5 sm:px-8 border-b border-[#0B0B0B]/10"
         >
-          <div className="w-full max-w-xl mx-auto flex flex-col gap-12">
+          <div className="w-full max-w-xl mx-auto flex flex-col gap-8">
             {/* Section Header: 01 ABOUT, gold rule, big display heading */}
             <div data-reveal data-reveal-header className="flex flex-col gap-2 pt-2 border-t border-[#C9A24A]/40">
               <span className="font-mono text-[12px] uppercase tracking-widest text-[#1F5A3A] font-bold">
@@ -709,57 +830,43 @@ export function MobileSite() {
               </div>
             </div>
 
-            {/* Rotating Portrait + Giant "MISHAL." Wordmark */}
-            <div data-reveal data-reveal-card className="relative flex flex-col">
-              {/* Large Image Container */}
+            {/* One Portrait Only (Clean single image, no overlap over bio) */}
+            <div data-reveal data-reveal-card className="relative flex flex-col gap-4">
               <div
                 className="relative w-full aspect-[4/5] sm:aspect-square rounded-2xl overflow-hidden bg-[#171615] shadow-md"
                 aria-label={about.portraitAlt}
                 role="img"
               >
                 <img
-                  ref={portraitImgA}
                   src={sideImg}
-                  alt=""
+                  alt="Muhammed Mishal"
                   decoding="async"
-                  aria-hidden="true"
-                  className="absolute inset-0 w-full h-full object-cover transition-opacity"
-                  style={{ willChange: "opacity" }}
+                  className="w-full h-full object-cover"
                 />
-                <img
-                  ref={portraitImgB}
-                  src={frontImg}
-                  alt=""
-                  decoding="async"
-                  aria-hidden="true"
-                  className="absolute inset-0 w-full h-full object-cover transition-opacity"
-                  style={{ opacity: 0, willChange: "opacity" }}
-                />
-                {/* Soft gradient fade over bottom edge */}
                 <div
-                  className="absolute inset-x-0 bottom-0 h-28 pointer-events-none"
+                  className="absolute inset-x-0 bottom-0 h-24 pointer-events-none"
                   style={{
                     background:
-                      "linear-gradient(to bottom, transparent 0%, rgba(232, 222, 208, 0.4) 50%, #E8DED0 100%)",
+                      "linear-gradient(to bottom, transparent 0%, rgba(232, 222, 208, 0.4) 60%, #E8DED0 100%)",
                   }}
                   aria-hidden="true"
                 />
               </div>
 
-              {/* Giant Overlapping Wordmark */}
-              <div className="relative -mt-10 sm:-mt-14 z-10 px-2 flex flex-col">
-                <div className="font-display uppercase tracking-tight text-[clamp(52px,16vw,84px)] leading-[0.86] text-[#0B0B0B]">
+              {/* Repositioned Wordmark: clean spacing, no negative margin, doesn't overlap bio */}
+              <div className="flex flex-col gap-1 pt-1">
+                <div className="font-display uppercase tracking-tight text-[clamp(42px,12vw,64px)] leading-[0.88] text-[#0B0B0B]">
                   {about.name}
                   <span className="text-[#1F5A3A]">{about.period}</span>
                 </div>
-                <div className="font-mono text-[11px] sm:text-[12px] uppercase tracking-widest text-[#1F5A3A] font-bold mt-1">
+                <div className="font-mono text-[11px] sm:text-[12px] uppercase tracking-widest text-[#1F5A3A] font-bold">
                   {about.fullName} · {about.role}
                 </div>
               </div>
             </div>
 
-            {/* Short Bio */}
-            <p data-reveal data-reveal-card className="font-sans text-[17px] leading-relaxed text-[#0B0B0B]/90 pr-8 sm:pr-0">
+            {/* Short Bio (Body text #1a1a1a with contrast >= 0.85) */}
+            <p data-reveal data-reveal-card className="font-sans text-[17px] leading-relaxed text-[#1a1a1a] pr-4 sm:pr-0 m-0">
               {about.bio}
             </p>
 
@@ -882,7 +989,7 @@ export function MobileSite() {
               </div>
             </div>
 
-            <p data-reveal data-reveal-card className="font-sans text-[16px] text-[#0B0B0B]/80 -mt-6 pr-8 sm:pr-0">
+            <p data-reveal data-reveal-card className="font-sans text-[16px] text-[#1a1a1a]/85 -mt-6 pr-8 sm:pr-0">
               Tap a skill chip to see where and how I used it in production:
             </p>
 
@@ -1195,9 +1302,9 @@ export function MobileSite() {
         <section
           id="journey"
           aria-label="Journey"
-          className="w-full bg-[#E8DED0] text-[#0B0B0B] py-24 px-5 sm:px-8 border-b border-[#0B0B0B]/10"
+          className="w-full bg-[#E8DED0] text-[#0B0B0B] py-16 px-5 sm:px-8 border-b border-[#0B0B0B]/10"
         >
-          <div className="w-full max-w-xl mx-auto flex flex-col gap-12">
+          <div className="w-full max-w-xl mx-auto flex flex-col gap-5">
             {/* Section Header: 04 JOURNEY, gold rule, big display heading */}
             <div data-reveal data-reveal-header className="flex flex-col gap-2 pt-2 border-t border-[#C9A24A]/40">
               <span className="font-mono text-[12px] uppercase tracking-widest text-[#1F5A3A] font-bold">
@@ -1210,18 +1317,24 @@ export function MobileSite() {
               </div>
             </div>
 
-            {/* Vertical Timeline with strictly 24px gap between stops */}
-            <div className="relative pl-6 flex flex-col gap-8 before:content-[''] before:absolute before:left-2.5 before:top-4 before:bottom-4 before:w-0.5 before:bg-[#1F5A3A]/30 pr-8 sm:pr-0">
+            {/* Vertical Timeline: Thin vertical gold line on left, dot per entry, big year next to dot, card under it */}
+            <div className="relative pl-6 flex flex-col gap-6 before:content-[''] before:absolute before:left-2 before:top-2 before:bottom-2 before:w-[1.5px] before:bg-[#C9A24A]/40 pr-2">
               {journey.stops.map((stop, idx) => (
-                <div key={`${stop.year}-${idx}`} data-reveal data-reveal-card className="relative flex flex-col gap-2">
-                  {/* Timeline Dot */}
+                <div
+                  key={`${stop.year}-${idx}`}
+                  data-reveal
+                  data-reveal-journey
+                  className="relative flex flex-col gap-2"
+                >
+                  {/* Dot on gold line */}
                   <div
-                    className="absolute -left-[27px] top-3 w-3.5 h-3.5 rounded-full bg-[#1F5A3A] border-2 border-[#E8DED0] shadow-xs"
+                    className="absolute -left-[20px] top-2.5 w-3 h-3 rounded-full bg-[#1F5A3A] border-2 border-[#E8DED0] shadow-xs"
                     aria-hidden="true"
                   />
 
+                  {/* Year next to dot */}
                   <div className="flex items-baseline gap-3">
-                    <span className="font-display text-[clamp(38px,10vw,52px)] leading-none text-[#1F5A3A] tracking-tight">
+                    <span className="font-display text-[clamp(34px,9vw,46px)] leading-none text-[#1F5A3A] tracking-tight">
                       {stop.year}
                     </span>
                     {stop.tag && (
@@ -1231,17 +1344,18 @@ export function MobileSite() {
                     )}
                   </div>
 
-                  <h3 className="font-sans text-[17px] font-bold text-[#0B0B0B] m-0">
-                    {stop.role}
-                  </h3>
-
-                  <span className="font-sans text-[14px] font-medium text-[#0B0B0B]/75">
-                    {stop.place}
-                  </span>
-
-                  <p className="font-sans text-[15px] leading-relaxed text-[#0B0B0B]/85 m-0 pt-0.5">
-                    {stop.line}
-                  </p>
+                  {/* Card under it */}
+                  <div className="p-4 rounded-xl bg-[#0B0B0B]/[0.03] border border-[#0B0B0B]/10 flex flex-col gap-1.5 shadow-2xs">
+                    <h3 className="font-sans text-[16px] font-bold text-[#0B0B0B] m-0">
+                      {stop.role}
+                    </h3>
+                    <span className="font-sans text-[13px] font-medium text-[#1F5A3A]">
+                      {stop.place}
+                    </span>
+                    <p className="font-sans text-[14px] leading-relaxed text-[#0B0B0B]/85 m-0 pt-0.5">
+                      {stop.line}
+                    </p>
+                  </div>
                 </div>
               ))}
             </div>
@@ -1254,9 +1368,9 @@ export function MobileSite() {
         <section
           id="connect"
           aria-label="Connect"
-          className="w-full bg-[#0B0B0B] text-[#E8DED0] pt-24 pb-32 px-5 sm:px-8"
+          className="w-full bg-[#0B0B0B] text-[#E8DED0] py-6 px-5 sm:px-8"
         >
-          <div className="w-full max-w-xl mx-auto flex flex-col gap-12">
+          <div className="w-full max-w-xl mx-auto flex flex-col gap-6">
             {/* Section Header: 05 CONNECT, gold rule, big display heading */}
             <div data-reveal data-reveal-header className="flex flex-col gap-2 pt-2 border-t border-[#C9A24A]/40">
               <span className="font-mono text-[12px] uppercase tracking-widest text-[#C9A24A] font-bold">
@@ -1269,24 +1383,24 @@ export function MobileSite() {
               </div>
             </div>
 
-            <p data-reveal data-reveal-card className="font-sans text-[17px] leading-relaxed text-[#E8DED0]/90 m-0 pr-8 sm:pr-0">
+            <p data-reveal data-reveal-card className="font-sans text-[16px] leading-relaxed text-[#E8DED0]/90 m-0 pr-4 sm:pr-0">
               {connect.sub}
             </p>
 
-            {/* Email Display & Action Cards (strictly 24px gap rhythm) */}
-            <div data-reveal data-reveal-card className="p-5 rounded-2xl bg-[#161616] border border-[#E8DED0]/15 flex flex-col gap-4">
-              <span className="font-mono text-[12px] uppercase tracking-widest text-[#C9A24A] font-semibold">
+            {/* Email Display & Action Cards (Full width, 48px tap targets for Copy email & Download CV) */}
+            <div data-reveal data-reveal-card className="w-full p-4 sm:p-5 rounded-2xl bg-[#161616] border border-[#E8DED0]/15 flex flex-col gap-3.5 shadow-sm">
+              <span className="font-mono text-[11px] uppercase tracking-widest text-[#C9A24A] font-semibold">
                 Direct Email:
               </span>
               <span className="font-mono text-[16px] sm:text-[18px] text-[#E8DED0] font-bold break-all">
                 {site.email}
               </span>
 
-              <div className="flex flex-wrap gap-3 pt-2">
+              <div className="grid grid-cols-2 gap-3 pt-1">
                 <button
                   type="button"
                   onClick={handleCopyEmail}
-                  className="min-h-[44px] px-5 py-2.5 rounded-full bg-[#E8DED0] text-[#0B0B0B] font-mono text-[12px] uppercase tracking-wider font-bold hover:bg-[#C9A24A] transition-colors flex items-center justify-center gap-2"
+                  className="min-h-[48px] px-4 py-2.5 rounded-full bg-[#E8DED0] text-[#0B0B0B] font-mono text-[12px] uppercase tracking-wider font-bold hover:bg-[#C9A24A] transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   {copiedEmail ? (
                     <>
@@ -1304,7 +1418,7 @@ export function MobileSite() {
                 <a
                   href="/cv.pdf"
                   download
-                  className="min-h-[44px] px-5 py-2.5 rounded-full border border-[#E8DED0]/30 text-[#E8DED0] font-mono text-[12px] uppercase tracking-wider font-semibold hover:bg-[#E8DED0]/10 transition-colors flex items-center justify-center gap-2"
+                  className="min-h-[48px] px-4 py-2.5 rounded-full border border-[#E8DED0]/30 text-[#E8DED0] font-mono text-[12px] uppercase tracking-wider font-semibold hover:bg-[#E8DED0]/10 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <Download className="w-4 h-4" aria-hidden="true" />
                   <span>{ui.downloadCv}</span>
@@ -1322,7 +1436,7 @@ export function MobileSite() {
                   href={site.github}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="min-h-[44px] px-5 py-2 rounded-full border border-[#E8DED0]/20 text-[#E8DED0] font-mono text-[13px] hover:border-[#E8DED0]/60 transition-colors flex items-center gap-1.5"
+                  className="min-h-[44px] px-5 py-2 rounded-full border border-[#E8DED0]/20 text-[#E8DED0] font-mono text-[13px] hover:border-[#E8DED0]/60 transition-colors flex items-center gap-1.5 cursor-pointer"
                 >
                   <span>{ui.github}</span>
                   <ExternalLink className="w-3.5 h-3.5 opacity-70" aria-hidden="true" />
@@ -1332,7 +1446,7 @@ export function MobileSite() {
                   href={site.linkedin}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="min-h-[44px] px-5 py-2 rounded-full border border-[#E8DED0]/20 text-[#E8DED0] font-mono text-[13px] hover:border-[#E8DED0]/60 transition-colors flex items-center gap-1.5"
+                  className="min-h-[44px] px-5 py-2 rounded-full border border-[#E8DED0]/20 text-[#E8DED0] font-mono text-[13px] hover:border-[#E8DED0]/60 transition-colors flex items-center gap-1.5 cursor-pointer"
                 >
                   <span>{ui.linkedin}</span>
                   <ExternalLink className="w-3.5 h-3.5 opacity-70" aria-hidden="true" />
@@ -1350,13 +1464,29 @@ export function MobileSite() {
             </div>
 
             {/* Footer Credits */}
-            <div className="pt-6 border-t border-[#E8DED0]/10 flex flex-col gap-1 text-[13px] text-[#E8DED0]/50 font-mono">
+            <div className="pt-4 border-t border-[#E8DED0]/10 flex flex-col gap-1 text-[13px] text-[#E8DED0]/50 font-mono">
               <span>{ui.copyright}</span>
               <span>{site.roleYear}</span>
             </div>
           </div>
         </section>
       </main>
+
+      {/* Scroll-Up Chevron: bottom-left (16px from edge + safe-area), shows only after 1 screen scroll */}
+      {showScrollTop && (
+        <button
+          type="button"
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          className="fixed z-35 w-11 h-11 rounded-full bg-[#E8DED0]/95 text-[#0B0B0B] border border-[#0B0B0B]/20 shadow-md flex items-center justify-center hover:bg-[#E8DED0] active:scale-95 transition-all cursor-pointer backdrop-blur-xs"
+          style={{
+            left: "max(16px, env(safe-area-inset-left))",
+            bottom: "max(16px, env(safe-area-inset-bottom))",
+          }}
+          aria-label="Scroll to top"
+        >
+          <ChevronUp className="w-5 h-5 text-[#0B0B0B]" aria-hidden="true" />
+        </button>
+      )}
 
       {/* Case Study Full-Screen Modal Drawer */}
       <CaseStudy

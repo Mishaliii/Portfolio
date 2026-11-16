@@ -113,23 +113,11 @@ const IDLE_BUBBLES_POOL: IdleBubbleItem[] = [
     query: "What can you do?",
     timeContext: "night",
   },
-  // Returning to tab / scroll
+  // Returning to tab (Step 28: Keep only "welcome back" (>= 60s hidden), 2 lines)
   {
     id: "r1",
-    text: "You're back! I wasn't counting. (It was 4 minutes.)",
+    text: "You're back!\nI wasn't counting. (It was 4 minutes.)",
     action: "What's new?",
-    query: "What has Mishal built?",
-  },
-  {
-    id: "s1",
-    text: "Whoa, speed reader! Want the 10 second version?",
-    action: "Tell me about Mishal",
-    query: "Who is Mishal?",
-  },
-  {
-    id: "s2",
-    text: "Scrolling fast! Looking for anything specific?",
-    action: "Show projects",
     query: "What has Mishal built?",
   },
   // Page aware: Works
@@ -489,21 +477,30 @@ export function Buddy() {
         }
       }
 
-      // If chat panel is open, head bubble is strictly disabled
-      if (chatOpen) {
+      // If chat panel is open or menu is open, head bubble is strictly disabled
+      if (chatOpen || (typeof document !== "undefined" && document.body.classList.contains("menu-open"))) {
         setBubbleVisible(false);
         setBubbleText(null);
         setBubbleAction(null);
         return;
       }
 
+      const isMobile =
+        typeof window !== "undefined" &&
+        window.matchMedia("(max-width: 820px), (pointer: coarse) and (max-width: 1024px)").matches;
+
+      // Mobile: No Sprout bubble in first 8s on hero
+      if (isMobile) {
+        const onHero = window.scrollY < (window.innerHeight || 800) * 0.75;
+        if (onHero && Date.now() - mountTime.current < 8000) {
+          return;
+        }
+      }
+
       setBubbleAction(action || null);
       setBubbleText(text);
       setBubbleVisible(true);
 
-      const isMobile =
-        typeof window !== "undefined" &&
-        window.matchMedia("(max-width: 820px), (pointer: coarse) and (max-width: 1024px)").matches;
       const fadeTime = isMobile ? 5000 : 6000;
       bubbleFadeTimeout.current = window.setTimeout(() => {
         setBubbleVisible(false);
@@ -961,40 +958,6 @@ export function Buddy() {
         scrollTimeout = window.setTimeout(() => {
           isFastScrolling.current = false;
         }, 1500);
-
-        // Check if we should trigger fast scroll bubble (at most once per session in sessionStorage)
-        const now = Date.now();
-        const isMobile =
-          typeof window !== "undefined" &&
-          window.matchMedia("(max-width: 820px), (pointer: coarse) and (max-width: 1024px)").matches;
-        const minInterval = isMobile ? 90000 : 45000;
-        let fastScrollSeen = false;
-        try {
-          fastScrollSeen = sessionStorage.getItem("sprout_fast_scroll_seen") === "1";
-        } catch {}
-
-        if (
-          !fastScrollSeen &&
-          now - mountTime.current >= 10000 &&
-          now - lastIdleBubbleTime.current >= minInterval &&
-          !chatOpen &&
-          !isAsleep &&
-          !bubbleVisible
-        ) {
-          const currentPage = window.location.hash.slice(1) || "overview";
-          if (currentPage !== "works") {
-            try {
-              sessionStorage.setItem("sprout_fast_scroll_seen", "1");
-            } catch {}
-            lastIdleBubbleTime.current = now;
-            idleBubbleCount.current++;
-            speakReaction(
-              "Scrolling fast! Looking for anything specific?",
-              "happy",
-              { label: "Show projects", query: "What has Mishal built?" },
-            );
-          }
-        }
       }
     };
 
@@ -1003,11 +966,18 @@ export function Buddy() {
       window.removeEventListener("scroll", onScroll);
       clearTimeout(scrollTimeout);
     };
-  }, [bubbleVisible, chatOpen, isAsleep, speakReaction]);
+  }, []);
 
-  // Idle Bubble Scheduler (Problem 4)
+  // Idle Bubble Scheduler (Problem 4 / Step 28)
   useEffect(() => {
     const interval = window.setInterval(() => {
+      const isMobile =
+        typeof window !== "undefined" &&
+        window.matchMedia("(max-width: 820px), (pointer: coarse) and (max-width: 1024px)").matches;
+
+      // On mobile: suppress spontaneous idle bubbles from pool. Only "welcome back" (>= 60s hidden) per Step 28.
+      if (isMobile) return;
+
       if (
         chatOpen ||
         isAsleep ||
@@ -1023,11 +993,8 @@ export function Buddy() {
       const now = Date.now();
       // First idle bubble no earlier than 14 s after buddy appears
       if (now - mountTime.current < 14000) return;
-      // At most one per 45 s on desktop, 90 s on mobile
-      const isMobile =
-        typeof window !== "undefined" &&
-        window.matchMedia("(max-width: 820px), (pointer: coarse) and (max-width: 1024px)").matches;
-      const minInterval = isMobile ? 90000 : 45000;
+      // At most one per 45 s on desktop
+      const minInterval = 45000;
       if (now - lastIdleBubbleTime.current < minInterval) return;
       // At most 4 per session unless visitor has chatted
       if (idleBubbleCount.current >= 4 && !hasChatted.current) return;
@@ -1039,17 +1006,9 @@ export function Buddy() {
       if (currentPage === "works" || chatOpen) return;
       if (now - lastScrollTime.current < 2000 || isFastScrolling.current) return;
 
-      // Fast scroll bubble is allowed at most once per session
-      let fastScrollSeen = false;
-      try {
-        fastScrollSeen = sessionStorage.getItem("sprout_fast_scroll_seen") === "1";
-      } catch {}
-
       // Find suitable candidate from pool (exclude r1 which only fires on >=60s return)
       let candidates = IDLE_BUBBLES_POOL.filter((item) => {
         if (item.id === "r1") return false;
-        if (currentPage === "works" && (item.id === "s1" || item.id === "s2")) return false;
-        if (fastScrollSeen && (item.id === "s1" || item.id === "s2")) return false;
         if (item.page && item.page !== currentPage) return false;
         if (item.timeContext === "morning" && hour >= 12) return false;
         if (item.timeContext === "night" && hour >= 6 && hour < 20) return false;
@@ -1058,17 +1017,11 @@ export function Buddy() {
 
       if (candidates.length === 0)
         candidates = IDLE_BUBBLES_POOL.filter(
-          (item) => item.id !== "r1" && !item.page && !item.timeContext && !(fastScrollSeen && (item.id === "s1" || item.id === "s2")),
+          (item) => item.id !== "r1" && !item.page && !item.timeContext,
         );
 
       const picked = candidates[Math.floor(Math.random() * candidates.length)];
       if (!picked) return;
-
-      if (picked.id === "s1" || picked.id === "s2") {
-        try {
-          sessionStorage.setItem("sprout_fast_scroll_seen", "1");
-        } catch {}
-      }
 
       lastIdleBubbleTime.current = now;
       idleBubbleCount.current++;
@@ -1185,7 +1138,7 @@ export function Buddy() {
                   lastIdleBubbleTime.current = now;
                   idleBubbleCount.current++;
                   speakReaction(
-                    "You're back! I wasn't counting. (It was 4 minutes.)",
+                    "You're back!\nI wasn't counting.",
                     "happy",
                     { label: "What's new?", query: "What has Mishal built?" },
                   );
@@ -1695,6 +1648,29 @@ export function Buddy() {
           </g>
           <line x1="2" y1="92" x2="56" y2="92" stroke="#0B0B0B" strokeWidth="3" />
         </svg>
+      </button>
+
+      {/* Mobile Journey Corner Button: Sprout stays as a clean corner button when Journey is in view */}
+      <button
+        type="button"
+        onClick={() => {
+          setChatOpen(true);
+          wakeUp();
+        }}
+        data-sprout-launcher="true"
+        aria-label="Open Sprout chat"
+        className="buddy-journey-corner-btn rounded-full bg-[#1F5A3A] text-[#E8DED0] border border-[#C9A24A]/40 shadow-md items-center justify-center cursor-pointer"
+        style={{
+          position: "fixed",
+          right: "calc(12px + env(safe-area-inset-right))",
+          bottom: "calc(12px + env(safe-area-inset-bottom))",
+          width: "40px",
+          height: "40px",
+          display: "none",
+          zIndex: 45,
+        }}
+      >
+        <span className="font-mono text-[16px] leading-none select-none">🌱</span>
       </button>
 
       {/* Floating Notes Container for door perch */}
