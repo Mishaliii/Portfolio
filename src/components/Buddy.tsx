@@ -320,6 +320,7 @@ export function Buddy() {
   const idleBubbleCount = useRef<number>(0);
   const lastScrollTime = useRef<number>(0);
   const isFastScrolling = useRef<boolean>(false);
+  const hiddenStartTime = useRef<number | null>(null);
 
   // Active typing state for instant click completion
   const activeTypingRef = useRef<{ cancel: () => void; finish: () => void } | null>(null);
@@ -1034,8 +1035,9 @@ export function Buddy() {
       const currentPage = window.location.hash.slice(1) || "overview";
       const hour = new Date().getHours();
 
-      // Never show spontaneous / idle bubbles over Works cards or if chat is open
+      // Never show spontaneous / idle bubbles over Works cards or if chat is open, or while actively scrolling
       if (currentPage === "works" || chatOpen) return;
+      if (now - lastScrollTime.current < 2000 || isFastScrolling.current) return;
 
       // Fast scroll bubble is allowed at most once per session
       let fastScrollSeen = false;
@@ -1043,8 +1045,9 @@ export function Buddy() {
         fastScrollSeen = sessionStorage.getItem("sprout_fast_scroll_seen") === "1";
       } catch {}
 
-      // Find suitable candidate from pool
+      // Find suitable candidate from pool (exclude r1 which only fires on >=60s return)
       let candidates = IDLE_BUBBLES_POOL.filter((item) => {
+        if (item.id === "r1") return false;
         if (currentPage === "works" && (item.id === "s1" || item.id === "s2")) return false;
         if (fastScrollSeen && (item.id === "s1" || item.id === "s2")) return false;
         if (item.page && item.page !== currentPage) return false;
@@ -1055,7 +1058,7 @@ export function Buddy() {
 
       if (candidates.length === 0)
         candidates = IDLE_BUBBLES_POOL.filter(
-          (item) => !item.page && !item.timeContext && !(fastScrollSeen && (item.id === "s1" || item.id === "s2")),
+          (item) => item.id !== "r1" && !item.page && !item.timeContext && !(fastScrollSeen && (item.id === "s1" || item.id === "s2")),
         );
 
       const picked = candidates[Math.floor(Math.random() * candidates.length)];
@@ -1145,16 +1148,60 @@ export function Buddy() {
 
   // Visibility change
   useEffect(() => {
+    let returnTimeout: number | null = null;
     const onVisibility = () => {
       if (document.hidden) {
+        hiddenStartTime.current = Date.now();
         stopIdleBob();
-      } else if (!isAsleep && !isPerched.current && !isRunning.current) {
-        startIdleBob();
+      } else {
+        if (!isAsleep && !isPerched.current && !isRunning.current) {
+          startIdleBob();
+        }
+
+        // Check if user was away for at least 60 seconds
+        if (hiddenStartTime.current) {
+          const hiddenDuration = Date.now() - hiddenStartTime.current;
+          hiddenStartTime.current = null;
+
+          if (hiddenDuration >= 60000) {
+            // Wait for user to settle, verify not scrolling
+            returnTimeout = window.setTimeout(() => {
+              const now = Date.now();
+              const isMobile =
+                typeof window !== "undefined" &&
+                window.matchMedia("(max-width: 820px), (pointer: coarse) and (max-width: 1024px)").matches;
+              const minInterval = isMobile ? 90000 : 45000;
+
+              if (
+                !chatOpen &&
+                !isAsleep &&
+                !bubbleVisible &&
+                !isFastScrolling.current &&
+                now - lastScrollTime.current > 2000 &&
+                now - lastIdleBubbleTime.current >= minInterval
+              ) {
+                const currentPage = window.location.hash.slice(1) || "overview";
+                if (currentPage !== "works") {
+                  lastIdleBubbleTime.current = now;
+                  idleBubbleCount.current++;
+                  speakReaction(
+                    "You're back! I wasn't counting. (It was 4 minutes.)",
+                    "happy",
+                    { label: "What's new?", query: "What has Mishal built?" },
+                  );
+                }
+              }
+            }, 1500);
+          }
+        }
       }
     };
     document.addEventListener("visibilitychange", onVisibility);
-    return () => document.removeEventListener("visibilitychange", onVisibility);
-  }, [isAsleep, startIdleBob, stopIdleBob]);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      if (returnTimeout) clearTimeout(returnTimeout);
+    };
+  }, [bubbleVisible, chatOpen, isAsleep, speakReaction, startIdleBob, stopIdleBob]);
 
   // Door click
   const onDoorClick = () => {

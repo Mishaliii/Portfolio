@@ -61,7 +61,7 @@ async function runSmoke() {
       }
     });
 
-    for (let i = 0; i < 50; i++) {
+    for (let i = 0; i < 80; i++) {
       try {
         await new Promise((res, rej) => {
           const req = http.get(targetUrl, (r) => res(r.statusCode));
@@ -550,6 +550,42 @@ async function runSmoke() {
         "ddss_demo_video_plays_on_mobile",
         Boolean(mobileVideoStatus?.ok),
         `hasPoster=${mobileVideoStatus?.hasPoster}, paused=${mobileVideoStatus?.paused}`,
+      );
+
+      // Check that the three cards use three distinct visuals and no DDSS assets in cards 2 & 3
+      const worksVisualsAudit = await evalJs(`
+        (() => {
+          const cards = Array.from(document.querySelectorAll('#works article'));
+          if (cards.length < 3) return { ok: false, reason: 'fewer than 3 cards' };
+
+          const card1 = cards[0];
+          const card2 = cards[1];
+          const card3 = cards[2];
+
+          const card1HasDdss = Boolean(card1.querySelector('img[src*="ddss"], video[src*="ddss"]'));
+          const card2HasDdss = Boolean(card2.querySelector('img[src*="ddss"], video[src*="ddss"]'));
+          const card3HasDdss = Boolean(card3.querySelector('img[src*="ddss"], video[src*="ddss"]'));
+
+          const card2HasProdWidget = Boolean(card2.querySelector('[data-productivity-widget]'));
+          const card3HasCareerlensPipeline = Boolean(card3.querySelector('[data-careerlens-pipeline]'));
+
+          const distinctVisuals = card1HasDdss && card2HasProdWidget && card3HasCareerlensPipeline && !card2HasDdss && !card3HasDdss;
+
+          return {
+            ok: distinctVisuals,
+            card1HasDdss,
+            card2HasProdWidget,
+            card2HasDdss,
+            card3HasCareerlensPipeline,
+            card3HasDdss
+          };
+        })()
+      `);
+      logCheck(
+        "MOBILE_WORKS",
+        "distinct_visuals_per_project_and_no_ddss_on_productivity_or_careerlens",
+        Boolean(worksVisualsAudit?.ok),
+        `c1_ddss=${worksVisualsAudit?.card1HasDdss}, c2_widget=${worksVisualsAudit?.card2HasProdWidget}, c2_ddss=${worksVisualsAudit?.card2HasDdss}, c3_pipe=${worksVisualsAudit?.card3HasCareerlensPipeline}, c3_ddss=${worksVisualsAudit?.card3HasDdss}`
       );
 
       // 6. MOBILE_EXPERTISE: NO graph, 4 grouped chip lists, tapping opens inline panel with >=44px tap targets

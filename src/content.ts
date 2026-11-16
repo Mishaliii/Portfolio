@@ -784,6 +784,53 @@ export const roleCaseStudy: CaseStudyData = {
   ],
 };
 
+export interface RoleFeature {
+  key: string;
+  label: string;
+  max: number;
+}
+
+export const ROLE_FEATURES: RoleFeature[] = [
+  { key: "Typing_Intensity", label: "Typing intensity", max: 87 },
+  { key: "Idle_Duration", label: "Idle duration", max: 23 },
+  { key: "Task_Switching_Frequency", label: "Task switching", max: 11 },
+  { key: "Time_Coding", label: "Time coding", max: 18.26 },
+  { key: "Time_Email", label: "Time email", max: 19.24 },
+  { key: "Time_SocialMedia", label: "Time social media", max: 12.07 },
+  { key: "Time_Browsing", label: "Time browsing", max: 13.78 },
+  { key: "Time_Docs", label: "Time docs", max: 13.16 },
+];
+
+export type SubjectId = "Sample 1" | "Sample 2" | "Sample 3";
+
+export interface SubjectRow {
+  vals: number[];
+  score: number;
+  label: string;
+  role: string;
+}
+
+export const SUBJECT_ROWS: Record<SubjectId, SubjectRow> = {
+  "Sample 1": {
+    vals: [75, 23, 11, 4.9, 7.65, 9.8, 13.78, 13.16],
+    score: 53.48,
+    label: "Medium",
+    role: "Manager",
+  },
+  "Sample 2": {
+    vals: [61, 9, 7, 10.86, 12.22, 7.87, 7.6, 7.33],
+    score: 54.36,
+    label: "Medium",
+    role: "Manager",
+  },
+  "Sample 3": {
+    vals: [87, 13, 4, 18.26, 19.24, 12.07, 0.33, 0.33],
+    score: 77.14,
+    label: "High",
+    role: "Manager",
+  },
+};
+
 export interface CareerLensStage {
   num: string;
   label: string;

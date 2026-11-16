@@ -11,6 +11,10 @@ import {
   PROJECTS,
   roleCaseStudy,
   careerlensCaseStudy,
+  careerlensStages,
+  ROLE_FEATURES,
+  SUBJECT_ROWS,
+  type SubjectId,
   type CaseStudyData,
   ui,
 } from "@/content";
@@ -21,8 +25,6 @@ import sideImg from "@/assets/portrait-side-composited.webp";
 import frontImg from "@/assets/portrait-front-composited.webp";
 import { ABOUT_IMAGE_INTERVAL_MS, ABOUT_IMAGE_FADE_MS } from "@/lib/about-portrait";
 import ddssScreenImg from "@/assets/ddss-screen.webp";
-import ddss2ScreenImg from "@/assets/ddss-2-screen.webp";
-import ddss3ScreenImg from "@/assets/ddss-3-screen.webp";
 import {
   Menu,
   X,
@@ -35,6 +37,164 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
+
+function ProductivityExplorerMobile() {
+  const [selectedId, setSelectedId] = useState<SubjectId>("Sample 1");
+  const subjectData = SUBJECT_ROWS[selectedId];
+
+  return (
+    <div
+      data-productivity-widget
+      className="w-full bg-[#E8DED0] border border-[#0B0B0B]/20 rounded-xl p-3.5 sm:p-4 flex flex-col gap-3 shadow-xs select-none"
+    >
+      {/* Top row: Tab selectors */}
+      <div className="flex items-center justify-between border-b border-[#0B0B0B]/15 pb-2">
+        <div className="flex items-center gap-1.5" role="tablist" aria-label="Select sample session">
+          {(["Sample 1", "Sample 2", "Sample 3"] as SubjectId[]).map((id) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={selectedId === id}
+              onClick={() => setSelectedId(id)}
+              className={`px-3 py-1 rounded font-mono text-[11px] sm:text-[12px] tracking-wider transition-colors cursor-pointer min-h-[36px] flex items-center justify-center ${
+                selectedId === id
+                  ? "bg-[#0B0B0B] text-[#E8DED0] font-semibold shadow-xs"
+                  : "bg-[#0B0B0B]/5 text-[#6B645A] hover:text-[#0B0B0B] hover:bg-[#0B0B0B]/10"
+              }`}
+            >
+              {id}
+            </button>
+          ))}
+        </div>
+        <span className="font-mono text-[10px] sm:text-[11px] text-[#1F5A3A] font-bold uppercase tracking-wider">
+          Sample Session
+        </span>
+      </div>
+
+      {/* Middle: 8 Horizontal Behaviour Bars */}
+      <div className="flex flex-col gap-1.5 py-1">
+        {ROLE_FEATURES.map((feat, idx) => {
+          const val = subjectData.vals[idx];
+          const pct = Math.min(100, Math.max(3, (val / feat.max) * 100));
+          return (
+            <div key={feat.key} className="flex items-center text-[11px] font-mono leading-tight">
+              <span className="w-[110px] sm:w-[135px] truncate text-[#0B0B0B]/80 font-medium">
+                {feat.label}
+              </span>
+              <div className="flex-1 h-[6px] sm:h-[7px] bg-[#0B0B0B]/10 rounded-full overflow-hidden mx-2">
+                <div
+                  className="h-full bg-[#1F5A3A] rounded-full transition-all duration-300 ease-out"
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+              <span className="w-[38px] text-right font-semibold text-[#0B0B0B]">
+                {val}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Bottom: Output Strip with Score & Role chips */}
+      <div className="border-t border-[#0B0B0B]/15 pt-2 flex items-center justify-between">
+        <div className="flex items-baseline gap-1.5">
+          <span className="font-mono text-[10px] sm:text-[11px] uppercase tracking-wider text-[#6B645A]">
+            Score:
+          </span>
+          <span className="font-mono text-[18px] sm:text-[20px] font-bold text-[#0B0B0B] leading-none">
+            {subjectData.score.toFixed(2)}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <span className="font-mono text-[11px] px-2 py-0.5 rounded-full border border-[#0B0B0B]/20 bg-[#0B0B0B]/5 text-[#0B0B0B]">
+            {subjectData.label}
+          </span>
+          <span className="font-mono text-[11px] font-semibold px-2 py-0.5 rounded-full border border-[#1F5A3A]/40 bg-[#1F5A3A]/10 text-[#1F5A3A]">
+            {subjectData.role}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CareerLensPipelineMobile() {
+  const [selectedIdx, setSelectedIdx] = useState<number>(0);
+  const activeStage = careerlensStages[selectedIdx] || careerlensStages[0];
+
+  return (
+    <div
+      data-careerlens-pipeline
+      className="w-full bg-[#E8DED0] border border-[#0B0B0B]/20 rounded-xl p-3.5 sm:p-4 flex flex-col gap-3 shadow-xs select-none"
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-[#0B0B0B]/15 pb-2">
+        <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[#1F5A3A]">
+          {careerlensStages.length} Pipeline Stages
+        </span>
+        <span className="font-mono text-[10px] text-[#6B645A] uppercase tracking-wider">
+          Tap stage to inspect
+        </span>
+      </div>
+
+      {/* 8 Stages Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {careerlensStages.map((stage, idx) => {
+          const isSelected = selectedIdx === idx;
+          return (
+            <button
+              key={stage.num}
+              type="button"
+              onClick={() => setSelectedIdx(idx)}
+              className={`p-2 rounded-lg border text-left transition-all min-h-[44px] flex flex-col justify-between cursor-pointer ${
+                isSelected
+                  ? "bg-[#1F5A3A] text-[#E8DED0] border-[#1F5A3A] shadow-xs"
+                  : "bg-[#0B0B0B]/5 text-[#0B0B0B] border-[#0B0B0B]/10 hover:bg-[#0B0B0B]/10"
+              }`}
+            >
+              <div className="flex items-center justify-between w-full">
+                <span className={`font-mono text-[10px] font-bold ${isSelected ? "text-[#C9A24A]" : "text-[#1F5A3A]"}`}>
+                  {stage.num}
+                </span>
+                <span
+                  className={`text-[9px] font-mono px-1 rounded ${
+                    isSelected
+                      ? "bg-[#E8DED0]/20 text-[#E8DED0]"
+                      : stage.built
+                      ? "bg-[#1F5A3A]/10 text-[#1F5A3A]"
+                      : "bg-[#0B0B0B]/10 text-[#6B645A]"
+                  }`}
+                >
+                  {stage.built ? "Built" : "Planned"}
+                </span>
+              </div>
+              <span className="font-sans text-[11px] font-bold leading-tight line-clamp-1 mt-1">
+                {stage.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Selected Stage Detail Panel */}
+      <div className="p-2.5 rounded-lg bg-[#0B0B0B]/5 border border-[#0B0B0B]/10 flex flex-col gap-1">
+        <div className="flex items-baseline gap-2">
+          <span className="font-mono text-[11px] font-bold text-[#1F5A3A]">
+            Stage {activeStage.num}: {activeStage.label}
+          </span>
+          <span className="font-mono text-[10px] text-[#6B645A]">
+            ({activeStage.caption})
+          </span>
+        </div>
+        <p className="font-sans text-[12px] text-[#0B0B0B]/85 leading-snug m-0">
+          {activeStage.desc}
+        </p>
+      </div>
+    </div>
+  );
+}
 
 const NAV_ITEMS = [
   { id: "overview", num: "00", label: "Overview" },
@@ -345,10 +505,15 @@ export function MobileSite() {
         <button
           type="button"
           onClick={() => scrollTo("overview")}
-          className="font-anton text-[22px] tracking-wider text-[#0B0B0B] hover:opacity-80 transition-opacity focus:outline-none focus:ring-2 focus:ring-[#1F5A3A] rounded px-1 min-h-[44px] flex items-center"
+          className="hover:opacity-80 transition-opacity focus:outline-none focus:ring-2 focus:ring-[#1F5A3A] rounded px-1 min-h-[44px] flex items-center"
           aria-label="Mishal - Scroll to overview"
         >
-          {site.wordmark}
+          <span
+            data-brand="wordmark"
+            className="display text-[26px] tracking-tight text-[#0B0B0B] leading-none"
+          >
+            {site.wordmark}
+          </span>
         </button>
 
         <div className="flex items-center gap-2">
@@ -453,35 +618,37 @@ export function MobileSite() {
         <section
           id="overview"
           aria-label="Overview"
-          className="relative w-full bg-[#0B0B0B] text-[#E8DED0] flex flex-col justify-end pt-24 pb-12 px-5 sm:px-8"
-          style={{ height: "100svh", minHeight: "100dvh" }}
+          className="relative w-full bg-[#0B0B0B] text-[#E8DED0] flex flex-col justify-start"
+          style={{ minHeight: "100svh" }}
         >
-          {/* Portrait Video & Poster Background with subtle scroll drift */}
-          <div ref={heroDriftRef} className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-            <video
-              className="scene-video w-full h-full object-cover pointer-events-none"
-              style={{ objectPosition: "84% 50%" }}
-              autoPlay
-              muted
-              loop
-              playsInline
-              poster="/hero/poster.webp"
-              src="/hero/hero-sm.mp4"
-            />
-            {/* Soft bottom gradient behind the text & CTA block only — Mishal's face stays un-shaded & bright */}
+          {/* Top ~62svh Media Framing: Mishal's face clearly positioned and bright, clear of 56px header */}
+          <div className="relative w-full h-[62svh] min-h-[380px] overflow-hidden">
+            <div ref={heroDriftRef} className="w-full h-full">
+              <video
+                className="scene-video w-full h-full object-cover pointer-events-none"
+                style={{ objectPosition: "84% 20%" }}
+                autoPlay
+                muted
+                loop
+                playsInline
+                poster="/hero/poster.webp"
+                src="/hero/hero-sm.mp4"
+              />
+            </div>
+            {/* Soft bottom gradient fading into solid ink #0B0B0B */}
             <div
               className="hero-shade absolute inset-0 pointer-events-none"
               style={{
                 background:
-                  "linear-gradient(to bottom, transparent 0%, transparent 58%, rgba(11, 11, 11, 0.45) 78%, rgba(11, 11, 11, 0.96) 100%)",
+                  "linear-gradient(to bottom, transparent 0%, transparent 60%, rgba(11, 11, 11, 0.45) 80%, #0B0B0B 100%)",
               }}
             />
           </div>
 
-          {/* Hero Content (strictly 24px gap rhythm) */}
-          <div className="relative z-10 w-full max-w-xl mx-auto flex flex-col gap-6">
+          {/* Hero Content in solid ink area below media — nothing overlaps his face or torso */}
+          <div className="relative z-10 w-full max-w-xl mx-auto flex flex-col gap-6 px-5 sm:px-8 pt-4 pb-14">
             {/* Availability Pill */}
-            <div className="inline-flex items-center gap-2 self-start px-3.5 py-1.5 rounded-full bg-[#0B0B0B]/90 border border-[#E8DED0]/20 font-mono text-[12px] tracking-wider text-[#E8DED0]">
+            <div className="inline-flex items-center gap-2 self-start px-3.5 py-1.5 rounded-full bg-[#0B0B0B] border border-[#E8DED0]/20 font-mono text-[12px] tracking-wider text-[#E8DED0]">
               <span className="w-2 h-2 rounded-full bg-[#1F5A3A] animate-pulse" aria-hidden="true" />
               <span>{hero.status}</span>
             </div>
@@ -494,7 +661,7 @@ export function MobileSite() {
             </h1>
 
             {/* Subtitle */}
-            <p className="font-sans text-[17px] sm:text-[19px] leading-relaxed text-[#E8DED0]/90 max-w-md pr-6 sm:pr-0">
+            <p className="font-sans text-[17px] sm:text-[19px] leading-relaxed text-[#E8DED0]/90 max-w-md pr-6 sm:pr-0 m-0">
               {hero.sub}
             </p>
 
@@ -659,17 +826,14 @@ export function MobileSite() {
                 </span>
               </div>
 
-              {/* Additional Projects Block */}
+              {/* Projects Block */}
               <div
                 data-reveal
                 data-reveal-card
                 className="p-5 rounded-xl bg-[#0B0B0B]/[0.03] border border-[#0B0B0B]/10 flex flex-col gap-1.5 pr-8 sm:pr-5"
               >
                 <span className="font-mono text-[12px] uppercase tracking-widest text-[#1F5A3A] font-bold">
-                  {about.facts[3].label}
-                </span>
-                <span className="font-sans text-[15px] font-semibold text-[#0B0B0B]">
-                  {about.facts[3].bold}
+                  PROJECTS
                 </span>
                 <span className="font-sans text-[14px] text-[#0B0B0B]/80 leading-relaxed">
                   {about.facts[3].text.replace(/^ · /, "")}
@@ -829,16 +993,16 @@ export function MobileSite() {
         <section
           id="works"
           aria-label="Works"
-          className="w-full bg-[#0B0B0B] text-[#E8DED0] py-24 px-5 sm:px-8 border-b border-[#E8DED0]/15"
+          className="w-full bg-[#E8DED0] text-[#0B0B0B] py-24 px-5 sm:px-8 border-b border-[#0B0B0B]/10"
         >
           <div className="w-full max-w-xl mx-auto flex flex-col gap-12">
             {/* Section Header: 03 WORKS, gold rule, big display heading */}
             <div data-reveal data-reveal-header className="flex flex-col gap-2 pt-2 border-t border-[#C9A24A]/40">
-              <span className="font-mono text-[12px] uppercase tracking-widest text-[#C9A24A] font-bold">
+              <span className="font-mono text-[12px] uppercase tracking-widest text-[#1F5A3A] font-bold">
                 03 WORKS
               </span>
               <div className="overflow-hidden">
-                <h2 data-reveal-title className="font-display uppercase tracking-[-0.01em] text-[clamp(36px,10vw,48px)] leading-[0.92] text-[#E8DED0] m-0">
+                <h2 data-reveal-title className="font-display uppercase tracking-[-0.01em] text-[clamp(36px,10vw,48px)] leading-[0.92] text-[#0B0B0B] m-0">
                   {works.heading}
                 </h2>
               </div>
@@ -850,7 +1014,7 @@ export function MobileSite() {
               <article
                 data-reveal
                 data-reveal-card
-                className="rounded-2xl overflow-hidden bg-[#161616] border border-[#E8DED0]/15 flex flex-col"
+                className="rounded-2xl overflow-hidden bg-[#F4EFE6] border border-[#0B0B0B]/15 flex flex-col shadow-xs"
               >
                 <div className="relative w-full aspect-video bg-[#000] overflow-hidden">
                   <img
@@ -865,15 +1029,15 @@ export function MobileSite() {
                 </div>
 
                 <div className="p-5 flex flex-col gap-3">
-                  <h3 className="font-display uppercase tracking-[-0.01em] text-[clamp(22px,6vw,28px)] leading-[1.05] text-[#E8DED0] m-0">
+                  <h3 className="font-display uppercase tracking-[-0.01em] text-[clamp(22px,6vw,28px)] leading-[1.05] text-[#0B0B0B] m-0">
                     {works.projects[0].title}
                   </h3>
 
-                  <p className="font-sans text-[16px] leading-relaxed text-[#E8DED0]/90 m-0">
+                  <p className="font-sans text-[16px] leading-relaxed text-[#0B0B0B]/90 m-0">
                     {works.projects[0].sentence}
                   </p>
 
-                  <p className="font-sans text-[14px] leading-relaxed text-[#E8DED0]/70 m-0">
+                  <p className="font-sans text-[14px] leading-relaxed text-[#6B645A] m-0">
                     {works.projects[0].line}
                   </p>
 
@@ -882,7 +1046,7 @@ export function MobileSite() {
                     {["DINOv2", "FAISS", "FastAPI", "Supabase", "pgvector", "PyTorch"].map((t) => (
                       <span
                         key={t}
-                        className="px-2.5 py-1 rounded-md bg-[#E8DED0]/10 font-mono text-[11px] text-[#E8DED0]/80"
+                        className="px-2.5 py-1 rounded-md bg-[#0B0B0B]/5 border border-[#0B0B0B]/10 font-mono text-[11px] text-[#0B0B0B]/80"
                       >
                         {t}
                       </span>
@@ -894,7 +1058,7 @@ export function MobileSite() {
                     <button
                       type="button"
                       onClick={(e) => openDrawer(works.caseStudy, e.currentTarget)}
-                      className="min-h-[44px] px-5 py-2.5 rounded-full bg-[#C9A24A] text-[#0B0B0B] font-mono text-[13px] uppercase tracking-wider font-bold hover:bg-[#E8DED0] transition-colors flex items-center justify-center gap-1.5 shadow"
+                      className="min-h-[44px] px-6 py-2.5 rounded-full bg-[#0B0B0B] text-[#E8DED0] font-mono text-[13px] uppercase tracking-wider font-bold hover:bg-[#1F5A3A] transition-colors flex items-center justify-center gap-2 shadow-xs cursor-pointer"
                     >
                       <span>Deep Dive</span>
                       <ArrowUpRight className="w-4 h-4" aria-hidden="true" />
@@ -903,7 +1067,7 @@ export function MobileSite() {
                     <button
                       type="button"
                       onClick={() => setActiveVideoDemo((v) => !v)}
-                      className="min-h-[44px] px-4 py-2.5 rounded-full border border-[#E8DED0]/30 text-[#E8DED0] font-mono text-[13px] uppercase tracking-wider font-medium hover:bg-[#E8DED0]/10 transition-colors flex items-center justify-center gap-2"
+                      className="min-h-[44px] px-4 py-2.5 rounded-full border border-[#0B0B0B]/30 text-[#0B0B0B] font-mono text-[13px] uppercase tracking-wider font-medium hover:bg-[#0B0B0B]/10 transition-colors flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <Play className="w-3.5 h-3.5 fill-current" aria-hidden="true" />
                       <span>{activeVideoDemo ? "Close demo" : "Play demo"}</span>
@@ -912,7 +1076,7 @@ export function MobileSite() {
 
                   {/* Inline DDSS Video Player */}
                   {activeVideoDemo && (
-                    <div className="mt-3 rounded-xl overflow-hidden border border-[#E8DED0]/20 bg-black animate-in fade-in duration-200">
+                    <div className="mt-3 rounded-xl overflow-hidden border border-[#0B0B0B]/20 bg-black animate-in fade-in duration-200">
                       <video
                         src="/media/ddss-demo.mp4"
                         poster="/media/ddss-demo-poster.webp"
@@ -930,30 +1094,22 @@ export function MobileSite() {
               <article
                 data-reveal
                 data-reveal-card
-                className="rounded-2xl overflow-hidden bg-[#161616] border border-[#E8DED0]/15 flex flex-col"
+                className="rounded-2xl overflow-hidden bg-[#F4EFE6] border border-[#0B0B0B]/15 flex flex-col shadow-xs"
               >
-                <div className="relative w-full aspect-video bg-[#000] overflow-hidden">
-                  <img
-                    src={ddss3ScreenImg}
-                    alt="Productivity & Role Prediction interface"
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                  />
-                  <div className="absolute top-3 left-3 px-3 py-1 rounded-full bg-[#0B0B0B]/80 backdrop-blur-sm border border-[#E8DED0]/20 font-mono text-[11px] text-[#C9A24A] uppercase tracking-wider font-semibold">
-                    ~87% Accuracy
-                  </div>
+                <div className="p-3 bg-[#E8DED0]/60 border-b border-[#0B0B0B]/10">
+                  <ProductivityExplorerMobile />
                 </div>
 
                 <div className="p-5 flex flex-col gap-3">
-                  <h3 className="font-display uppercase tracking-[-0.01em] text-[clamp(22px,6vw,28px)] leading-[1.05] text-[#E8DED0] m-0">
+                  <h3 className="font-display uppercase tracking-[-0.01em] text-[clamp(22px,6vw,28px)] leading-[1.05] text-[#0B0B0B] m-0">
                     {works.projects[1].title}
                   </h3>
 
-                  <p className="font-sans text-[16px] leading-relaxed text-[#E8DED0]/90 m-0">
+                  <p className="font-sans text-[16px] leading-relaxed text-[#0B0B0B]/90 m-0">
                     {works.projects[1].sentence}
                   </p>
 
-                  <p className="font-sans text-[14px] leading-relaxed text-[#E8DED0]/70 m-0">
+                  <p className="font-sans text-[14px] leading-relaxed text-[#6B645A] m-0">
                     {works.projects[1].line}
                   </p>
 
@@ -962,7 +1118,7 @@ export function MobileSite() {
                     {["Random Forest", "Logistic Regression", "Streamlit", "Pandas", "joblib"].map((t) => (
                       <span
                         key={t}
-                        className="px-2.5 py-1 rounded-md bg-[#E8DED0]/10 font-mono text-[11px] text-[#E8DED0]/80"
+                        className="px-2.5 py-1 rounded-md bg-[#0B0B0B]/5 border border-[#0B0B0B]/10 font-mono text-[11px] text-[#0B0B0B]/80"
                       >
                         {t}
                       </span>
@@ -973,7 +1129,7 @@ export function MobileSite() {
                     <button
                       type="button"
                       onClick={(e) => openDrawer(roleCaseStudy, e.currentTarget)}
-                      className="min-h-[44px] px-5 py-2.5 rounded-full bg-[#C9A24A] text-[#0B0B0B] font-mono text-[13px] uppercase tracking-wider font-bold hover:bg-[#E8DED0] transition-colors flex items-center justify-center gap-1.5 shadow"
+                      className="min-h-[44px] px-6 py-2.5 rounded-full bg-[#0B0B0B] text-[#E8DED0] font-mono text-[13px] uppercase tracking-wider font-bold hover:bg-[#1F5A3A] transition-colors flex items-center justify-center gap-2 shadow-xs cursor-pointer"
                     >
                       <span>Deep Dive</span>
                       <ArrowUpRight className="w-4 h-4" aria-hidden="true" />
@@ -986,30 +1142,22 @@ export function MobileSite() {
               <article
                 data-reveal
                 data-reveal-card
-                className="rounded-2xl overflow-hidden bg-[#161616] border border-[#E8DED0]/15 flex flex-col"
+                className="rounded-2xl overflow-hidden bg-[#F4EFE6] border border-[#0B0B0B]/15 flex flex-col shadow-xs"
               >
-                <div className="relative w-full aspect-video bg-[#000] overflow-hidden">
-                  <img
-                    src={ddss2ScreenImg}
-                    alt="CareerLens AI Architecture"
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                  />
-                  <div className="absolute top-3 left-3 px-3 py-1 rounded-full bg-[#0B0B0B]/80 backdrop-blur-sm border border-[#E8DED0]/20 font-mono text-[11px] text-[#C9A24A] uppercase tracking-wider font-semibold">
-                    RAG & Citations
-                  </div>
+                <div className="p-3 bg-[#E8DED0]/60 border-b border-[#0B0B0B]/10">
+                  <CareerLensPipelineMobile />
                 </div>
 
                 <div className="p-5 flex flex-col gap-3">
-                  <h3 className="font-display uppercase tracking-[-0.01em] text-[clamp(22px,6vw,28px)] leading-[1.05] text-[#E8DED0] m-0">
+                  <h3 className="font-display uppercase tracking-[-0.01em] text-[clamp(22px,6vw,28px)] leading-[1.05] text-[#0B0B0B] m-0">
                     {works.projects[2].title}
                   </h3>
 
-                  <p className="font-sans text-[16px] leading-relaxed text-[#E8DED0]/90 m-0">
+                  <p className="font-sans text-[16px] leading-relaxed text-[#0B0B0B]/90 m-0">
                     {works.projects[2].sentence}
                   </p>
 
-                  <p className="font-sans text-[14px] leading-relaxed text-[#E8DED0]/70 m-0">
+                  <p className="font-sans text-[14px] leading-relaxed text-[#6B645A] m-0">
                     {works.projects[2].line}
                   </p>
 
@@ -1018,7 +1166,7 @@ export function MobileSite() {
                     {["FastAPI", "Sentence Transformers", "FAISS", "Gemini API", "SQLite"].map((t) => (
                       <span
                         key={t}
-                        className="px-2.5 py-1 rounded-md bg-[#E8DED0]/10 font-mono text-[11px] text-[#E8DED0]/80"
+                        className="px-2.5 py-1 rounded-md bg-[#0B0B0B]/5 border border-[#0B0B0B]/10 font-mono text-[11px] text-[#0B0B0B]/80"
                       >
                         {t}
                       </span>
@@ -1029,7 +1177,7 @@ export function MobileSite() {
                     <button
                       type="button"
                       onClick={(e) => openDrawer(careerlensCaseStudy, e.currentTarget)}
-                      className="min-h-[44px] px-5 py-2.5 rounded-full bg-[#C9A24A] text-[#0B0B0B] font-mono text-[13px] uppercase tracking-wider font-bold hover:bg-[#E8DED0] transition-colors flex items-center justify-center gap-1.5 shadow"
+                      className="min-h-[44px] px-6 py-2.5 rounded-full bg-[#0B0B0B] text-[#E8DED0] font-mono text-[13px] uppercase tracking-wider font-bold hover:bg-[#1F5A3A] transition-colors flex items-center justify-center gap-2 shadow-xs cursor-pointer"
                     >
                       <span>Deep Dive</span>
                       <ArrowUpRight className="w-4 h-4" aria-hidden="true" />
@@ -1063,17 +1211,17 @@ export function MobileSite() {
             </div>
 
             {/* Vertical Timeline with strictly 24px gap between stops */}
-            <div className="relative pl-6 flex flex-col gap-6 before:content-[''] before:absolute before:left-2.5 before:top-3 before:bottom-3 before:w-0.5 before:bg-[#1F5A3A]/30 pr-8 sm:pr-0">
+            <div className="relative pl-6 flex flex-col gap-8 before:content-[''] before:absolute before:left-2.5 before:top-4 before:bottom-4 before:w-0.5 before:bg-[#1F5A3A]/30 pr-8 sm:pr-0">
               {journey.stops.map((stop, idx) => (
-                <div key={`${stop.year}-${idx}`} data-reveal data-reveal-card className="relative flex flex-col gap-1.5">
+                <div key={`${stop.year}-${idx}`} data-reveal data-reveal-card className="relative flex flex-col gap-2">
                   {/* Timeline Dot */}
                   <div
-                    className="absolute -left-[27px] top-1.5 w-3.5 h-3.5 rounded-full bg-[#1F5A3A] border-2 border-[#E8DED0] shadow-sm"
+                    className="absolute -left-[27px] top-3 w-3.5 h-3.5 rounded-full bg-[#1F5A3A] border-2 border-[#E8DED0] shadow-xs"
                     aria-hidden="true"
                   />
 
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-[13px] font-bold text-[#1F5A3A]">
+                  <div className="flex items-baseline gap-3">
+                    <span className="font-display text-[clamp(38px,10vw,52px)] leading-none text-[#1F5A3A] tracking-tight">
                       {stop.year}
                     </span>
                     {stop.tag && (

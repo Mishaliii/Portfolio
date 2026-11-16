@@ -2338,7 +2338,7 @@ html.paged .page:not(.is-active) [data-card] {
   /* 3. Hero character portrait positioning: keep Mishal and laptop visible below headline */
   .scene-poster,
   .scene-video {
-    object-position: 84% 50% !important;
+    object-position: 84% 20% !important;
   }
 
   /* 4. Hero headline top spacing so availability chip never overlaps headings */
