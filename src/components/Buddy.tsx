@@ -265,6 +265,18 @@ export function Buddy() {
       return null;
     }
   });
+
+  // Track chatOpen on body for styling (Step 29: hides mobile chevron and Sprout button)
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      document.body.classList.toggle("sprout-panel-open", chatOpen);
+    }
+    return () => {
+      if (typeof document !== "undefined") {
+        document.body.classList.remove("sprout-panel-open");
+      }
+    };
+  }, [chatOpen]);
   const awaitingName = useRef<boolean>(false);
   const greetedWithName = useRef<boolean>(false);
   const lastIntent = useRef<string | null>(null);

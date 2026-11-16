@@ -205,9 +205,22 @@ const NAV_ITEMS = [
   { id: "connect", num: "05", label: "Connect" },
 ];
 
+let mobileIntroCompleted = false;
+
+function checkMobileIntroDone(): boolean {
+  if (typeof window === "undefined") return false;
+  if (mobileIntroCompleted) return true;
+  try {
+    return sessionStorage.getItem("mishal_intro_done") === "1";
+  } catch {
+    return false;
+  }
+}
+
 export function MobileSite() {
-  const [booted, setBooted] = useState(false);
-  const [loaderMode, setLoaderMode] = useState<"full" | "short" | "none">("full");
+  const isIntroDone = checkMobileIntroDone();
+  const [booted, setBooted] = useState(isIntroDone);
+  const [loaderMode, setLoaderMode] = useState<"full" | "short" | "none">(isIntroDone ? "none" : "full");
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeHash, setActiveHash] = useState("overview");
   const [activeSkill, setActiveSkill] = useState<string | null>(null);
@@ -220,28 +233,57 @@ export function MobileSite() {
   const [copiedEmail, setCopiedEmail] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
 
-  // Menu and scroll refs
+  // Menu, scroll & animation refs
   const menuOverlayRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const progressBarRef = useRef<HTMLDivElement>(null);
   const heroDriftRef = useRef<HTMLDivElement>(null);
+  const heroScrambleDoneRef = useRef(false);
+  const scrollToTopTweenRef = useRef<gsap.core.Tween | null>(null);
+  const isMenuClosingRef = useRef(false);
 
   useEffect(() => {
     document.documentElement.classList.remove("paged");
     document.body.style.overflow = "";
     document.documentElement.style.overflow = "";
 
+    if (checkMobileIntroDone()) {
+      setBooted(true);
+      setLoaderMode("none");
+      (window as any).__siteBooted = true;
+      return;
+    }
+
     let seen = false;
     try {
       seen = Boolean(sessionStorage.getItem("mishal_loader_seen"));
     } catch {}
     const m = introMode(seen, window.location.hash);
-    setLoaderMode(m);
     if (m === "none") {
+      mobileIntroCompleted = true;
+      try {
+        sessionStorage.setItem("mishal_intro_done", "1");
+        sessionStorage.setItem("mishal_loader_seen", "1");
+      } catch {}
       setBooted(true);
+      setLoaderMode("none");
       (window as any).__siteBooted = true;
       window.dispatchEvent(new CustomEvent("site-loader-done"));
+    } else {
+      setLoaderMode(m);
     }
+  }, []);
+
+  const handleLoaderDone = useCallback(() => {
+    mobileIntroCompleted = true;
+    try {
+      sessionStorage.setItem("mishal_intro_done", "1");
+      sessionStorage.setItem("mishal_loader_seen", "1");
+    } catch {}
+    setBooted(true);
+    setLoaderMode("none");
+    (window as any).__siteBooted = true;
+    window.dispatchEvent(new CustomEvent("site-loader-done"));
   }, []);
 
   // Viewport Jitter Safeguard: ignore resize events where height changes by < 120px and width is the same (URL-bar collapse/expand)
@@ -295,7 +337,38 @@ export function MobileSite() {
     return () => window.removeEventListener("popstate", onPopState);
   }, [menuOpen]);
 
-  // Menu Animation (Slides down from header with 0.45s power3.out, items stagger 0.05s)
+  // Menu Open & Close Helpers (Step 29: GSAP slide down 0.5s, items stagger 0.06s; close reverses in 0.35s)
+  const openMenu = useCallback(() => {
+    if (isMenuClosingRef.current) return;
+    setMenuOpen(true);
+  }, []);
+
+  const closeMenu = useCallback(() => {
+    if (!menuOverlayRef.current) {
+      setMenuOpen(false);
+      menuButtonRef.current?.focus();
+      return;
+    }
+    const isReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (isReduced) {
+      setMenuOpen(false);
+      menuButtonRef.current?.focus();
+      return;
+    }
+    isMenuClosingRef.current = true;
+    gsap.to(menuOverlayRef.current, {
+      yPercent: -100,
+      duration: 0.35,
+      ease: "power3.in",
+      onComplete: () => {
+        setMenuOpen(false);
+        isMenuClosingRef.current = false;
+        menuButtonRef.current?.focus();
+      },
+    });
+  }, []);
+
+  // Menu Animation (Slides down with 0.5s power3.out, items stagger 0.06s with 24px rise)
   useEffect(() => {
     if (menuOpen && menuOverlayRef.current) {
       const isReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -303,18 +376,19 @@ export function MobileSite() {
         gsap.fromTo(
           menuOverlayRef.current,
           { yPercent: -100 },
-          { yPercent: 0, duration: 0.45, ease: "power3.out" },
+          { yPercent: 0, duration: 0.5, ease: "power3.out" },
         );
+        const items = menuOverlayRef.current.querySelectorAll(".mobile-menu-item");
         gsap.fromTo(
-          menuOverlayRef.current.querySelectorAll(".mobile-menu-item"),
-          { opacity: 0, y: 16 },
-          { opacity: 1, y: 0, duration: 0.35, ease: "power2.out", stagger: 0.05, delay: 0.08 },
+          items,
+          { opacity: 0, y: 24 },
+          { opacity: 1, y: 0, duration: 0.4, ease: "power2.out", stagger: 0.06, delay: 0.1 },
         );
       }
     }
   }, [menuOpen]);
 
-  // Hero Headline reveal (each line rises 24px with 0.6s power3.out, stagger 0.08s, starting 0.2s after loader finishes)
+  // Hero Headline reveal (each line rises 24px with 0.6s power3.out, stagger 0.08s — runs ONCE on initial boot, never on return)
   useEffect(() => {
     if (!booted) return;
     const isReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -322,135 +396,63 @@ export function MobileSite() {
       gsap.set(".mobile-hero-line", { y: 0, opacity: 1 });
       return;
     }
-    gsap.fromTo(
-      ".mobile-hero-line",
-      { y: 24, opacity: 0 },
-      { y: 0, opacity: 1, duration: 0.6, ease: "power3.out", stagger: 0.08, delay: 0.2 },
-    );
+    if (!heroScrambleDoneRef.current) {
+      heroScrambleDoneRef.current = true;
+      gsap.fromTo(
+        ".mobile-hero-line",
+        { y: 24, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.6, ease: "power3.out", stagger: 0.08, delay: 0.2 },
+      );
+    } else {
+      gsap.set(".mobile-hero-line", { y: 0, opacity: 1 });
+    }
   }, [booted]);
 
-  // Setup GSAP light scroll reveals (line-reveal for titles, fade+rise for cards, 0.35s/16px for journey)
+  // Setup GSAP light scroll reveals (plays ONCE, never reverses, never re-hides on scroll up, keeps final box height)
   const containerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!booted || !containerRef.current) return;
     const isReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    // 1. Title line reveal (rise from overflow-hidden mask)
-    const titleEls = containerRef.current.querySelectorAll<HTMLElement>("[data-reveal-title]");
-    if (isReduced) {
-      titleEls.forEach((el) => {
-        el.style.transform = "none";
-      });
-    } else {
-      const titleObserver = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            if (entry.isIntersecting) {
-              const target = entry.target as HTMLElement;
-              gsap.fromTo(
-                target,
-                { yPercent: 105 },
-                { yPercent: 0, duration: 0.7, ease: "power3.out" },
-              );
-              titleObserver.unobserve(target);
-            }
-          });
-        },
-        { threshold: 0.1, rootMargin: "0px 0px -20px 0px" },
-      );
-      titleEls.forEach((el) => {
-        gsap.set(el, { yPercent: 105 });
-        titleObserver.observe(el);
-      });
-    }
+    // Unified Reveal Observer (unobserves on intersection so elements NEVER re-hide on scroll up)
+    const revealEls = containerRef.current.querySelectorAll<HTMLElement>(
+      "[data-reveal], [data-reveal-title], [data-reveal-card], [data-reveal-journey], [data-reveal-header]"
+    );
 
-    // 2. Card enter (opacity + 24px rise)
-    const cardEls = containerRef.current.querySelectorAll<HTMLElement>("[data-reveal-card]");
     if (isReduced) {
-      cardEls.forEach((el) => {
+      revealEls.forEach((el) => {
         el.style.opacity = "1";
         el.style.transform = "none";
       });
-    } else {
-      const cardObserver = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            if (entry.isIntersecting) {
-              const target = entry.target as HTMLElement;
-              gsap.fromTo(
-                target,
-                { opacity: 0, y: 24 },
-                { opacity: 1, y: 0, duration: 0.65, ease: "power2.out", clearProps: "transform" },
-              );
-              cardObserver.unobserve(target);
-            }
-          });
-        },
-        { threshold: 0.08, rootMargin: "0px 0px -30px 0px" },
-      );
-      cardEls.forEach((el) => {
-        gsap.set(el, { opacity: 0, y: 24 });
-        cardObserver.observe(el);
-      });
+      return;
     }
-
-    // 3. Journey enter (0.35s fade + 16px rise entering viewport once)
-    const journeyEls = containerRef.current.querySelectorAll<HTMLElement>("[data-reveal-journey]");
-    if (isReduced) {
-      journeyEls.forEach((el) => {
-        el.style.opacity = "1";
-        el.style.transform = "none";
-      });
-    } else {
-      const journeyObserver = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            if (entry.isIntersecting) {
-              const target = entry.target as HTMLElement;
-              gsap.fromTo(
-                target,
-                { opacity: 0, y: 16 },
-                { opacity: 1, y: 0, duration: 0.35, ease: "power2.out", clearProps: "transform" },
-              );
-              journeyObserver.unobserve(target);
-            }
-          });
-        },
-        { threshold: 0.08, rootMargin: "0px 0px -20px 0px" },
-      );
-      journeyEls.forEach((el) => {
-        gsap.set(el, { opacity: 0, y: 16 });
-        journeyObserver.observe(el);
-      });
-    }
-  }, [booted]);
-
-  // Track Journey visibility for body.journey-in-view (Hides Sprout walker, door, and notes on mobile)
-  useEffect(() => {
-    if (!booted) return;
-    const journeyEl = document.getElementById("journey");
-    if (!journeyEl) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
-        entries.forEach((e) => {
-          if (e.isIntersecting) {
-            document.body.classList.add("journey-in-view");
-          } else {
-            document.body.classList.remove("journey-in-view");
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const target = entry.target as HTMLElement;
+            gsap.fromTo(
+              target,
+              { opacity: 0, y: 20 },
+              { opacity: 1, y: 0, duration: 0.45, ease: "power2.out", clearProps: "transform" },
+            );
+            observer.unobserve(target);
           }
         });
       },
-      { threshold: 0.05, rootMargin: "-10% 0px -10% 0px" },
+      { threshold: 0.05, rootMargin: "0px 0px -10px 0px" },
     );
-    observer.observe(journeyEl);
-    return () => {
-      observer.disconnect();
-      document.body.classList.remove("journey-in-view");
-    };
+
+    revealEls.forEach((el) => {
+      gsap.set(el, { opacity: 0, y: 20 });
+      observer.observe(el);
+    });
+
+    return () => observer.disconnect();
   }, [booted]);
 
-  // Scroll Progress Bar + Hero Drift + Scroll-to-top chevron toggle
+  // Scroll Progress Bar + Hero Drift + Scroll-to-top chevron toggle (1.5 screens of scroll)
   useEffect(() => {
     if (!booted) return;
     const isReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -470,8 +472,8 @@ export function MobileSite() {
         gsap.set(heroDriftRef.current, { y: drift });
       }
 
-      // Show scroll-up chevron only after 1 screen scroll
-      setShowScrollTop(scrollY > innerHeight);
+      // Show scroll-up chevron only after 1.5 screens of scroll
+      setShowScrollTop(scrollY >= innerHeight * 1.45);
     };
 
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -479,7 +481,7 @@ export function MobileSite() {
     return () => window.removeEventListener("scroll", onScroll);
   }, [booted]);
 
-  // Section visibility tracker for location.hash
+  // Section visibility tracker for location.hash (only when scrolling down / natural read)
   useEffect(() => {
     if (!booted) return;
     const sectionIds = ["overview", "about", "expertise", "works", "journey", "connect"];
@@ -489,7 +491,6 @@ export function MobileSite() {
         if (visible) {
           const id = visible.target.id;
           setActiveHash(id);
-          window.history.replaceState(null, "", `#${id}`);
         }
       },
       { threshold: 0.25, rootMargin: "-10% 0px -50% 0px" },
@@ -503,40 +504,58 @@ export function MobileSite() {
     return () => observer.disconnect();
   }, [booted]);
 
-  // Scroll to initial hash on boot
-  useEffect(() => {
-    if (booted && window.location.hash) {
-      const targetId = window.location.hash.slice(1);
-      const el = document.getElementById(targetId);
-      if (el) {
-        setTimeout(() => {
-          el.scrollIntoView({ behavior: "smooth" });
-        }, 300);
-      }
-    }
-  }, [booted]);
-
-  // Menu Open/Close helpers
-  const openMenu = useCallback(() => {
-    setMenuOpen(true);
-    window.history.pushState({ mobileMenu: true }, "", window.location.href);
-  }, []);
-
-  const closeMenu = useCallback(() => {
-    setMenuOpen(false);
-    menuButtonRef.current?.focus();
-  }, []);
-
-  // Smooth scroll helper
+  // Smooth scroll helper for menu / CTAs
   const scrollTo = useCallback((id: string) => {
     closeMenu();
     const el = document.getElementById(id);
     if (el) {
       el.scrollIntoView({ behavior: "smooth" });
-      window.history.replaceState(null, "", `#${id}`);
       setActiveHash(id);
+      try {
+        window.history.replaceState(null, "", `#${id}`);
+      } catch {}
     }
   }, [closeMenu]);
+
+  // GSAP Smooth Scroll-To-Top (0.9s power2.inOut, cancels on user touch, never changes location.hash)
+  const scrollToTop = useCallback(() => {
+    if (scrollToTopTweenRef.current) {
+      scrollToTopTweenRef.current.kill();
+    }
+    const startY = window.scrollY;
+    if (startY <= 0) return;
+
+    const proxy = { y: startY };
+
+    const cancelScroll = () => {
+      if (scrollToTopTweenRef.current) {
+        scrollToTopTweenRef.current.kill();
+        scrollToTopTweenRef.current = null;
+      }
+      window.removeEventListener("touchstart", cancelScroll);
+      window.removeEventListener("pointerdown", cancelScroll);
+      window.removeEventListener("wheel", cancelScroll);
+    };
+
+    window.addEventListener("touchstart", cancelScroll, { passive: true });
+    window.addEventListener("pointerdown", cancelScroll, { passive: true });
+    window.addEventListener("wheel", cancelScroll, { passive: true });
+
+    scrollToTopTweenRef.current = gsap.to(proxy, {
+      y: 0,
+      duration: 0.9,
+      ease: "power2.inOut",
+      onUpdate: () => {
+        window.scrollTo(0, proxy.y);
+      },
+      onComplete: () => {
+        scrollToTopTweenRef.current = null;
+        window.removeEventListener("touchstart", cancelScroll);
+        window.removeEventListener("pointerdown", cancelScroll);
+        window.removeEventListener("wheel", cancelScroll);
+      },
+    });
+  }, []);
 
   // Copy email handler
   const handleCopyEmail = useCallback(() => {
@@ -580,15 +599,11 @@ export function MobileSite() {
       className="mobile-site w-full min-h-screen text-[#0B0B0B] bg-[#E8DED0] selection:bg-[#1F5A3A] selection:text-[#E8DED0] font-sans"
     >
       {/* 1. Full Screen Liquid Intro Loader */}
-      {!booted && (
+      {!booted && loaderMode !== "none" && (
         <Intro
           mode={loaderMode}
           onReveal={() => {}}
-          onDone={() => {
-            setBooted(true);
-            (window as any).__siteBooted = true;
-            window.dispatchEvent(new CustomEvent("site-loader-done"));
-          }}
+          onDone={handleLoaderDone}
         />
       )}
 
@@ -642,19 +657,19 @@ export function MobileSite() {
         />
       </header>
 
-      {/* 3. Full-Screen Menu Overlay (Cream sheet #E8DED0 with Ink text #0B0B0B) */}
+      {/* 3. Full-Screen Menu Overlay (Cream sheet #E8DED0 with Ink text #0B0B0B, no shadows/slivers) */}
       {menuOpen && (
         <div
           ref={menuOverlayRef}
           role="dialog"
           aria-modal="true"
           aria-label="Navigation Menu"
-          className="fixed inset-0 z-50 bg-[#E8DED0] text-[#0B0B0B] flex flex-col justify-between p-5 sm:p-7 shadow-2xl"
+          className="fixed inset-0 z-50 bg-[#E8DED0] text-[#0B0B0B] flex flex-col justify-between p-5 sm:p-7 overflow-y-auto"
           style={{ width: "100%", height: "100%", willChange: "transform" }}
         >
-          {/* Top Row: Wordmark and CLOSE button */}
-          <div className="flex items-center justify-between border-b border-[#0B0B0B]/15 pb-3">
-            <span className="font-display text-[26px] tracking-tight uppercase text-[#0B0B0B]">
+          {/* Top Row: Wordmark and CLOSE button separated by thin gold line */}
+          <div className="flex items-center justify-between border-b border-[#C9A24A]/40 pb-3">
+            <span className="font-display text-[28px] tracking-tight uppercase text-[#0B0B0B]">
               {site.wordmark}
             </span>
             <button
@@ -668,8 +683,8 @@ export function MobileSite() {
             </button>
           </div>
 
-          {/* Navigation Items: ~40px display font with mono index number, active item has forest-green dot */}
-          <nav className="flex flex-col gap-2 py-4 my-auto" aria-label="Mobile Navigation">
+          {/* Navigation Items: font size clamp(44px, 12vw, 64px), line-height 1.05, left aligned, uses at least 55% sheet height */}
+          <nav className="flex flex-col justify-evenly min-h-[55%] flex-1 py-4 my-auto" aria-label="Mobile Navigation">
             {NAV_ITEMS.map((item) => {
               const isActive = activeHash === item.id;
               return (
@@ -677,21 +692,21 @@ export function MobileSite() {
                   key={item.id}
                   type="button"
                   onClick={() => scrollTo(item.id)}
-                  className={`mobile-menu-item flex items-center justify-between text-left py-2 px-2.5 rounded-lg transition-colors min-h-[48px] cursor-pointer ${
+                  className={`mobile-menu-item flex items-center justify-between text-left py-2 px-1 rounded-lg transition-colors min-h-[48px] cursor-pointer ${
                     isActive ? "bg-[#0B0B0B]/5" : "hover:bg-[#0B0B0B]/5"
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     {isActive ? (
-                      <span className="w-2.5 h-2.5 rounded-full bg-[#1F5A3A] shrink-0" aria-hidden="true" />
+                      <span className="w-3 h-3 rounded-full bg-[#1F5A3A] shrink-0" aria-hidden="true" />
                     ) : (
-                      <span className="w-2.5 h-2.5 shrink-0" aria-hidden="true" />
+                      <span className="w-3 h-3 shrink-0" aria-hidden="true" />
                     )}
-                    <span className="font-display uppercase tracking-[-0.01em] text-[clamp(32px,8vw,40px)] leading-[1.0] text-[#0B0B0B]">
+                    <span className="font-display uppercase tracking-[-0.01em] text-[clamp(44px,12vw,64px)] leading-[1.05] text-[#0B0B0B]">
                       {item.label}
                     </span>
                   </div>
-                  <span className="font-mono text-[13px] text-[#6B645A] tracking-widest font-semibold">
+                  <span className="font-mono text-[14px] text-[#6B645A] tracking-widest font-semibold shrink-0">
                     {item.num}
                   </span>
                 </button>
@@ -699,26 +714,31 @@ export function MobileSite() {
             })}
           </nav>
 
-          {/* Bottom Actions: Download CV (outline) and Say hello (ink fill) side by side */}
+          {/* Bottom Actions: Download CV (outline) and Say hello (ink fill) side by side, plus email in mono under them */}
           <div
-            className="grid grid-cols-2 gap-3 pt-3 border-t border-[#0B0B0B]/15"
+            className="flex flex-col gap-2 pt-3 border-t border-[#0B0B0B]/15"
             style={{ paddingBottom: "max(16px, env(safe-area-inset-bottom))" }}
           >
-            <a
-              href="/cv.pdf"
-              download
-              className="min-h-[48px] px-4 py-2.5 rounded-full border border-[#0B0B0B]/40 text-[#0B0B0B] bg-transparent hover:bg-[#0B0B0B]/5 active:bg-[#0B0B0B]/10 font-mono text-[13px] uppercase tracking-wider font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer"
-            >
-              <Download className="w-4 h-4" aria-hidden="true" />
-              <span>{ui.downloadCv}</span>
-            </a>
-            <button
-              type="button"
-              onClick={() => scrollTo("connect")}
-              className="min-h-[48px] px-4 py-2.5 rounded-full bg-[#0B0B0B] text-[#E8DED0] hover:bg-[#1F5A3A] active:bg-[#17452c] font-mono text-[13px] uppercase tracking-wider font-bold transition-colors flex items-center justify-center cursor-pointer shadow-sm"
-            >
-              {ui.sayHello}
-            </button>
+            <div className="grid grid-cols-2 gap-3">
+              <a
+                href="/cv.pdf"
+                download
+                className="min-h-[48px] px-4 py-2.5 rounded-full border border-[#0B0B0B]/40 text-[#0B0B0B] bg-transparent hover:bg-[#0B0B0B]/5 active:bg-[#0B0B0B]/10 font-mono text-[13px] uppercase tracking-wider font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer"
+              >
+                <Download className="w-4 h-4" aria-hidden="true" />
+                <span>{ui.downloadCv}</span>
+              </a>
+              <button
+                type="button"
+                onClick={() => scrollTo("connect")}
+                className="min-h-[48px] px-4 py-2.5 rounded-full bg-[#0B0B0B] text-[#E8DED0] hover:bg-[#1F5A3A] active:bg-[#17452c] font-mono text-[13px] uppercase tracking-wider font-bold transition-colors flex items-center justify-center cursor-pointer shadow-sm"
+              >
+                {ui.sayHello}
+              </button>
+            </div>
+            <p className="font-mono text-[13px] text-[#0B0B0B]/70 tracking-wider text-center py-1 m-0 select-all">
+              {site.email}
+            </p>
           </div>
         </div>
       )}
@@ -731,11 +751,11 @@ export function MobileSite() {
         <section
           id="overview"
           aria-label="Overview"
-          className="relative w-full bg-[#0B0B0B] text-[#E8DED0] flex flex-col justify-start"
-          style={{ minHeight: "100svh" }}
+          className="relative w-full bg-[#0B0B0B] text-[#E8DED0] flex flex-col justify-between"
+          style={{ height: "calc(100svh - 56px)", minHeight: "560px" }}
         >
-          {/* Top ~62svh Media Framing: Mishal's face clearly positioned and bright, clear of 56px header */}
-          <div className="relative w-full h-[62svh] min-h-[360px] overflow-hidden">
+          {/* Top Media Framing: Sized so video fits nicely and leaves full room for content & buttons */}
+          <div className="relative w-full flex-1 min-h-[190px] max-h-[38svh] overflow-hidden">
             <div ref={heroDriftRef} className="w-full h-full">
               <video
                 className="scene-video w-full h-full object-cover pointer-events-none"
@@ -758,40 +778,39 @@ export function MobileSite() {
             />
           </div>
 
-          {/* Hero Content in solid ink area below media — starts ~62svh from top */}
-          <div className="relative z-10 w-full max-w-xl mx-auto flex flex-col gap-4 px-5 sm:px-8 pt-3 pb-12">
+          {/* Hero Content below media — compact spacing ensures everything is visible on first load */}
+          <div className="relative z-10 w-full max-w-xl mx-auto flex flex-col justify-end gap-2.5 px-5 sm:px-8 pb-4 pt-1">
             {/* Availability Pill */}
             <div className="inline-flex items-center gap-2 self-start px-3 py-1 rounded-full bg-[#0B0B0B] border border-[#E8DED0]/20 font-mono text-[11px] sm:text-[12px] tracking-wider text-[#E8DED0]">
               <span className="w-2 h-2 rounded-full bg-[#1F5A3A] animate-pulse" aria-hidden="true" />
               <span>{hero.status}</span>
             </div>
 
+            {/* Display Headline: Canonical hero.h1 from content.ts ("AI / ML", "ENGINEER.") with 24px rise */}
+            <h1 className="font-display uppercase tracking-[-0.01em] text-[clamp(36px,10vw,54px)] leading-[0.92] text-[#E8DED0] m-0">
+              {hero.h1.map((line, idx) => (
+                <span key={idx} className="block overflow-hidden">
+                  <span className="mobile-hero-line block">{line}</span>
+                </span>
+              ))}
+            </h1>
+
             {/* Role & Location line */}
             <p className="font-mono text-[12px] sm:text-[13px] uppercase tracking-widest text-[#C9A24A] font-semibold m-0">
               AI / ML Engineer · Kollam, Kerala
             </p>
 
-            {/* Display Headline: "AI / ML engineer who ships." split into lines with 24px rise */}
-            <h1 className="font-display uppercase tracking-[-0.01em] text-[clamp(36px,10vw,54px)] leading-[0.94] text-[#E8DED0] m-0">
-              <span className="block overflow-hidden">
-                <span className="mobile-hero-line block">AI / ML</span>
-              </span>
-              <span className="block overflow-hidden">
-                <span className="mobile-hero-line block">ENGINEER WHO SHIPS.</span>
-              </span>
-            </h1>
-
             {/* Subtitle */}
-            <p className="font-sans text-[16px] sm:text-[17px] leading-relaxed text-[#E8DED0]/90 max-w-md m-0">
+            <p className="font-sans text-[14px] sm:text-[15px] leading-snug text-[#E8DED0]/85 max-w-md m-0">
               {hero.sub}
             </p>
 
             {/* CTA Buttons: View projects and Download CV */}
-            <div className="flex flex-row gap-3 pt-2">
+            <div className="flex flex-row gap-3 pt-1">
               <button
                 type="button"
                 onClick={() => scrollTo("works")}
-                className="flex-1 min-h-[48px] px-5 py-2.5 rounded-full bg-[#0B0B0B] text-[#E8DED0] border border-[#E8DED0]/40 font-mono text-[13px] uppercase tracking-wider font-semibold hover:border-[#E8DED0] transition-colors flex items-center justify-center gap-1.5 shadow-md cursor-pointer"
+                className="flex-1 min-h-[44px] sm:min-h-[48px] px-4 py-2.5 rounded-full bg-[#0B0B0B] text-[#E8DED0] border border-[#E8DED0]/40 font-mono text-[12px] sm:text-[13px] uppercase tracking-wider font-semibold hover:border-[#E8DED0] transition-colors flex items-center justify-center gap-1.5 shadow-md cursor-pointer"
               >
                 <span>{ui.viewProjects}</span>
                 <span aria-hidden="true">↓</span>
@@ -800,7 +819,7 @@ export function MobileSite() {
               <a
                 href="/cv.pdf"
                 download
-                className="flex-1 min-h-[48px] px-5 py-2.5 rounded-full bg-[#E8DED0] text-[#0B0B0B] font-mono text-[13px] uppercase tracking-wider font-bold hover:bg-[#C9A24A] transition-colors flex items-center justify-center gap-2 shadow-md cursor-pointer"
+                className="flex-1 min-h-[44px] sm:min-h-[48px] px-4 py-2.5 rounded-full bg-[#E8DED0] text-[#0B0B0B] font-mono text-[12px] sm:text-[13px] uppercase tracking-wider font-bold hover:bg-[#C9A24A] transition-colors flex items-center justify-center gap-2 shadow-md cursor-pointer"
               >
                 <Download className="w-4 h-4" aria-hidden="true" />
                 <span>{hero.cta1}</span>
@@ -1317,8 +1336,8 @@ export function MobileSite() {
               </div>
             </div>
 
-            {/* Vertical Timeline: Thin vertical gold line on left, dot per entry, big year next to dot, card under it */}
-            <div className="relative pl-6 flex flex-col gap-6 before:content-[''] before:absolute before:left-2 before:top-2 before:bottom-2 before:w-[1.5px] before:bg-[#C9A24A]/40 pr-2">
+            {/* Vertical Timeline: Starts immediately under heading without dead gap, thin vertical gold line on left */}
+            <div className="relative pl-6 flex flex-col gap-5 before:content-[''] before:absolute before:left-2 before:top-1 before:bottom-1 before:w-[1.5px] before:bg-[#C9A24A]/40 pr-2 pt-1">
               {journey.stops.map((stop, idx) => (
                 <div
                   key={`${stop.year}-${idx}`}
@@ -1472,12 +1491,12 @@ export function MobileSite() {
         </section>
       </main>
 
-      {/* Scroll-Up Chevron: bottom-left (16px from edge + safe-area), shows only after 1 screen scroll */}
-      {showScrollTop && (
+      {/* Scroll-Up Chevron: bottom-left (16px from edge + safe-area), shows only after 1.5 screens scroll, hidden if menu or sprout panel open */}
+      {showScrollTop && !menuOpen && (
         <button
           type="button"
-          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          className="fixed z-35 w-11 h-11 rounded-full bg-[#E8DED0]/95 text-[#0B0B0B] border border-[#0B0B0B]/20 shadow-md flex items-center justify-center hover:bg-[#E8DED0] active:scale-95 transition-all cursor-pointer backdrop-blur-xs"
+          onClick={scrollToTop}
+          className="mobile-scroll-top-btn fixed z-35 w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-[#E8DED0]/95 text-[#0B0B0B] border border-[#0B0B0B]/20 shadow-md flex items-center justify-center hover:bg-[#E8DED0] active:scale-95 transition-all cursor-pointer backdrop-blur-xs"
           style={{
             left: "max(16px, env(safe-area-inset-left))",
             bottom: "max(16px, env(safe-area-inset-bottom))",

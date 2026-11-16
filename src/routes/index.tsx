@@ -10,12 +10,25 @@ const MobileSite = lazy(() =>
 
 const MOBILE_QUERY = "(max-width: 820px), (pointer: coarse) and (max-width: 1024px)";
 
+let hasHydrated = false;
+let cachedMode: "desktop" | "mobile" | null = null;
+
+function getInitialMode(): "desktop" | "mobile" | "pending" {
+  if (!hasHydrated || typeof window === "undefined") return "pending";
+  return cachedMode ?? "pending";
+}
+
 function App() {
-  const [mode, setMode] = useState<"desktop" | "mobile" | "pending">("pending");
+  const [mode, setMode] = useState<"desktop" | "mobile" | "pending">(getInitialMode);
 
   useEffect(() => {
+    hasHydrated = true;
     const mql = window.matchMedia(MOBILE_QUERY);
-    const update = () => setMode(mql.matches ? "mobile" : "desktop");
+    const update = () => {
+      const next = mql.matches ? "mobile" : "desktop";
+      cachedMode = next;
+      setMode(next);
+    };
     update();
     mql.addEventListener("change", update);
     return () => mql.removeEventListener("change", update);

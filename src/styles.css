@@ -2429,26 +2429,34 @@ html.paged .page:not(.is-active) [data-card] {
     transform: none !important;
   }
 
-  /* Step 28: Hide Sprout & bubbles while menu is open */
-  body.menu-open .buddy-layer {
+  /* Step 29: Hide Sprout walker, door, musical note, and head bubbles on mobile entirely */
+  .buddy-walker,
+  .buddy-door,
+  .buddy-bubble-wrap,
+  .buddy-notes {
+    display: none !important;
     opacity: 0 !important;
     pointer-events: none !important;
     visibility: hidden !important;
   }
 
-  /* Step 28: Hide Sprout walker, musical note, and green door while Journey is in view */
-  body.journey-in-view .buddy-walker,
-  body.journey-in-view .buddy-door,
-  body.journey-in-view .buddy-bubble-wrap {
-    opacity: 0 !important;
-    pointer-events: none !important;
-    visibility: hidden !important;
-    transition: opacity 0.2s ease-out;
-  }
-
-  /* Sprout stays as a clean corner button when Journey is in view */
-  body.journey-in-view:not(.menu-open) .buddy-journey-corner-btn {
+  /* Sprout stays as a clean corner button only on mobile */
+  .buddy-journey-corner-btn {
     display: flex !important;
+    right: max(16px, env(safe-area-inset-right)) !important;
+    bottom: max(16px, env(safe-area-inset-bottom)) !important;
+  }
+
+  /* Step 29: Hide Sprout button, bubbles, and scroll-to-top chevron while menu or chat panel is open */
+  body.menu-open .buddy-layer,
+  body.menu-open .buddy-journey-corner-btn,
+  body.menu-open .mobile-scroll-top-btn,
+  body.sprout-panel-open .buddy-journey-corner-btn,
+  body.sprout-panel-open .mobile-scroll-top-btn {
+    display: none !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    visibility: hidden !important;
   }
 }
 

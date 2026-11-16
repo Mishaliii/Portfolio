@@ -1093,6 +1093,174 @@ async function runSmoke() {
       await evalJs(`window.scrollTo(0, 0)`);
       await wait(300);
 
+      // 12g. STEP 29 ROOT-CAUSE VERIFICATION
+      console.log("\n--- Checking STEP 29 ROOT-CAUSE VERIFICATION ---");
+
+      // Check A: Scroll-to-top does not replay intro or scramble text
+      await evalJs(`window.scrollTo(0, 1500)`);
+      await wait(400);
+      await evalJs(`document.querySelector('button[aria-label="Scroll to top"]')?.click()`);
+      await wait(1200);
+      const scrollTopCheck = await evalJs(`
+        (() => {
+          const atTop = window.scrollY === 0;
+          const introMounted = Boolean(document.querySelector('.site-loader, .intro-overlay'));
+          const lines = Array.from(document.querySelectorAll('.mobile-hero-line')).map(l => l.textContent.trim());
+          const hasCanonicalH1 = lines.includes("AI / ML") && lines.includes("ENGINEER.");
+          const introDone = sessionStorage.getItem("mishal_intro_done") === "1";
+          return { atTop, introMounted, hasCanonicalH1, introDone };
+        })()
+      `);
+      logCheck(
+        "STEP_29_ROOT_CAUSE",
+        "scroll_to_top_never_replays_intro_or_scrambles_text",
+        Boolean(scrollTopCheck?.atTop && !scrollTopCheck?.introMounted && scrollTopCheck?.hasCanonicalH1 && scrollTopCheck?.introDone),
+        `atTop=${scrollTopCheck?.atTop}, introMounted=${scrollTopCheck?.introMounted}, h1=${scrollTopCheck?.hasCanonicalH1}, done=${scrollTopCheck?.introDone}`,
+      );
+
+      // Check B: Menu stability on 56px URL-bar resize & >=50% height
+      await evalJs(`document.querySelector('header button[aria-label*="menu" i]')?.click()`);
+      await wait(500);
+      const menuPreResize = await evalJs(`
+        (() => {
+          const m = document.querySelector('[role="dialog"][aria-label*="Menu" i]');
+          if (!m) return null;
+          const nav = m.querySelector('nav');
+          const r = m.getBoundingClientRect();
+          const nr = nav ? nav.getBoundingClientRect() : null;
+          return { top: r.top, left: r.left, height: r.height, navHeight: nr ? nr.height : 0 };
+        })()
+      `);
+      // Simulate 56px URL-bar collapse (viewport height drops by 56px to 788px)
+      await send("Emulation.setDeviceMetricsOverride", {
+        width: 390,
+        height: 788,
+        deviceScaleFactor: 2,
+        mobile: true,
+      });
+      await wait(300);
+      const menuPostResize = await evalJs(`
+        (() => {
+          const m = document.querySelector('[role="dialog"][aria-label*="Menu" i]');
+          if (!m) return null;
+          const r = m.getBoundingClientRect();
+          return { top: r.top, left: r.left, height: r.height, winH: window.innerHeight };
+        })()
+      `);
+      // Restore viewport to 844px and close menu
+      await send("Emulation.setDeviceMetricsOverride", {
+        width: 390,
+        height: 844,
+        deviceScaleFactor: 2,
+        mobile: true,
+      });
+      await wait(200);
+      await evalJs(`document.querySelector('[role="dialog"] button[aria-label*="close" i]')?.click()`);
+      await wait(400);
+
+      const menuStable = menuPreResize?.top === 0 && menuPostResize?.top === 0 && menuPostResize?.height === 788;
+      const navFills50 = (menuPreResize?.navHeight || 0) >= (menuPreResize?.height || 844) * 0.50;
+      logCheck(
+        "STEP_29_ROOT_CAUSE",
+        "menu_stable_on_url_bar_resize_and_fills_height",
+        Boolean(menuStable && navFills50),
+        `stable=${menuStable}, navFill=${((menuPreResize?.navHeight || 0) / (menuPreResize?.height || 844) * 100).toFixed(0)}%`,
+      );
+
+      // Check C: Hero CTA buttons fully visible above fold at 390x844 and 360x740
+      const heroButtons390 = await evalJs(`
+        (() => {
+          const ctas = Array.from(document.querySelectorAll('#overview a, #overview button'));
+          const winH = window.innerHeight;
+          const allAboveFold = ctas.length >= 2 && ctas.every(el => {
+            const r = el.getBoundingClientRect();
+            return r.bottom <= winH && r.top >= 0;
+          });
+          return { ok: allAboveFold, count: ctas.length, winH };
+        })()
+      `);
+      await send("Emulation.setDeviceMetricsOverride", {
+        width: 360,
+        height: 740,
+        deviceScaleFactor: 2,
+        mobile: true,
+      });
+      await wait(300);
+      const heroButtons360 = await evalJs(`
+        (() => {
+          const ctas = Array.from(document.querySelectorAll('#overview a, #overview button'));
+          const winH = window.innerHeight;
+          const allAboveFold = ctas.length >= 2 && ctas.every(el => {
+            const r = el.getBoundingClientRect();
+            return r.bottom <= winH && r.top >= 0;
+          });
+          return { ok: allAboveFold, count: ctas.length, winH };
+        })()
+      `);
+      // Restore viewport to 390x844
+      await send("Emulation.setDeviceMetricsOverride", {
+        width: 390,
+        height: 844,
+        deviceScaleFactor: 2,
+        mobile: true,
+      });
+      await wait(200);
+      logCheck(
+        "STEP_29_ROOT_CAUSE",
+        "hero_cta_buttons_fully_visible_above_fold",
+        Boolean(heroButtons390?.ok && heroButtons360?.ok),
+        `390x844=${heroButtons390?.ok}, 360x740=${heroButtons360?.ok}`,
+      );
+
+      // Check D: Journey & reveals (no re-hiding on scroll up, Sprout walker/door hidden)
+      for (let y = 600; y <= 4000; y += 800) {
+        await evalJs(`window.scrollTo(0, ${y})`);
+        await wait(150);
+      }
+      const revealedCountDown = await evalJs(`
+        (() => {
+          const els = Array.from(document.querySelectorAll('#about [data-reveal], #expertise [data-reveal]'));
+          return els.filter(el => window.getComputedStyle(el).opacity === '1').length;
+        })()
+      `);
+      await evalJs(`window.scrollTo(0, 0)`);
+      await wait(300);
+      const revealedCountUp = await evalJs(`
+        (() => {
+          const els = Array.from(document.querySelectorAll('#about [data-reveal], #expertise [data-reveal]'));
+          return els.filter(el => window.getComputedStyle(el).opacity === '1').length;
+        })()
+      `);
+      const revealsNeverRehide = revealedCountDown > 0 && revealedCountUp >= revealedCountDown;
+
+      const sproutVisibilityCheck = await evalJs(`
+        (() => {
+          const walker = document.querySelector('.buddy-walker');
+          const door = document.querySelector('.buddy-door');
+          const note = document.querySelector('.buddy-notes');
+          const cornerBtn = document.querySelector('.buddy-journey-corner-btn');
+
+          const walkerHidden = !walker || window.getComputedStyle(walker).display === 'none';
+          const doorHidden = !door || window.getComputedStyle(door).display === 'none';
+          const noteHidden = !note || window.getComputedStyle(note).display === 'none';
+          const cornerBtnVisible = Boolean(cornerBtn && window.getComputedStyle(cornerBtn).display !== 'none');
+
+          return { walkerHidden, doorHidden, noteHidden, cornerBtnVisible };
+        })()
+      `);
+      logCheck(
+        "STEP_29_ROOT_CAUSE",
+        "reveals_never_rehide_on_scroll_up",
+        Boolean(revealsNeverRehide),
+        `downCount=${revealedCountDown}, upCount=${revealedCountUp}`,
+      );
+      logCheck(
+        "STEP_29_ROOT_CAUSE",
+        "sprout_walker_door_hidden_only_corner_button_active",
+        Boolean(sproutVisibilityCheck?.walkerHidden && sproutVisibilityCheck?.doorHidden && sproutVisibilityCheck?.cornerBtnVisible),
+        `walkerHidden=${sproutVisibilityCheck?.walkerHidden}, doorHidden=${sproutVisibilityCheck?.doorHidden}, cornerBtn=${sproutVisibilityCheck?.cornerBtnVisible}`,
+      );
+
       // 13. MOBILE_QUALITY
       logCheck(
         "MOBILE_QUALITY",
