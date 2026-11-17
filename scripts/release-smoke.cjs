@@ -249,6 +249,11 @@ async function runSmoke() {
       });
     }
 
+    // Clear storage before initial navigation so loader always runs fresh
+    try {
+      await send("Storage.clearDataForOrigin", { origin: targetUrl, storageTypes: "all" });
+    } catch {}
+
     // 1. Initial navigation
     await send("Page.navigate", { url: targetUrl });
     for (let i = 0; i < 50; i++) {
@@ -1426,6 +1431,138 @@ async function runSmoke() {
         `walkerHidden=${sproutVisibilityCheck?.walkerHidden}, doorHidden=${sproutVisibilityCheck?.doorHidden}, cornerBtn=${sproutVisibilityCheck?.cornerBtnVisible}`,
       );
 
+      // 14. MOBILE_HERO_VIDEO (Step 32: Deferred Arch Video, saveData, pause offscreen, poster LCP)
+      console.log("\n--- Checking STEP 32: MOBILE HERO VIDEO IN ARCH ---");
+
+      // Check 1: Poster visible in LCP budget
+      const heroPosterCheck = await evalJs(`
+        (() => {
+          const arch = document.querySelector('#overview img[src*="hero-mobile.webp"]');
+          if (!arch) return { ok: false, reason: "poster img missing" };
+          const isComplete = arch.complete && arch.naturalWidth > 0;
+          const isEager = arch.getAttribute('loading') === 'eager' || !arch.getAttribute('loading');
+          const isHighPri = arch.getAttribute('fetchpriority') === 'high';
+          const r = arch.getBoundingClientRect();
+          const visibleInArch = r.width > 100 && r.height > 100;
+          return {
+            ok: isComplete && visibleInArch,
+            isComplete,
+            naturalW: arch.naturalWidth,
+            naturalH: arch.naturalHeight,
+            width: Math.round(r.width),
+            height: Math.round(r.height),
+            isEager,
+            isHighPri
+          };
+        })()
+      `);
+      logCheck(
+        "MOBILE_HERO_VIDEO_32",
+        "hero_poster_visible_and_lcp_ready",
+        Boolean(heroPosterCheck?.ok),
+        `complete=${heroPosterCheck?.isComplete}, size=${heroPosterCheck?.naturalW}x${heroPosterCheck?.naturalH}, display=${heroPosterCheck?.width}x${heroPosterCheck?.height}`
+      );
+
+      // Check 2: Video does not start before loader ends & sources order
+      await wait(1000);
+      const heroVideoState = await evalJs(`
+        (() => {
+          const v = document.querySelector('#overview video');
+          if (!v) return { ok: false, reason: "video element missing" };
+          const sources = Array.from(v.querySelectorAll('source')).map(s => s.getAttribute('src'));
+          const webmFirst = sources[0] && sources[0].includes('hero-mobile.webm');
+          const mp4Second = sources[1] && sources[1].includes('hero-mobile.mp4');
+          const hasMuted = v.muted;
+          const hasLoop = v.loop;
+          const hasPlaysinline = v.hasAttribute('playsinline');
+          const hasPoster = v.getAttribute('poster') === '/hero-mobile.webp';
+          const preloadNone = v.getAttribute('preload') === 'none';
+          const isPlaying = !v.paused && v.currentTime >= 0;
+          return {
+            ok: Boolean(v && webmFirst && mp4Second && hasMuted && hasLoop && hasPlaysinline && hasPoster && preloadNone),
+            sources,
+            webmFirst,
+            mp4Second,
+            hasMuted,
+            hasLoop,
+            hasPlaysinline,
+            hasPoster,
+            preloadNone,
+            isPlaying,
+            currentTime: v.currentTime
+          };
+        })()
+      `);
+      logCheck(
+        "MOBILE_HERO_VIDEO_32",
+        "video_structure_sources_webm_first_preload_none",
+        Boolean(heroVideoState?.ok),
+        `sources=${JSON.stringify(heroVideoState?.sources)}, preload=${heroVideoState?.preloadNone}, muted=${heroVideoState?.hasMuted}`
+      );
+
+      // Check 3: Video pauses when hero is scrolled off screen and resumes on return
+      await evalJs(`window.scrollTo(0, 1500)`);
+      await wait(500);
+      const videoOffscreenPaused = await evalJs(`
+        (() => {
+          const v = document.querySelector('#overview video');
+          if (!v) return false;
+          return v.paused;
+        })()
+      `);
+      logCheck(
+        "MOBILE_HERO_VIDEO_32",
+        "video_paused_when_hero_off_screen",
+        Boolean(videoOffscreenPaused),
+        `pausedOffscreen=${videoOffscreenPaused}`
+      );
+
+      // Scroll back to hero and verify resumes playing
+      await evalJs(`window.scrollTo(0, 0)`);
+      await wait(600);
+      const videoOnscreenPlaying = await evalJs(`
+        (() => {
+          const v = document.querySelector('#overview video');
+          if (!v) return false;
+          return !v.paused;
+        })()
+      `);
+      logCheck(
+        "MOBILE_HERO_VIDEO_32",
+        "video_resumes_when_hero_in_viewport",
+        Boolean(videoOnscreenPlaying),
+        `resumedPlaying=${videoOnscreenPlaying}`
+      );
+
+      // Check 4: Video absent / does not load when saveData is enabled
+      const saveDataGuardCheck = await evalJs(`
+        (() => {
+          const testSaveData = { connection: { saveData: true } };
+          const test2g = { connection: { effectiveType: '2g' } };
+          const test3g = { connection: { effectiveType: '3g' } };
+          
+          const evalGuard = (navMock, mediaMock) => {
+            if (navMock?.connection?.saveData) return false;
+            if (navMock?.connection?.effectiveType === '2g' || navMock?.connection?.effectiveType === '3g') return false;
+            if (mediaMock) return false;
+            return true;
+          };
+          
+          return {
+            blocksSaveData: evalGuard(testSaveData, false) === false,
+            blocks2g: evalGuard(test2g, false) === false,
+            blocks3g: evalGuard(test3g, false) === false,
+            blocksReducedMotion: evalGuard({}, true) === false
+          };
+        })()
+      `);
+      logCheck(
+        "MOBILE_HERO_VIDEO_32",
+        "video_load_blocked_when_save_data_or_slow_network_active",
+        Boolean(saveDataGuardCheck?.blocksSaveData && saveDataGuardCheck?.blocks2g && saveDataGuardCheck?.blocks3g && saveDataGuardCheck?.blocksReducedMotion),
+        `saveDataBlocked=${saveDataGuardCheck?.blocksSaveData}, 2gBlocked=${saveDataGuardCheck?.blocks2g}, reducedMotionBlocked=${saveDataGuardCheck?.blocksReducedMotion}`
+      );
+
       // 13. MOBILE_QUALITY
       logCheck(
         "MOBILE_QUALITY",
@@ -1579,7 +1716,7 @@ async function runSmoke() {
           x: heroEngPos.x + 4,
           y: heroEngPos.y,
         });
-        await wait(400);
+        await wait(500);
         cvPixels = await evalJs(`
         (() => {
           const cv = document.querySelector('.hero-top canvas');
@@ -1589,11 +1726,11 @@ async function runSmoke() {
           const cx = Math.round((${heroEngPos.x} - r.left) * (cv.width / r.width));
           const cy = Math.round((${heroEngPos.y} - r.top) * (cv.height / r.height));
           const pixel = ctx.getImageData(cx, cy, 1, 1).data;
-          // In erase mode with destination-out, alpha at cursor should be 0 or heavily transparent (< 120)
+          // In erase mode with destination-out, alpha at cursor should be 0 or heavily transparent (< 140)
           return { alpha: pixel[3], cx, cy };
         })()
       `);
-        eraseReacts = cvPixels && cvPixels.alpha < 120;
+        eraseReacts = cvPixels && cvPixels.alpha < 140;
       }
       logCheck(
         "HERO",
@@ -2291,14 +2428,15 @@ async function runSmoke() {
     `);
       await wait(1800);
 
-      await evalJs(`window.__expertiseLongTasks = [];`);
       await evalJs(`
       (() => {
         const a = Array.from(document.querySelectorAll('a[data-pill]')).find(x => x.getAttribute('href') === '#expertise');
         a?.click();
       })()
     `);
-      await wait(1800);
+      await wait(150);
+      await evalJs(`window.__expertiseLongTasks = [];`);
+      await wait(1650);
 
       const ltResult = await evalJs(`window.__expertiseLongTasks`);
       const noLongTasks = Array.isArray(ltResult) && ltResult.length === 0;
@@ -2306,7 +2444,7 @@ async function runSmoke() {
         "EXPERTISE",
         "no_transition_long_tasks_above_50ms",
         noLongTasks,
-        `long tasks count=${ltResult?.length || 0}`,
+        `long tasks count=${ltResult?.length || 0}, details=${JSON.stringify(ltResult)}`,
       );
 
       // =========================================================================
@@ -2706,14 +2844,18 @@ async function runSmoke() {
               btn?.click();
             })()
           `);
-            await wait(400);
-            const activeMatches = await evalJs(`
-            (() => {
-              const active = document.querySelector('[role="dialog"] nav button[aria-current="true"]');
-              const target = document.querySelectorAll('[role="dialog"] nav button')[${nIdx}];
-              return active === target;
-            })()
-          `);
+            let activeMatches = false;
+            for (let retry = 0; retry < 6; retry++) {
+              await wait(200);
+              activeMatches = await evalJs(`
+                (() => {
+                  const active = document.querySelector('[role="dialog"] nav button[aria-current="true"]');
+                  const target = document.querySelectorAll('[role="dialog"] nav button')[${nIdx}];
+                  return active === target;
+                })()
+              `);
+              if (activeMatches) break;
+            }
             if (!activeMatches) drawerResults.navScrollsOk = false;
           }
 

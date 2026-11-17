@@ -244,6 +244,14 @@ export function MobileSite() {
   const scrollToTopTweenRef = useRef<gsap.core.Tween | null>(null);
   const isMenuClosingRef = useRef(false);
 
+  // Step 32: Arch Video Deferred Playback State & Refs
+  const heroVideoRef = useRef<HTMLVideoElement>(null);
+  const [videoSourcesLoaded, setVideoSourcesLoaded] = useState(false);
+  const [videoPlaying, setVideoPlaying] = useState(false);
+  const videoSourcesLoadedRef = useRef(false);
+  const hasFadedInRef = useRef(false);
+  const isHeroVisibleRef = useRef(true);
+
   useEffect(() => {
     document.documentElement.classList.remove("paged");
     document.body.style.overflow = "";
@@ -478,6 +486,189 @@ export function MobileSite() {
       if (archMediaRef.current) gsap.set(archMediaRef.current, { scale: 1 });
     }
   }, [booted]);
+
+  // Step 32: Check conditions for video loading (saveData, 2g/3g, reduced-motion, hidden)
+  const checkCanLoadVideo = useCallback((): boolean => {
+    if (typeof window === "undefined") return false;
+    try {
+      const conn =
+        (navigator as any).connection ||
+        (navigator as any).mozConnection ||
+        (navigator as any).webkitConnection;
+      if (conn) {
+        if (conn.saveData === true) return false;
+        if (
+          conn.effectiveType &&
+          (conn.effectiveType === "2g" ||
+            conn.effectiveType === "3g" ||
+            conn.effectiveType === "slow-2g")
+        ) {
+          return false;
+        }
+      }
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        return false;
+      }
+      if (document.hidden) {
+        return false;
+      }
+    } catch {
+      /* fallback to allowing */
+    }
+    return true;
+  }, []);
+
+  // Step 32: Defer video load until window 'load' + intro loader finished ('booted') + 500ms idle
+  useEffect(() => {
+    if (!booted) return;
+    if (videoSourcesLoadedRef.current) return;
+
+    let cancelled = false;
+    let idleHandle: any = null;
+    let timerHandle: any = null;
+
+    const triggerVideoLoad = () => {
+      if (cancelled || videoSourcesLoadedRef.current) return;
+      if (!checkCanLoadVideo()) return;
+
+      videoSourcesLoadedRef.current = true;
+      setVideoSourcesLoaded(true);
+    };
+
+    const scheduleAfterIdleAnd500ms = () => {
+      if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+        idleHandle = (window as any).requestIdleCallback(
+          () => {
+            timerHandle = setTimeout(triggerVideoLoad, 500);
+          },
+          { timeout: 2000 },
+        );
+      } else {
+        timerHandle = setTimeout(triggerVideoLoad, 500);
+      }
+    };
+
+    if (typeof document !== "undefined" && document.readyState === "complete") {
+      scheduleAfterIdleAnd500ms();
+    } else if (typeof window !== "undefined") {
+      const onWindowLoad = () => {
+        scheduleAfterIdleAnd500ms();
+      };
+      window.addEventListener("load", onWindowLoad, { once: true });
+      return () => {
+        cancelled = true;
+        window.removeEventListener("load", onWindowLoad);
+        if (idleHandle && (window as any).cancelIdleCallback)
+          (window as any).cancelIdleCallback(idleHandle);
+        if (timerHandle) clearTimeout(timerHandle);
+      };
+    }
+
+    return () => {
+      cancelled = true;
+      if (idleHandle && (window as any).cancelIdleCallback)
+        (window as any).cancelIdleCallback(idleHandle);
+      if (timerHandle) clearTimeout(timerHandle);
+    };
+  }, [booted, checkCanLoadVideo]);
+
+  // Step 32: When video sources are loaded, trigger load() and play()
+  useEffect(() => {
+    if (!videoSourcesLoaded || !heroVideoRef.current) return;
+    const vid = heroVideoRef.current;
+    vid.load();
+    if (
+      isHeroVisibleRef.current &&
+      !document.hidden &&
+      !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      vid.play().catch(() => {});
+    }
+  }, [videoSourcesLoaded]);
+
+  // Step 32: IntersectionObserver (pause under 30% visibility) & tab visibility listener
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const heroSection = document.getElementById("overview");
+    if (!heroSection) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          const isVisible = entry.isIntersecting && entry.intersectionRatio >= 0.3;
+          isHeroVisibleRef.current = isVisible;
+
+          if (heroVideoRef.current && videoSourcesLoadedRef.current) {
+            if (
+              isVisible &&
+              !document.hidden &&
+              !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+            ) {
+              if (heroVideoRef.current.paused) {
+                heroVideoRef.current.play().catch(() => {});
+              }
+            } else {
+              if (!heroVideoRef.current.paused) {
+                heroVideoRef.current.pause();
+              }
+            }
+          }
+        }
+      },
+      { threshold: [0, 0.3] },
+    );
+
+    observer.observe(heroSection);
+
+    const onVisibilityChange = () => {
+      if (!heroVideoRef.current || !videoSourcesLoadedRef.current) return;
+      if (document.hidden) {
+        heroVideoRef.current.pause();
+      } else if (
+        isHeroVisibleRef.current &&
+        !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      ) {
+        heroVideoRef.current.play().catch(() => {});
+      }
+    };
+
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      observer.disconnect();
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, []);
+
+  // Step 32: Pause video during active scroll to ensure zero frame gaps > 50ms
+  useEffect(() => {
+    let scrollTimeout: any = null;
+    const onScroll = () => {
+      if (!heroVideoRef.current || !videoSourcesLoadedRef.current || !isHeroVisibleRef.current)
+        return;
+      if (!heroVideoRef.current.paused) {
+        heroVideoRef.current.pause();
+      }
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(() => {
+        if (
+          isHeroVisibleRef.current &&
+          !document.hidden &&
+          heroVideoRef.current &&
+          heroVideoRef.current.paused
+        ) {
+          heroVideoRef.current.play().catch(() => {});
+        }
+      }, 150);
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      clearTimeout(scrollTimeout);
+    };
+  }, []);
 
   // Setup GSAP light scroll reveals (plays ONCE from 0 to 1 in 0.4s, never reverses, never leaves ghost faded)
   const containerRef = useRef<HTMLDivElement>(null);
@@ -876,16 +1067,30 @@ export function MobileSite() {
                     style={{ objectPosition: "50% 22%" }}
                   />
                   <video
-                    autoPlay
+                    ref={heroVideoRef}
                     muted
                     loop
                     playsInline
+                    preload="none"
                     poster="/hero-mobile.webp"
-                    className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none"
+                    className={`absolute inset-0 w-full h-full object-cover select-none pointer-events-none transition-opacity duration-500 ${
+                      videoPlaying ? "opacity-100" : "opacity-0"
+                    }`}
                     style={{ objectPosition: "50% 22%" }}
+                    onPlaying={() => {
+                      hasFadedInRef.current = true;
+                      setVideoPlaying(true);
+                    }}
+                    onError={() => {
+                      setVideoPlaying(false);
+                    }}
                   >
-                    <source src="/hero-mobile.webm" type="video/webm" />
-                    <source src="/hero-mobile.mp4" type="video/mp4" />
+                    {videoSourcesLoaded && (
+                      <>
+                        <source src="/hero-mobile.webm" type="video/webm" />
+                        <source src="/hero-mobile.mp4" type="video/mp4" />
+                      </>
+                    )}
                   </video>
                 </div>
               </div>
