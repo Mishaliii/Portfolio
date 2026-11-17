@@ -408,15 +408,15 @@ export function MobileSite() {
     }
   }, [booted]);
 
-  // Setup GSAP light scroll reveals (plays ONCE, never reverses, never re-hides on scroll up, keeps final box height)
+  // Setup GSAP light scroll reveals (plays ONCE from 0 to 1 in 0.4s, never reverses, never leaves ghost faded)
   const containerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!booted || !containerRef.current) return;
     const isReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    // Unified Reveal Observer (unobserves on intersection so elements NEVER re-hide on scroll up)
+    // Unified Reveal Observer: observe top-level reveal blocks (headers, cards, journey stops)
     const revealEls = containerRef.current.querySelectorAll<HTMLElement>(
-      "[data-reveal], [data-reveal-title], [data-reveal-card], [data-reveal-journey], [data-reveal-header]"
+      "[data-reveal-header], [data-reveal-card], [data-reveal-journey]"
     );
 
     if (isReduced) {
@@ -432,12 +432,18 @@ export function MobileSite() {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             const target = entry.target as HTMLElement;
+            observer.unobserve(target);
             gsap.fromTo(
               target,
-              { opacity: 0, y: 20 },
-              { opacity: 1, y: 0, duration: 0.45, ease: "power2.out", clearProps: "transform" },
+              { opacity: 0, y: 16 },
+              {
+                opacity: 1,
+                y: 0,
+                duration: 0.4,
+                ease: "power2.out",
+                clearProps: "opacity,transform",
+              },
             );
-            observer.unobserve(target);
           }
         });
       },
@@ -445,7 +451,7 @@ export function MobileSite() {
     );
 
     revealEls.forEach((el) => {
-      gsap.set(el, { opacity: 0, y: 20 });
+      gsap.set(el, { opacity: 0, y: 16 });
       observer.observe(el);
     });
 
@@ -481,19 +487,32 @@ export function MobileSite() {
     return () => window.removeEventListener("scroll", onScroll);
   }, [booted]);
 
-  // Section visibility tracker for location.hash (only when scrolling down / natural read)
+  // Section visibility tracker for active menu item and hash
   useEffect(() => {
     if (!booted) return;
     const sectionIds = ["overview", "about", "expertise", "works", "journey", "connect"];
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries.find((e) => e.isIntersecting);
-        if (visible) {
-          const id = visible.target.id;
-          setActiveHash(id);
+
+    const updateActiveSection = () => {
+      const refY = (window.innerHeight || 700) * 0.35;
+      let current = "overview";
+      for (const id of sectionIds) {
+        const el = document.getElementById(id);
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          if (rect.top <= refY && rect.bottom > refY) {
+            current = id;
+            break;
+          }
         }
+      }
+      setActiveHash(current);
+    };
+
+    const observer = new IntersectionObserver(
+      () => {
+        updateActiveSection();
       },
-      { threshold: 0.25, rootMargin: "-10% 0px -50% 0px" },
+      { threshold: [0, 0.1, 0.2, 0.5], rootMargin: "-15% 0px -40% 0px" },
     );
 
     sectionIds.forEach((id) => {
@@ -501,7 +520,13 @@ export function MobileSite() {
       if (el) observer.observe(el);
     });
 
-    return () => observer.disconnect();
+    window.addEventListener("scroll", updateActiveSection, { passive: true });
+    updateActiveSection();
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("scroll", updateActiveSection);
+    };
   }, [booted]);
 
   // Smooth scroll helper for menu / CTAs
@@ -609,7 +634,7 @@ export function MobileSite() {
 
       {/* 2. Fixed Top Navigation Bar */}
       <header
-        className="fixed top-0 left-0 right-0 z-40 bg-[#E8DED0]/95 backdrop-blur-md border-b border-[#0B0B0B]/10 px-4 py-2.5 flex items-center justify-between transition-all"
+        className="fixed top-0 left-0 right-0 z-[50] bg-[#E8DED0]/95 backdrop-blur-md border-b border-[#0B0B0B]/10 px-4 py-2.5 flex items-center justify-between transition-all"
         style={{ height: "56px" }}
       >
         <button
@@ -664,7 +689,7 @@ export function MobileSite() {
           role="dialog"
           aria-modal="true"
           aria-label="Navigation Menu"
-          className="fixed inset-0 z-50 bg-[#E8DED0] text-[#0B0B0B] flex flex-col justify-between p-5 sm:p-7 overflow-y-auto"
+          className="fixed inset-0 z-[60] bg-[#E8DED0] text-[#0B0B0B] flex flex-col justify-between p-5 sm:p-7 overflow-y-auto"
           style={{ width: "100%", height: "100%", willChange: "transform" }}
         >
           {/* Top Row: Wordmark and CLOSE button separated by thin gold line */}
@@ -683,30 +708,31 @@ export function MobileSite() {
             </button>
           </div>
 
-          {/* Navigation Items: font size clamp(44px, 12vw, 64px), line-height 1.05, left aligned, uses at least 55% sheet height */}
-          <nav className="flex flex-col justify-evenly min-h-[55%] flex-1 py-4 my-auto" aria-label="Mobile Navigation">
-            {NAV_ITEMS.map((item) => {
+          {/* Navigation Items: clamp(26px, 7.5vw, 32px), body font Manrope weight 600, sentence case, line-height 1.2, 18px row spacing, thin divider lines, mono index on right */}
+          <nav className="flex flex-col justify-evenly min-h-[50%] flex-1 py-4 my-auto" aria-label="Mobile Navigation">
+            {NAV_ITEMS.map((item, index) => {
               const isActive = activeHash === item.id;
               return (
                 <button
                   key={item.id}
                   type="button"
                   onClick={() => scrollTo(item.id)}
-                  className={`mobile-menu-item flex items-center justify-between text-left py-2 px-1 rounded-lg transition-colors min-h-[48px] cursor-pointer ${
-                    isActive ? "bg-[#0B0B0B]/5" : "hover:bg-[#0B0B0B]/5"
+                  className={`mobile-menu-item flex items-center justify-between text-left py-[9px] px-1 transition-colors min-h-[48px] cursor-pointer border-b border-[#0B0B0B]/10 ${
+                    index === 0 ? "border-t border-[#0B0B0B]/10" : ""
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    {isActive ? (
-                      <span className="w-3 h-3 rounded-full bg-[#1F5A3A] shrink-0" aria-hidden="true" />
-                    ) : (
-                      <span className="w-3 h-3 shrink-0" aria-hidden="true" />
-                    )}
-                    <span className="font-display uppercase tracking-[-0.01em] text-[clamp(44px,12vw,64px)] leading-[1.05] text-[#0B0B0B]">
+                    <span
+                      className={`w-2.5 h-2.5 rounded-full shrink-0 transition-colors ${
+                        isActive ? "bg-[#1F5A3A]" : "bg-transparent"
+                      }`}
+                      aria-hidden="true"
+                    />
+                    <span className="font-sans font-semibold text-[clamp(26px,7.5vw,32px)] leading-[1.2] text-[#0B0B0B] tracking-[-0.01em]">
                       {item.label}
                     </span>
                   </div>
-                  <span className="font-mono text-[14px] text-[#6B645A] tracking-widest font-semibold shrink-0">
+                  <span className="font-mono text-[13px] text-[#6B645A] tracking-widest font-medium shrink-0">
                     {item.num}
                   </span>
                 </button>
@@ -850,7 +876,7 @@ export function MobileSite() {
             </div>
 
             {/* One Portrait Only (Clean single image, no overlap over bio) */}
-            <div data-reveal data-reveal-card className="relative flex flex-col gap-4">
+            <div data-reveal-card className="relative flex flex-col gap-4">
               <div
                 className="relative w-full aspect-[4/5] sm:aspect-square rounded-2xl overflow-hidden bg-[#171615] shadow-md"
                 aria-label={about.portraitAlt}
@@ -870,17 +896,6 @@ export function MobileSite() {
                   }}
                   aria-hidden="true"
                 />
-              </div>
-
-              {/* Repositioned Wordmark: clean spacing, no negative margin, doesn't overlap bio */}
-              <div className="flex flex-col gap-1 pt-1">
-                <div className="font-display uppercase tracking-tight text-[clamp(42px,12vw,64px)] leading-[0.88] text-[#0B0B0B]">
-                  {about.name}
-                  <span className="text-[#1F5A3A]">{about.period}</span>
-                </div>
-                <div className="font-mono text-[11px] sm:text-[12px] uppercase tracking-widest text-[#1F5A3A] font-bold">
-                  {about.fullName} · {about.role}
-                </div>
               </div>
             </div>
 
@@ -1491,12 +1506,12 @@ export function MobileSite() {
         </section>
       </main>
 
-      {/* Scroll-Up Chevron: bottom-left (16px from edge + safe-area), shows only after 1.5 screens scroll, hidden if menu or sprout panel open */}
-      {showScrollTop && !menuOpen && (
+      {/* Scroll-Up Chevron: bottom-left (16px from edge + safe-area), shows only after 1.5 screens scroll, hidden on connect or if menu/sprout panel open */}
+      {showScrollTop && !menuOpen && activeHash !== "connect" && (
         <button
           type="button"
           onClick={scrollToTop}
-          className="mobile-scroll-top-btn fixed z-35 w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-[#E8DED0]/95 text-[#0B0B0B] border border-[#0B0B0B]/20 shadow-md flex items-center justify-center hover:bg-[#E8DED0] active:scale-95 transition-all cursor-pointer backdrop-blur-xs"
+          className="mobile-scroll-top-btn fixed z-[40] w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-[#E8DED0] text-[#0B0B0B] border border-[#0B0B0B]/20 shadow-md flex items-center justify-center hover:bg-[#E8DED0] active:scale-95 transition-all cursor-pointer"
           style={{
             left: "max(16px, env(safe-area-inset-left))",
             bottom: "max(16px, env(safe-area-inset-bottom))",

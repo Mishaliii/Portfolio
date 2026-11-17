@@ -1338,6 +1338,8 @@ export function Buddy() {
   useEffect(() => {
     if (!chatOpen) return;
 
+    const openedAt = Date.now();
+
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
@@ -1346,6 +1348,9 @@ export function Buddy() {
     };
 
     const onPointerDown = (e: PointerEvent) => {
+      // Ignore pointerdown within 200ms of opening to avoid immediately closing on the opening tap
+      if (Date.now() - openedAt < 200) return;
+
       const target = e.target;
       if (!target || !(target instanceof Node)) {
         closeChat(true);
@@ -1364,10 +1369,10 @@ export function Buddy() {
         return;
       }
 
-      // Do NOT close when clicking Sprout's door or any launcher element
+      // Do NOT close when clicking Sprout's door, corner button, or any launcher element
       if (
         doorRef.current?.contains(target) ||
-        el?.closest(".buddy-door, [data-sprout-launcher]")
+        el?.closest(".buddy-door, .buddy-journey-corner-btn, [data-sprout-launcher]")
       ) {
         return;
       }
@@ -1377,12 +1382,10 @@ export function Buddy() {
     };
 
     document.addEventListener("pointerdown", onPointerDown);
-    window.addEventListener("pointerdown", onPointerDown);
     window.addEventListener("keydown", onKeyDown);
 
     return () => {
       document.removeEventListener("pointerdown", onPointerDown);
-      window.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [chatOpen, closeChat]);
@@ -1662,10 +1665,15 @@ export function Buddy() {
         </svg>
       </button>
 
-      {/* Mobile Journey Corner Button: Sprout stays as a clean corner button when Journey is in view */}
+      {/* Mobile Journey Corner Button: Sprout stays as a clean corner button on mobile */}
       <button
         type="button"
         onClick={() => {
+          setChatOpen(true);
+          wakeUp();
+        }}
+        onTouchEnd={(e) => {
+          e.preventDefault();
           setChatOpen(true);
           wakeUp();
         }}
@@ -1674,15 +1682,18 @@ export function Buddy() {
         className="buddy-journey-corner-btn rounded-full bg-[#1F5A3A] text-[#E8DED0] border border-[#C9A24A]/40 shadow-md items-center justify-center cursor-pointer"
         style={{
           position: "fixed",
-          right: "calc(12px + env(safe-area-inset-right))",
-          bottom: "calc(12px + env(safe-area-inset-bottom))",
-          width: "40px",
-          height: "40px",
+          right: "max(16px, env(safe-area-inset-right))",
+          bottom: "max(16px, env(safe-area-inset-bottom))",
+          width: "44px",
+          height: "44px",
+          minWidth: "44px",
+          minHeight: "44px",
           display: "none",
           zIndex: 45,
+          pointerEvents: "auto",
         }}
       >
-        <span className="font-mono text-[16px] leading-none select-none">🌱</span>
+        <span className="font-mono text-[18px] leading-none select-none" aria-hidden="true">🌱</span>
       </button>
 
       {/* Floating Notes Container for door perch */}

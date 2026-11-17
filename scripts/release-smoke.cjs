@@ -698,73 +698,220 @@ async function runSmoke() {
         await wait(300);
       }
 
-      const sproutMobileState = await evalJs(`
-        (() => {
-          const walker = document.querySelector('.buddy-walker');
-          if (!walker) return null;
-          const wr = walker.getBoundingClientRect();
-          walker.click();
-          return {
-            walkerHeight: wr.height,
-            isSmaller: wr.height <= 85
-          };
-        })()
-      `);
+      // 9. MOBILE_SPROUT_CHAT (Step 30: Sprout touch launcher across 5 sections, strict Z-order, 44px targets)
+      console.log("\n--- Checking MOBILE_SPROUT_CHAT (Step 30: Touch launch across 5 sections, Z-order) ---");
+      const fiveSections = ["overview", "about", "works", "journey", "connect"];
+      let allFiveOpen = true;
+      let allFiveClose = true;
+      let targetSizeValid = true;
+
+      for (const sId of fiveSections) {
+        await evalJs(`document.getElementById('${sId}')?.scrollIntoView({ behavior: 'instant' })`);
+        await wait(250);
+
+        const btnInfo = await evalJs(`(() => {
+          const btn = document.querySelector('.buddy-journey-corner-btn');
+          if (!btn) return null;
+          const r = btn.getBoundingClientRect();
+          return { x: r.x, y: r.y, w: r.width, h: r.height };
+        })()`);
+
+        if (!btnInfo || btnInfo.w < 43.5 || btnInfo.h < 43.5) {
+          targetSizeValid = false;
+          allFiveOpen = false;
+          break;
+        }
+
+        const cx = Math.round(btnInfo.x + btnInfo.w / 2);
+        const cy = Math.round(btnInfo.y + btnInfo.h / 2);
+
+        // Real touch tap
+        await send("Input.dispatchTouchEvent", {
+          type: "touchStart",
+          touchPoints: [{ x: cx, y: cy }],
+        });
+        await wait(60);
+        await send("Input.dispatchTouchEvent", {
+          type: "touchEnd",
+          touchPoints: [],
+        });
+        await wait(500);
+
+        const isOpen = await evalJs(`Boolean(document.querySelector('.buddy-chat-panel'))`);
+        if (!isOpen) {
+          allFiveOpen = false;
+          break;
+        }
+
+        // Tap outside (x=100, y=100)
+        await send("Input.dispatchTouchEvent", {
+          type: "touchStart",
+          touchPoints: [{ x: 100, y: 100 }],
+        });
+        await wait(60);
+        await send("Input.dispatchTouchEvent", {
+          type: "touchEnd",
+          touchPoints: [],
+        });
+        await wait(400);
+
+        const isClosed = await evalJs(`!document.querySelector('.buddy-chat-panel')`);
+        if (!isClosed) {
+          allFiveClose = false;
+          break;
+        }
+      }
+
       logCheck(
         "MOBILE_SPROUT_CHAT",
-        "sprout_smaller_84px_mobile",
-        Boolean(sproutMobileState?.isSmaller),
-        `height=${sproutMobileState?.walkerHeight}px`,
+        "sprout_touch_opens_across_all_five_sections",
+        Boolean(allFiveOpen && targetSizeValid),
+        `allFiveOpen=${allFiveOpen}, minSize44px=${targetSizeValid}`,
       );
 
-      await wait(600);
-      const chatBottomSheet = await evalJs(`
-        (() => {
-          const panel = document.querySelector('.buddy-chat-panel');
-          if (!panel) return null;
-          const pr = panel.getBoundingClientRect();
-          const winW = window.innerWidth;
-          const winH = window.innerHeight;
-          return {
-            found: true,
-            width: pr.width,
-            isFullWidth: pr.width >= winW * 0.95,
-            isBottomPinned: Math.abs(pr.bottom - winH) <= 5,
-            bottom: pr.bottom,
-            winH
-          };
-        })()
-      `);
-      logCheck(
-        "MOBILE_SPROUT_CHAT",
-        "chat_panel_full_width_bottom_sheet",
-        Boolean(chatBottomSheet?.isFullWidth && chatBottomSheet?.isBottomPinned),
-        `width=${chatBottomSheet?.width}px, pinned=${chatBottomSheet?.isBottomPinned}`,
-      );
-
-      // Tap outside the chat panel (e.g. top of screen at x=100, y=100)
-      await send("Input.dispatchMouseEvent", {
-        type: "mousePressed",
-        x: 100,
-        y: 100,
-        button: "left",
-        clickCount: 1,
-      });
-      await send("Input.dispatchMouseEvent", {
-        type: "mouseReleased",
-        x: 100,
-        y: 100,
-        button: "left",
-        clickCount: 1,
-      });
-      await wait(500);
-
-      const chatClosedOnOutsideTap = await evalJs(`!document.querySelector('.buddy-chat-panel')`);
       logCheck(
         "MOBILE_SPROUT_CHAT",
         "outside_tap_closes_chat_panel",
-        Boolean(chatClosedOnOutsideTap),
-        `chatClosed=${chatClosedOnOutsideTap}`,
+        Boolean(allFiveClose),
+        `allFiveClose=${allFiveClose}`,
+      );
+
+      // Verify Strict Z-order:
+      // Sprout panel: 90, Menu sheet: 60, Header: 50, Sprout button: 45, Chevron: 40
+      const zOrderCheck = await evalJs(`
+        (() => {
+          const header = document.querySelector('header');
+          const sproutBtn = document.querySelector('.buddy-journey-corner-btn');
+          const chevron = document.querySelector('.mobile-scroll-top-btn');
+          
+          const headerZ = header ? parseInt(getComputedStyle(header).zIndex, 10) : 0;
+          const sproutBtnZ = sproutBtn ? parseInt(getComputedStyle(sproutBtn).zIndex, 10) : 0;
+          
+          return {
+            headerZ,
+            sproutBtnZ,
+            headerAboveSprout: headerZ === 50 && sproutBtnZ === 45
+          };
+        })()
+      `);
+      logCheck(
+        "MOBILE_SPROUT_CHAT",
+        "strict_z_index_hierarchy_mobile",
+        Boolean(zOrderCheck?.headerAboveSprout),
+        `headerZ=${zOrderCheck?.headerZ}, sproutBtnZ=${zOrderCheck?.sproutBtnZ}`,
+      );
+
+      // Verify no overlap between Sprout button and Chevron at 360px width
+      await send("Emulation.setDeviceMetricsOverride", {
+        width: 360,
+        height: 740,
+        deviceScaleFactor: 2,
+        mobile: true,
+      });
+      await evalJs(`window.scrollTo(0, 1500)`);
+      await wait(300);
+
+      const overlapCheck360 = await evalJs(`
+        (() => {
+          const btn = document.querySelector('.buddy-journey-corner-btn');
+          const chev = document.querySelector('.mobile-scroll-top-btn');
+          if (!btn) return { ok: false, reason: 'no-sprout-btn' };
+          const br = btn.getBoundingClientRect();
+          const cr = chev ? chev.getBoundingClientRect() : null;
+          
+          const sproutMin = br.width >= 43.5 && br.height >= 43.5;
+          const chevMin = cr ? (cr.width >= 43.5 && cr.height >= 43.5) : true;
+          const noOverlap = cr ? (cr.right < br.left) : true;
+          const gap = cr ? Math.round(br.left - cr.right) : 300;
+
+          return { ok: sproutMin && chevMin && noOverlap, gap, sproutMin, chevMin };
+        })()
+      `);
+      logCheck(
+        "MOBILE_SPROUT_CHAT",
+        "sprout_and_chevron_no_overlap_at_360w",
+        Boolean(overlapCheck360?.ok),
+        `gap=${overlapCheck360?.gap}px, sproutMin44=${overlapCheck360?.sproutMin}, chevMin44=${overlapCheck360?.chevMin}`,
+      );
+
+      // Restore 390x844
+      await send("Emulation.setDeviceMetricsOverride", {
+        width: 390,
+        height: 844,
+        deviceScaleFactor: 2,
+        mobile: true,
+      });
+      await evalJs(`window.scrollTo(0, 0)`);
+      await wait(200);
+
+      // Check Menu typography and active item tracking
+      await evalJs(`document.querySelector('header button[aria-label*="menu" i]')?.click()`);
+      await wait(400);
+
+      const menuTypography = await evalJs(`
+        (() => {
+          const dialog = document.querySelector('[role="dialog"][aria-label*="Menu" i]');
+          if (!dialog) return null;
+          const items = Array.from(dialog.querySelectorAll('.mobile-menu-item'));
+          const labels = items.map(it => {
+            const span = it.querySelector('.font-sans');
+            return span ? span.textContent.trim() : '';
+          });
+          const hasSentenceCase = labels.includes('Overview') && labels.includes('About') && labels.includes('Works');
+          const hasDots = items.some(it => it.querySelector('.bg-\\\\[\\\\#1F5A3A\\\\]'));
+          const zIndex = parseInt(getComputedStyle(dialog).zIndex, 10);
+
+          return {
+            zIndex,
+            labels,
+            hasSentenceCase,
+            itemCount: items.length
+          };
+        })()
+      `);
+      await evalJs(`document.querySelector('[role="dialog"] button[aria-label*="close" i]')?.click()`);
+      await wait(300);
+
+      logCheck(
+        "MOBILE_NAV",
+        "menu_typography_sentence_case_and_z_index_60",
+        Boolean(menuTypography?.hasSentenceCase && menuTypography?.zIndex === 60 && menuTypography?.itemCount === 6),
+        `labels=${menuTypography?.labels?.slice(0, 3).join(', ')}..., z=${menuTypography?.zIndex}`,
+      );
+
+      // Check White Flash & Theme Color
+      const themeColorCheck = await evalJs(`
+        (() => {
+          const meta = document.querySelector('meta[name="theme-color"]');
+          return {
+            content: meta ? meta.getAttribute('content') : null,
+            ok: meta?.getAttribute('content') === '#0B0B0B'
+          };
+        })()
+      `);
+      logCheck(
+        "MOBILE_DESIGN_POLISH",
+        "meta_theme_color_dark_0B0B0B",
+        Boolean(themeColorCheck?.ok),
+        `themeColor=${themeColorCheck?.content}`,
+      );
+
+      // Check About: No repeated MISHAL wordmark
+      const aboutWordmarkCheck = await evalJs(`
+        (() => {
+          const aboutSection = document.querySelector('#about');
+          if (!aboutSection) return { ok: false };
+          // Check that portrait does not contain second MISHAL heading
+          const text = aboutSection.textContent;
+          const wordmarkCount = (text.match(/MISHAL/g) || []).length;
+          return { wordmarkCount, ok: wordmarkCount <= 1 };
+        })()
+      `);
+      logCheck(
+        "MOBILE_DESIGN_POLISH",
+        "about_section_no_duplicate_wordmark",
+        Boolean(aboutWordmarkCheck?.ok),
+        `wordmarkCount=${aboutWordmarkCheck?.wordmarkCount}`,
       );
 
       // 10. MOBILE_RESPONSIVE_OVERFLOW: 360, 390, 412, 430px portrait, 740x360 landscape

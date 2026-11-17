@@ -85,6 +85,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "theme-color", content: "#0B0B0B" },
       { title: "Muhammed Mishal — AI / ML Engineer" },
       {
         name: "description",
@@ -161,9 +162,10 @@ const personJsonLd = {
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" style={{ background: "#0B0B0B" }}>
       <head>
-        <style dangerouslySetInnerHTML={{ __html: "html,body{background:#0B0B0B;}" }} />
+        <meta name="theme-color" content="#0B0B0B" />
+        <style dangerouslySetInnerHTML={{ __html: "html,body{background:#0B0B0B !important;color:#E8DED0;}" }} />
         <HeadContent />
         <script
           type="application/ld+json"
@@ -222,15 +224,14 @@ function RootBuddy() {
   const [BuddyComponent, setBuddyComponent] = useState<React.ComponentType | null>(null);
 
   useEffect(() => {
-    let timer: number | undefined;
+    let mounted = true;
 
     const loadBuddy = () => {
-      if (timer) return;
-      timer = window.setTimeout(() => {
-        import("@/components/Buddy").then((mod) => {
+      import("@/components/Buddy").then((mod) => {
+        if (mounted) {
           setBuddyComponent(() => mod.Buddy);
-        });
-      }, 2000);
+        }
+      });
     };
 
     const isLoaderDone = () => {
@@ -245,9 +246,10 @@ function RootBuddy() {
       const interval = window.setInterval(() => {
         if (isLoaderDone()) {
           clearInterval(interval);
+          window.removeEventListener("site-loader-done", onDone);
           loadBuddy();
         }
-      }, 150);
+      }, 100);
       const onDone = () => {
         clearInterval(interval);
         window.removeEventListener("site-loader-done", onDone);
@@ -255,13 +257,15 @@ function RootBuddy() {
       };
       window.addEventListener("site-loader-done", onDone);
       return () => {
+        mounted = false;
         clearInterval(interval);
         window.removeEventListener("site-loader-done", onDone);
-        clearTimeout(timer);
       };
     }
 
-    return () => clearTimeout(timer);
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   if (!BuddyComponent) return null;

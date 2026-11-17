@@ -2440,14 +2440,51 @@ html.paged .page:not(.is-active) [data-card] {
     visibility: hidden !important;
   }
 
-  /* Sprout stays as a clean corner button only on mobile */
-  .buddy-journey-corner-btn {
-    display: flex !important;
-    right: max(16px, env(safe-area-inset-right)) !important;
-    bottom: max(16px, env(safe-area-inset-bottom)) !important;
+  /* Mobile Sprout layer and z-index hierarchy:
+     - Sprout panel: z-index 90
+     - Menu sheet: z-index 60
+     - Header: z-index 50
+     - Sprout button: z-index 45
+     - Chevron: z-index 40
+  */
+  .buddy-layer {
+    z-index: 45 !important;
+  }
+  body.sprout-panel-open .buddy-layer {
+    z-index: 90 !important;
   }
 
-  /* Step 29: Hide Sprout button, bubbles, and scroll-to-top chevron while menu or chat panel is open */
+  /* Sprout stays as a clean corner button only on mobile (>= 44px hit target) */
+  .buddy-journey-corner-btn {
+    display: flex !important;
+    position: fixed !important;
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+    right: max(16px, env(safe-area-inset-right)) !important;
+    bottom: max(16px, env(safe-area-inset-bottom)) !important;
+    z-index: 45 !important;
+    pointer-events: auto !important;
+    touch-action: manipulation;
+  }
+
+  .buddy-chat-panel {
+    z-index: 90 !important;
+  }
+
+  .mobile-scroll-top-btn {
+    z-index: 40 !important;
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+    left: max(16px, env(safe-area-inset-left)) !important;
+    bottom: max(16px, env(safe-area-inset-bottom)) !important;
+    touch-action: manipulation;
+  }
+
+  /* Step 29/30: Hide Sprout button, bubbles, and scroll-to-top chevron while menu or chat panel is open */
   body.menu-open .buddy-layer,
   body.menu-open .buddy-journey-corner-btn,
   body.menu-open .mobile-scroll-top-btn,
