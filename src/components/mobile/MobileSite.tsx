@@ -237,7 +237,9 @@ export function MobileSite() {
   const menuOverlayRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const progressBarRef = useRef<HTMLDivElement>(null);
-  const heroDriftRef = useRef<HTMLDivElement>(null);
+  const archMediaRef = useRef<HTMLDivElement>(null);
+  const stickerRef = useRef<HTMLDivElement>(null);
+  const stickerTweenRef = useRef<gsap.core.Tween | null>(null);
   const heroScrambleDoneRef = useRef(false);
   const scrollToTopTweenRef = useRef<gsap.core.Tween | null>(null);
   const isMenuClosingRef = useRef(false);
@@ -388,23 +390,92 @@ export function MobileSite() {
     }
   }, [menuOpen]);
 
-  // Hero Headline reveal (each line rises 24px with 0.6s power3.out, stagger 0.08s — runs ONCE on initial boot, never on return)
+  // Preload mobile hero arch image with high priority
+  useEffect(() => {
+    const link = document.createElement("link");
+    link.rel = "preload";
+    link.as = "image";
+    link.href = "/hero-mobile.webp";
+    link.type = "image/webp";
+    link.setAttribute("fetchpriority", "high");
+    document.head.appendChild(link);
+    return () => {
+      try {
+        document.head.removeChild(link);
+      } catch {}
+    };
+  }, []);
+
+  // Gold Sticker Continuous Slow Rotation (20s linear loop, paused when hidden or reduced motion)
+  useEffect(() => {
+    const isReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!stickerRef.current) return;
+
+    if (isReduced) {
+      gsap.set(stickerRef.current, { rotation: 0 });
+      return;
+    }
+
+    const tween = gsap.to(stickerRef.current, {
+      rotation: 360,
+      duration: 20,
+      repeat: -1,
+      ease: "none",
+    });
+    stickerTweenRef.current = tween;
+
+    const handleVis = () => {
+      if (document.hidden) {
+        tween.pause();
+      } else if (!isReduced) {
+        tween.play();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVis);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVis);
+      tween.kill();
+    };
+  }, []);
+
+  // Hero Arch subtle zoom & masked letters reveal (plays ONCE on initial boot, never on return to top)
   useEffect(() => {
     if (!booted) return;
     const isReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
     if (isReduced) {
+      gsap.set(".mobile-hero-letter", { y: "0%" });
       gsap.set(".mobile-hero-line", { y: 0, opacity: 1 });
+      if (archMediaRef.current) gsap.set(archMediaRef.current, { scale: 1 });
       return;
     }
+
     if (!heroScrambleDoneRef.current) {
       heroScrambleDoneRef.current = true;
+      // Arch subtle zoom-in on load (scale 1.06 to 1, 1.2s power2.out)
+      if (archMediaRef.current) {
+        gsap.fromTo(
+          archMediaRef.current,
+          { scale: 1.06 },
+          { scale: 1, duration: 1.2, ease: "power2.out" },
+        );
+      }
+      // Letters rise from a mask, 0.6s power3.out, stagger 0.04s, starting 0.2s after loader
+      gsap.fromTo(
+        ".mobile-hero-letter",
+        { y: "110%" },
+        { y: "0%", duration: 0.6, ease: "power3.out", stagger: 0.04, delay: 0.2 },
+      );
       gsap.fromTo(
         ".mobile-hero-line",
         { y: 24, opacity: 0 },
         { y: 0, opacity: 1, duration: 0.6, ease: "power3.out", stagger: 0.08, delay: 0.2 },
       );
     } else {
+      gsap.set(".mobile-hero-letter", { y: "0%" });
       gsap.set(".mobile-hero-line", { y: 0, opacity: 1 });
+      if (archMediaRef.current) gsap.set(archMediaRef.current, { scale: 1 });
     }
   }, [booted]);
 
@@ -471,11 +542,6 @@ export function MobileSite() {
 
       if (progressBarRef.current) {
         gsap.set(progressBarRef.current, { scaleX: Math.min(Math.max(progress, 0), 1) });
-      }
-
-      if (!isReduced && heroDriftRef.current && scrollY < innerHeight) {
-        const drift = Math.min(12, (scrollY / innerHeight) * 12);
-        gsap.set(heroDriftRef.current, { y: drift });
       }
 
       // Show scroll-up chevron only after 1.5 screens of scroll
@@ -772,71 +838,139 @@ export function MobileSite() {
       {/* MAIN DOCUMENT: ONE CONTINUOUS NATIVE SCROLL */}
       <main inert={!booted} className="w-full">
         {/* ================================================================= */}
-        {/* SECTION 1: HERO (#overview) */}
+        {/* SECTION 1: HERO (#overview) - Arch Portrait Layout */}
         {/* ================================================================= */}
         <section
           id="overview"
           aria-label="Overview"
-          className="relative w-full bg-[#0B0B0B] text-[#E8DED0] flex flex-col justify-between"
-          style={{ height: "calc(100svh - 56px)", minHeight: "560px" }}
+          className="relative w-full bg-[#E8DED0] text-[#0B0B0B] flex flex-col justify-between px-4 sm:px-6 pt-2 pb-3 overflow-hidden select-none"
+          style={{
+            height: "calc(100svh - 56px)",
+            maxHeight: "calc(100svh - 56px)",
+          }}
         >
-          {/* Top Media Framing: Sized so video fits nicely and leaves full room for content & buttons */}
-          <div className="relative w-full flex-1 min-h-[190px] max-h-[38svh] overflow-hidden">
-            <div ref={heroDriftRef} className="w-full h-full">
-              <video
-                className="scene-video w-full h-full object-cover pointer-events-none"
-                style={{ objectPosition: "84% 20%" }}
-                autoPlay
-                muted
-                loop
-                playsInline
-                poster="/hero/poster.webp"
-                src="/hero/hero-sm.mp4"
-              />
-            </div>
-            {/* Soft bottom gradient fading into solid ink #0B0B0B */}
+          {/* Top / Center: Arch frame with gold sticker (free height goes to the arch) */}
+          <div className="relative w-full flex-1 flex items-center justify-center min-h-0 my-auto">
             <div
-              className="hero-shade absolute inset-0 pointer-events-none"
-              style={{
-                background:
-                  "linear-gradient(to bottom, transparent 0%, transparent 60%, rgba(11, 11, 11, 0.45) 80%, #0B0B0B 100%)",
-              }}
-            />
+              className="relative h-full aspect-[3/4] max-h-[clamp(280px,46svh,420px)] max-w-[calc(100%-48px)] flex items-center justify-center"
+            >
+              {/* Inner Arch Frame: border-radius 200px 200px 22px 22px, 2px ink border */}
+              <div
+                className="relative w-full h-full overflow-hidden bg-[#171615]"
+                style={{
+                  borderRadius: "200px 200px 22px 22px",
+                  border: "2px solid #0B0B0B",
+                }}
+              >
+                <div
+                  ref={archMediaRef}
+                  className="w-full h-full relative"
+                  style={{ willChange: "transform" }}
+                >
+                  <img
+                    src="/hero-mobile.webp"
+                    alt="Muhammed Mishal"
+                    fetchPriority="high"
+                    decoding="sync"
+                    className="w-full h-full object-cover select-none pointer-events-none"
+                    style={{ objectPosition: "50% 22%" }}
+                  />
+                  <video
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    poster="/hero-mobile.webp"
+                    className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none"
+                    style={{ objectPosition: "50% 22%" }}
+                  >
+                    <source src="/hero-mobile.webm" type="video/webm" />
+                    <source src="/hero-mobile.mp4" type="video/mp4" />
+                  </video>
+                </div>
+              </div>
+
+              {/* Gold sticker: 104px circle, gold #C9A24A, text "OPEN TO WORK · 2026 ·" on a circle path */}
+              <div
+                ref={stickerRef}
+                className="absolute -right-5 sm:-right-7 bottom-2 sm:bottom-3 z-20 w-[96px] h-[96px] sm:w-[104px] sm:h-[104px] rounded-full pointer-events-none select-none flex items-center justify-center drop-shadow-md"
+                style={{ willChange: "transform" }}
+                aria-hidden="true"
+              >
+                <svg viewBox="0 0 104 104" className="w-full h-full">
+                  <defs>
+                    <path
+                      id="sticker-circle-path"
+                      d="M 52, 17 a 35,35 0 1,1 0,70 a 35,35 0 1,1 0,-70"
+                    />
+                  </defs>
+                  <circle cx="52" cy="52" r="50" fill="#C9A24A" stroke="#0B0B0B" strokeWidth="1.5" />
+                  <circle cx="52" cy="52" r="21" fill="#E8DED0" stroke="#0B0B0B" strokeWidth="1.5" />
+                  <circle cx="52" cy="52" r="4.5" fill="#1F5A3A" />
+                  <text
+                    fill="#0B0B0B"
+                    className="font-mono text-[9px] font-bold"
+                    style={{ fontFeatureSettings: "'tnum'" }}
+                  >
+                    <textPath href="#sticker-circle-path" startOffset="0%" textLength="215" lengthAdjust="spacing">
+                      OPEN TO WORK · 2026 ·
+                    </textPath>
+                  </text>
+                </svg>
+              </div>
+            </div>
           </div>
 
-          {/* Hero Content below media — compact spacing ensures everything is visible on first load */}
-          <div className="relative z-10 w-full max-w-xl mx-auto flex flex-col justify-end gap-2.5 px-5 sm:px-8 pb-4 pt-1">
-            {/* Availability Pill */}
-            <div className="inline-flex items-center gap-2 self-start px-3 py-1 rounded-full bg-[#0B0B0B] border border-[#E8DED0]/20 font-mono text-[11px] sm:text-[12px] tracking-wider text-[#E8DED0]">
-              <span className="w-2 h-2 rounded-full bg-[#1F5A3A] animate-pulse" aria-hidden="true" />
-              <span>{hero.status}</span>
+          {/* Bottom Content: Name, Role, Stack Chips, Two Buttons (Pinned to bottom with margin-top: auto) */}
+          <div className="relative z-10 w-full max-w-sm mx-auto flex flex-col items-center gap-1.5 sm:gap-2 shrink-0 pt-1 pb-1">
+            {/* Name MISHAL in Anton: clamp(64px, 22vw, 96px), line-height 0.8, letters rise from mask */}
+            <div className="w-full flex justify-center overflow-hidden">
+              <h1
+                aria-label="MISHAL"
+                className="font-display uppercase tracking-[-0.01em] text-[clamp(64px,22vw,96px)] leading-[0.8] text-[#0B0B0B] text-center m-0 select-none overflow-hidden"
+                style={{ fontFamily: "var(--font-display)" }}
+              >
+                <span className="sr-only">MISHAL</span>
+                <span aria-hidden="true" className="inline-flex justify-center">
+                  {"MISHAL".split("").map((letter, idx) => (
+                    <span key={idx} className="inline-block overflow-hidden pb-1 px-[1px]">
+                      <span
+                        className="mobile-hero-letter inline-block translate-y-[110%]"
+                        style={{ willChange: "transform" }}
+                      >
+                        {letter}
+                      </span>
+                    </span>
+                  ))}
+                </span>
+              </h1>
             </div>
 
-            {/* Display Headline: Canonical hero.h1 from content.ts ("AI / ML", "ENGINEER.") with 24px rise */}
-            <h1 className="font-display uppercase tracking-[-0.01em] text-[clamp(36px,10vw,54px)] leading-[0.92] text-[#E8DED0] m-0">
-              {hero.h1.map((line, idx) => (
-                <span key={idx} className="block overflow-hidden">
-                  <span className="mobile-hero-line block">{line}</span>
-                </span>
-              ))}
-            </h1>
-
-            {/* Role & Location line */}
-            <p className="font-mono text-[12px] sm:text-[13px] uppercase tracking-widest text-[#C9A24A] font-semibold m-0">
+            {/* Role line (mono, gold) */}
+            <p className="font-mono text-[11px] sm:text-[12px] uppercase tracking-widest text-[#C9A24A] font-semibold text-center m-0">
               AI / ML Engineer · Kollam, Kerala
             </p>
 
-            {/* Subtitle */}
-            <p className="font-sans text-[14px] sm:text-[15px] leading-snug text-[#E8DED0]/85 max-w-md m-0">
-              {hero.sub}
-            </p>
+            {/* Stack chips row: Python, FastAPI, DINOv2, FAISS, RAG */}
+            <div className="w-full flex items-center justify-center overflow-x-auto no-scrollbar py-0.5">
+              <div className="flex items-center gap-1.5 flex-nowrap px-2">
+                {["Python", "FastAPI", "DINOv2", "FAISS", "RAG"].map((chip) => (
+                  <span
+                    key={chip}
+                    className="px-2.5 py-1 rounded-full bg-[#0B0B0B]/[0.05] border border-[#0B0B0B]/12 font-mono text-[11px] text-[#0B0B0B]/85 font-medium whitespace-nowrap shrink-0"
+                  >
+                    {chip}
+                  </span>
+                ))}
+              </div>
+            </div>
 
-            {/* CTA Buttons: View projects and Download CV */}
-            <div className="flex flex-row gap-3 pt-1">
+            {/* Two buttons pinned to bottom with margin-top: auto, at least 48px tall */}
+            <div className="w-full flex flex-row gap-2.5 sm:gap-3 mt-auto pt-1">
               <button
                 type="button"
                 onClick={() => scrollTo("works")}
-                className="flex-1 min-h-[44px] sm:min-h-[48px] px-4 py-2.5 rounded-full bg-[#0B0B0B] text-[#E8DED0] border border-[#E8DED0]/40 font-mono text-[12px] sm:text-[13px] uppercase tracking-wider font-semibold hover:border-[#E8DED0] transition-colors flex items-center justify-center gap-1.5 shadow-md cursor-pointer"
+                className="flex-1 min-h-[48px] px-4 py-2.5 rounded-full bg-[#0B0B0B] text-[#E8DED0] hover:bg-[#1a1a1a] active:scale-[0.98] transition-all font-mono text-[12px] sm:text-[13px] uppercase tracking-wider font-semibold flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
               >
                 <span>{ui.viewProjects}</span>
                 <span aria-hidden="true">↓</span>
@@ -845,7 +979,7 @@ export function MobileSite() {
               <a
                 href="/cv.pdf"
                 download
-                className="flex-1 min-h-[44px] sm:min-h-[48px] px-4 py-2.5 rounded-full bg-[#E8DED0] text-[#0B0B0B] font-mono text-[12px] sm:text-[13px] uppercase tracking-wider font-bold hover:bg-[#C9A24A] transition-colors flex items-center justify-center gap-2 shadow-md cursor-pointer"
+                className="flex-1 min-h-[48px] px-4 py-2.5 rounded-full bg-transparent text-[#0B0B0B] border-2 border-[#0B0B0B] hover:bg-[#0B0B0B]/5 active:scale-[0.98] transition-all font-mono text-[12px] sm:text-[13px] uppercase tracking-wider font-semibold flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Download className="w-4 h-4" aria-hidden="true" />
                 <span>{hero.cta1}</span>

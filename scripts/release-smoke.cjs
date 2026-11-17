@@ -328,23 +328,25 @@ async function runSmoke() {
       await evalJs(`window.scrollTo(0, 0)`);
       await wait(300);
 
-      // 3. MOBILE_HERO: no horizontal scroll, small video, portrait framing (84% 50%), CTA buttons >=44px
+      // 3. MOBILE_HERO: no horizontal scroll, arch image loaded, buttons visible on first load at 390x844 and 360x640
       console.log("\n--- Checking MOBILE_HERO ---");
       const heroMetrics = await evalJs(`
         (() => {
           const docW = Math.max(document.documentElement.scrollWidth, document.body.scrollWidth);
           const winW = window.innerWidth;
+          const winH = window.innerHeight;
           const h1 = document.querySelector('#overview h1');
           const h1Rect = h1 ? h1.getBoundingClientRect() : null;
           const menuBtn = document.querySelector('header button[aria-label*="menu" i]');
           const menuBtnRect = menuBtn ? menuBtn.getBoundingClientRect() : null;
-          const vids = Array.from(document.querySelectorAll('video'));
-          const heroVid = vids.find(v => (v.currentSrc || v.src || '').includes('hero-sm') || (v.querySelector('source')?.src || '').includes('hero-sm'));
-          const heroVidObjPos = heroVid ? window.getComputedStyle(heroVid).objectPosition : '';
+          const archImg = document.querySelector('#overview img[src*="hero-mobile"]');
+          const archImgLoaded = Boolean(archImg && archImg.complete && archImg.naturalWidth > 0);
+          const sticker = document.querySelector('#overview svg textPath');
+          const stickerValid = Boolean(sticker && sticker.textContent.includes('OPEN TO WORK'));
           const ctas = Array.from(document.querySelectorAll('#overview a, #overview button'));
           const ctasValid = ctas.length >= 2 && ctas.every(el => {
             const r = el.getBoundingClientRect();
-            return r.height >= 43.5;
+            return r.height >= 43.5 && r.top >= 0 && r.bottom <= winH + 5;
           });
 
           return {
@@ -352,8 +354,8 @@ async function runSmoke() {
             docW, winW,
             h1Fits: h1Rect ? h1Rect.right <= winW + 2 : false,
             h1Width: h1Rect ? h1Rect.width : 0,
-            smallVidLoaded: Boolean(heroVid),
-            heroVidObjPos,
+            archImgLoaded,
+            stickerValid,
             menuBtnFound: Boolean(menuBtn),
             menuBtnW: menuBtnRect ? menuBtnRect.width : 0,
             menuBtnH: menuBtnRect ? menuBtnRect.height : 0,
@@ -377,9 +379,9 @@ async function runSmoke() {
       );
       logCheck(
         "MOBILE_HERO",
-        "hero_small_video_served_with_portrait_framing",
-        Boolean(heroMetrics?.smallVidLoaded && heroMetrics?.heroVidObjPos.includes("84%")),
-        `smallVidLoaded=${heroMetrics?.smallVidLoaded}, objectPosition=${heroMetrics?.heroVidObjPos}`,
+        "hero_arch_image_loaded_and_sticker_present",
+        Boolean(heroMetrics?.archImgLoaded && heroMetrics?.stickerValid),
+        `archImgLoaded=${heroMetrics?.archImgLoaded}, stickerValid=${heroMetrics?.stickerValid}`,
       );
       logCheck(
         "MOBILE_HERO",
@@ -389,7 +391,7 @@ async function runSmoke() {
       );
       logCheck(
         "MOBILE_HERO",
-        "hero_cta_buttons_accessible_height",
+        "hero_cta_buttons_accessible_height_and_visible_above_fold",
         Boolean(heroMetrics?.ctasValid),
         `ctasValid=${heroMetrics?.ctasValid}`,
       );
@@ -1006,23 +1008,20 @@ async function runSmoke() {
         `heroFont=${typoCheck?.heroFont}, aboutFont=${typoCheck?.aboutFont}`,
       );
 
-      // 12b. Hero Face Brightness
-      const faceBrightnessCheck = await evalJs(`
+      // 12b. Hero Arch Frame & Face Unshaded
+      const archFrameCheck = await evalJs(`
         (() => {
-          const shade = document.querySelector('#overview .hero-shade');
-          if (!shade) return { ok: false, reason: "no shade overlay" };
-          const bg = shade.getAttribute('style') || window.getComputedStyle(shade).backgroundImage || '';
-          // Ensure gradient doesn't darken face: transparent through at least 50%
-          const isTopTransparent = bg.includes('transparent 0%') || bg.includes('transparent 5') || bg.includes('transparent 6');
-          const hasHeavyScrim = bg.includes('via-[#0B0B0B]/60');
-          return { ok: isTopTransparent && !hasHeavyScrim, bg };
+          const arch = document.querySelector('#overview [style*="border-radius: 200px 200px 22px 22px"], #overview [style*="border-radius:200px 200px 22px 22px"]');
+          const archBorder = arch ? window.getComputedStyle(arch).borderWidth : '';
+          const hasHeavyScrim = Boolean(document.querySelector('#overview .hero-shade'));
+          return { ok: Boolean(arch) && !hasHeavyScrim, hasArch: Boolean(arch), archBorder, hasHeavyScrim };
         })()
       `);
       logCheck(
         "MOBILE_DESIGN_POLISH",
-        "hero_face_unshaded_soft_bottom_gradient_only",
-        Boolean(faceBrightnessCheck?.ok),
-        `ok=${faceBrightnessCheck?.ok}, style=${faceBrightnessCheck?.bg?.slice(0, 80)}`,
+        "hero_arch_portrait_frame_unshaded",
+        Boolean(archFrameCheck?.ok),
+        `hasArch=${archFrameCheck?.hasArch}, border=${archFrameCheck?.archBorder}, heavyScrim=${archFrameCheck?.hasHeavyScrim}`,
       );
 
       // 12c. Sprout Limits & Door Size
@@ -1147,24 +1146,25 @@ async function runSmoke() {
 
       // 12f. STEP 28 POLISH: Menu cream sheet, Hero split headline, Journey dot-line, Chevron bottom-left
       console.log("\n--- Checking STEP 28 POLISH ---");
-      // Check Hero split headline & location line
+      // Check Hero MISHAL headline & location line
       const heroR28Check = await evalJs(`
         (() => {
-          const lines = Array.from(document.querySelectorAll('.mobile-hero-line')).map(el => el.textContent.trim());
+          const h1 = document.querySelector('#overview h1');
+          const h1Text = h1 ? h1.textContent.trim() : '';
           const locEl = document.querySelector('#overview p');
           const locText = locEl ? locEl.textContent : '';
           return {
-            hasSplitLines: lines.length >= 2,
-            lines,
+            hasMishal: h1Text.includes('MISHAL'),
+            h1Text,
             hasLocation: locText.includes('Kollam, Kerala')
           };
         })()
       `);
       logCheck(
         "MOBILE_POLISH_28",
-        "hero_split_headline_and_location_line",
-        Boolean(heroR28Check?.hasSplitLines && heroR28Check?.hasLocation),
-        `lines=${JSON.stringify(heroR28Check?.lines)}, location=${heroR28Check?.hasLocation}`,
+        "hero_mishal_headline_and_location_line",
+        Boolean(heroR28Check?.hasMishal && heroR28Check?.hasLocation),
+        `h1Text=${heroR28Check?.h1Text}, location=${heroR28Check?.hasLocation}`,
       );
 
       // Check Menu: open menu, verify cream sheet #E8DED0 and ink text #0B0B0B, side-by-side bottom buttons
@@ -1252,17 +1252,17 @@ async function runSmoke() {
         (() => {
           const atTop = window.scrollY === 0;
           const introMounted = Boolean(document.querySelector('.site-loader, .intro-overlay'));
-          const lines = Array.from(document.querySelectorAll('.mobile-hero-line')).map(l => l.textContent.trim());
-          const hasCanonicalH1 = lines.includes("AI / ML") && lines.includes("ENGINEER.");
+          const h1 = document.querySelector('#overview h1');
+          const hasMishal = h1 ? h1.textContent.includes("MISHAL") : false;
           const introDone = sessionStorage.getItem("mishal_intro_done") === "1";
-          return { atTop, introMounted, hasCanonicalH1, introDone };
+          return { atTop, introMounted, hasMishal, introDone };
         })()
       `);
       logCheck(
         "STEP_29_ROOT_CAUSE",
         "scroll_to_top_never_replays_intro_or_scrambles_text",
-        Boolean(scrollTopCheck?.atTop && !scrollTopCheck?.introMounted && scrollTopCheck?.hasCanonicalH1 && scrollTopCheck?.introDone),
-        `atTop=${scrollTopCheck?.atTop}, introMounted=${scrollTopCheck?.introMounted}, h1=${scrollTopCheck?.hasCanonicalH1}, done=${scrollTopCheck?.introDone}`,
+        Boolean(scrollTopCheck?.atTop && !scrollTopCheck?.introMounted && scrollTopCheck?.hasMishal && scrollTopCheck?.introDone),
+        `atTop=${scrollTopCheck?.atTop}, introMounted=${scrollTopCheck?.introMounted}, h1=${scrollTopCheck?.hasMishal}, done=${scrollTopCheck?.introDone}`,
       );
 
       // Check B: Menu stability on 56px URL-bar resize & >=50% height
@@ -1344,6 +1344,24 @@ async function runSmoke() {
           return { ok: allAboveFold, count: ctas.length, winH };
         })()
       `);
+      await send("Emulation.setDeviceMetricsOverride", {
+        width: 360,
+        height: 640,
+        deviceScaleFactor: 2,
+        mobile: true,
+      });
+      await wait(300);
+      const heroButtons640 = await evalJs(`
+        (() => {
+          const ctas = Array.from(document.querySelectorAll('#overview a, #overview button'));
+          const winH = window.innerHeight;
+          const allAboveFold = ctas.length >= 2 && ctas.every(el => {
+            const r = el.getBoundingClientRect();
+            return r.bottom <= winH + 2 && r.top >= 0;
+          });
+          return { ok: allAboveFold, count: ctas.length, winH };
+        })()
+      `);
       // Restore viewport to 390x844
       await send("Emulation.setDeviceMetricsOverride", {
         width: 390,
@@ -1355,8 +1373,8 @@ async function runSmoke() {
       logCheck(
         "STEP_29_ROOT_CAUSE",
         "hero_cta_buttons_fully_visible_above_fold",
-        Boolean(heroButtons390?.ok && heroButtons360?.ok),
-        `390x844=${heroButtons390?.ok}, 360x740=${heroButtons360?.ok}`,
+        Boolean(heroButtons390?.ok && heroButtons360?.ok && heroButtons640?.ok),
+        `390x844=${heroButtons390?.ok}, 360x740=${heroButtons360?.ok}, 360x640=${heroButtons640?.ok}`,
       );
 
       // Check D: Journey & reveals (no re-hiding on scroll up, Sprout walker/door hidden)
