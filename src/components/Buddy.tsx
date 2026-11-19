@@ -113,11 +113,23 @@ const IDLE_BUBBLES_POOL: IdleBubbleItem[] = [
     query: "What can you do?",
     timeContext: "night",
   },
-  // Returning to tab (Step 28: Keep only "welcome back" (>= 60s hidden), 2 lines)
+  // Returning to tab / scroll
   {
     id: "r1",
-    text: "You're back!\nI wasn't counting. (It was 4 minutes.)",
+    text: "You're back! I wasn't counting. (It was 4 minutes.)",
     action: "What's new?",
+    query: "What has Mishal built?",
+  },
+  {
+    id: "s1",
+    text: "Whoa, speed reader! Want the 10 second version?",
+    action: "Tell me about Mishal",
+    query: "Who is Mishal?",
+  },
+  {
+    id: "s2",
+    text: "Scrolling fast! Looking for anything specific?",
+    action: "Show projects",
     query: "What has Mishal built?",
   },
   // Page aware: Works
@@ -1348,8 +1360,11 @@ export function Buddy() {
     };
 
     const onPointerDown = (e: PointerEvent) => {
-      // Ignore pointerdown within 200ms of opening to avoid immediately closing on the opening tap
-      if (Date.now() - openedAt < 200) return;
+      const isMobile =
+        typeof window !== "undefined" &&
+        window.matchMedia("(max-width: 820px), (pointer: coarse) and (max-width: 1024px)").matches;
+      // On mobile, ignore pointerdown within 200ms of opening to avoid immediately closing on the opening tap
+      if (isMobile && Date.now() - openedAt < 200) return;
 
       const target = e.target;
       if (!target || !(target instanceof Node)) {
@@ -1382,10 +1397,12 @@ export function Buddy() {
     };
 
     document.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("pointerdown", onPointerDown);
     window.addEventListener("keydown", onKeyDown);
 
     return () => {
       document.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [chatOpen, closeChat]);

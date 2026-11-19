@@ -3421,6 +3421,129 @@ async function runSmoke() {
         failedRequests.length === 0,
         failedRequests.length ? failedRequests.join(" | ") : "zero failures",
       );
+
+      // =========================================================================
+      // CHECK 67: PERMANENT DESKTOP TEXT CONTRAST AUDIT (Step 30R)
+      // =========================================================================
+      console.log("\n--- Checking DESKTOP_TEXT_CONTRAST (all visible text >= 3:1) ---");
+      const contrastAudit = await evalJs(`
+        (async () => {
+          const pages = ["overview", "about", "expertise", "works", "journey", "connect"];
+          const violations = [];
+          let totalChecked = 0;
+
+          function parseRgb(colorStr) {
+            const m = colorStr.match(/rgba?\\((\\d+),\\s*(\\d+),\\s*(\\d+)(?:,\\s*([\\d.]+))?\\)/);
+            if (!m) return null;
+            return {
+              r: parseInt(m[1], 10),
+              g: parseInt(m[2], 10),
+              b: parseInt(m[3], 10),
+              a: m[4] !== undefined ? parseFloat(m[4]) : 1,
+            };
+          }
+
+          function getLuminance(rgb) {
+            const [r, g, b] = [rgb.r, rgb.g, rgb.b].map((v) => {
+              const s = v / 255;
+              return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+            });
+            return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+          }
+
+          function getContrastRatio(fgRgb, bgRgb) {
+            const l1 = getLuminance(fgRgb);
+            const l2 = getLuminance(bgRgb);
+            const lighter = Math.max(l1, l2);
+            const darker = Math.min(l1, l2);
+            return (lighter + 0.05) / (darker + 0.05);
+          }
+
+          function getEffectiveBg(el, defaultDark, pageId) {
+            const activePill = el.closest('header nav a[aria-current="page"]');
+            if (activePill) {
+              if (pageId === "overview") return { r: 31, g: 90, b: 58, a: 1 };
+              if (pageId === "connect") return { r: 232, g: 222, b: 208, a: 1 };
+              return { r: 11, g: 11, b: 11, a: 1 };
+            }
+            let cur = el;
+            let layers = [];
+            while (cur && cur !== document.documentElement) {
+              const style = window.getComputedStyle(cur);
+              const bg = parseRgb(style.backgroundColor);
+              if (bg && bg.a > 0.05) {
+                layers.push(bg);
+                if (bg.a >= 0.95) break;
+              }
+              cur = cur.parentElement;
+            }
+            const base = defaultDark ? { r: 11, g: 11, b: 11, a: 1 } : { r: 232, g: 222, b: 208, a: 1 };
+            let res = { ...base };
+            for (let i = layers.length - 1; i >= 0; i--) {
+              const l = layers[i];
+              const a = l.a;
+              res.r = Math.round(l.r * a + res.r * (1 - a));
+              res.g = Math.round(l.g * a + res.g * (1 - a));
+              res.b = Math.round(l.b * a + res.b * (1 - a));
+            }
+            return res;
+          }
+
+          for (const pageId of pages) {
+            const link = document.querySelector('header a[href="#' + pageId + '"]');
+            if (link) link.click();
+            for (let i = 0; i < 30; i++) {
+              await new Promise(r => setTimeout(r, 100));
+              if (!document.documentElement.hasAttribute("data-page-transition")) break;
+            }
+            await new Promise(r => setTimeout(r, 400));
+
+            const activeSection = document.querySelector('section.is-active, section[data-page="' + pageId + '"]') || document.getElementById(pageId);
+            const isDark = pageId === "overview" || pageId === "connect";
+            const scopeRoots = [document.querySelector('header'), activeSection].filter(Boolean);
+            const textEls = scopeRoots.flatMap(r => Array.from(r.querySelectorAll("p, span, h1, h2, h3, h4, a, button, li")));
+
+            for (const el of textEls) {
+              if (el.offsetParent === null) continue;
+              const style = window.getComputedStyle(el);
+              if (style.display === "none" || style.visibility === "hidden" || parseFloat(style.opacity) < 0.1) continue;
+              const text = el.textContent.trim();
+              if (!text || text.length === 0) continue;
+              if (el.children.length > 0 && Array.from(el.children).some(c => c.textContent.trim() === text)) continue;
+
+              const fg = parseRgb(style.color);
+              if (!fg || fg.a < 0.2) continue;
+
+              const inHeader = el.closest('header');
+              const bg = getEffectiveBg(el, inHeader ? (document.querySelector('header')?.classList.contains('inv') || isDark) : isDark, pageId);
+              const ratio = getContrastRatio(fg, bg);
+              totalChecked++;
+
+              if (ratio < 3.0) {
+                violations.push({
+                  page: pageId,
+                  tag: el.tagName,
+                  text: text.slice(0, 30),
+                  fg: style.color,
+                  ratio: ratio.toFixed(2),
+                });
+              }
+            }
+          }
+
+          return { totalChecked, violations };
+        })()
+      `);
+
+      logCheck(
+        "CONTRAST",
+        "contrast_check_all_visible_text_at_least_3_to_1",
+        contrastAudit?.violations?.length === 0,
+        contrastAudit?.violations?.length
+          ? `${contrastAudit.violations.length} violations found: ` +
+            contrastAudit.violations.slice(0, 3).map(v => `[${v.page} ${v.tag}] "${v.text}" ratio ${v.ratio}:1`).join("; ")
+          : `All ${contrastAudit?.totalChecked || 0} visible text elements have contrast >= 3:1`,
+      );
     }
 
     // Check no build or asset file exceeds 24 MiB

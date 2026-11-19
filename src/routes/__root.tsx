@@ -162,10 +162,9 @@ const personJsonLd = {
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" style={{ background: "#0B0B0B" }}>
+    <html lang="en">
       <head>
-        <meta name="theme-color" content="#0B0B0B" />
-        <style dangerouslySetInnerHTML={{ __html: "html,body{background:#0B0B0B !important;color:#E8DED0;}" }} />
+        <style dangerouslySetInnerHTML={{ __html: "html,body{background:#0B0B0B;}" }} />
         <HeadContent />
         <script
           type="application/ld+json"
@@ -225,13 +224,25 @@ function RootBuddy() {
 
   useEffect(() => {
     let mounted = true;
+    let timer: number | undefined;
 
     const loadBuddy = () => {
-      import("@/components/Buddy").then((mod) => {
-        if (mounted) {
-          setBuddyComponent(() => mod.Buddy);
-        }
-      });
+      if (timer) return;
+      const isMobile =
+        typeof window !== "undefined" &&
+        window.matchMedia("(max-width: 820px), (pointer: coarse) and (max-width: 1024px)").matches;
+
+      if (isMobile) {
+        import("@/components/Buddy").then((mod) => {
+          if (mounted) setBuddyComponent(() => mod.Buddy);
+        });
+      } else {
+        timer = window.setTimeout(() => {
+          import("@/components/Buddy").then((mod) => {
+            if (mounted) setBuddyComponent(() => mod.Buddy);
+          });
+        }, 2000);
+      }
     };
 
     const isLoaderDone = () => {
@@ -249,7 +260,7 @@ function RootBuddy() {
           window.removeEventListener("site-loader-done", onDone);
           loadBuddy();
         }
-      }, 100);
+      }, 150);
       const onDone = () => {
         clearInterval(interval);
         window.removeEventListener("site-loader-done", onDone);
@@ -260,11 +271,13 @@ function RootBuddy() {
         mounted = false;
         clearInterval(interval);
         window.removeEventListener("site-loader-done", onDone);
+        if (timer) clearTimeout(timer);
       };
     }
 
     return () => {
       mounted = false;
+      if (timer) clearTimeout(timer);
     };
   }, []);
 

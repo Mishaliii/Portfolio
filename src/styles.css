@@ -69,9 +69,6 @@ html.has-cursor * {
   line-height: 0.86;
   font-weight: 400;
 }
-[data-drawer-content] .display {
-  line-height: 1.15 !important;
-}
 .mono {
   font-family: var(--font-mono);
   font-size: 11px;
@@ -2335,6 +2332,11 @@ html.paged .page:not(.is-active) [data-card] {
 }
 
 @media (max-width: 900px) {
+  /* Mobile drawer heading line-height: safe wrap without clipping */
+  [data-drawer-content] .display {
+    line-height: 1.15 !important;
+  }
+
   /* 3. Hero character portrait positioning: keep Mishal and laptop visible below headline */
   .scene-poster,
   .scene-video {
