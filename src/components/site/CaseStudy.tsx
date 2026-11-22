@@ -3,7 +3,6 @@ import { Odometer } from "@/components/Odometer";
 import { createPortal } from "react-dom";
 import { gsap } from "gsap";
 import { works, type CaseStudyData } from "@/content";
-import { useScrollSpy } from "@/hooks";
 import { ddssImages } from "./ScreenshotGallery";
 
 export function CaseStudy({
@@ -46,14 +45,46 @@ export function CaseStudy({
   }, [c.nav, validSections]);
 
   const sectionIds = useMemo(() => validSections.map((s) => s.id), [validSections]);
-  const { activeSection, setActiveSection, updateSpy } = useScrollSpy({
-    containerRef: scrollArea,
-    sectionIds,
-    offset: 24,
-    enabled: open,
-  });
-  const activeSectionRef = useRef(activeSection);
-  activeSectionRef.current = activeSection;
+  const navRef = useRef<HTMLElement>(null);
+  const activeSectionRef = useRef<string>(sectionIds[0] ?? "");
+
+  const updateNavActive = useCallback((id: string) => {
+    if (activeSectionRef.current === id) return;
+    activeSectionRef.current = id;
+    const nav = navRef.current;
+    if (!nav) return;
+    const buttons = nav.querySelectorAll<HTMLButtonElement>("button[data-nav-id]");
+    buttons.forEach((btn) => {
+      const isAct = btn.getAttribute("data-nav-id") === id;
+      const wasAct = btn.getAttribute("aria-current") === "true";
+      if (isAct && !wasAct) {
+        btn.setAttribute("aria-current", "true");
+        btn.className =
+          "block text-left transition-colors cursor-pointer text-[#1F5A3A] font-semibold underline underline-offset-8 decoration-[#1F5A3A] decoration-2";
+      } else if (!isAct && wasAct) {
+        btn.removeAttribute("aria-current");
+        btn.className =
+          "block text-left transition-colors cursor-pointer text-[#6B645A] hover:text-[#0B0B0B]";
+      }
+    });
+  }, []);
+
+  const sectionOffsetsRef = useRef<{ id: string; top: number }[]>([]);
+  const maxScrollRef = useRef<number>(0);
+
+  const measureOffsets = useCallback(() => {
+    const container = scrollArea.current;
+    if (!container || sectionIds.length === 0) return;
+    const cRect = container.getBoundingClientRect();
+    const sTop = container.scrollTop;
+    maxScrollRef.current = Math.max(0, container.scrollHeight - container.clientHeight);
+    sectionOffsetsRef.current = sectionIds.map((id) => {
+      const el = document.getElementById(id);
+      if (!el) return { id, top: 0 };
+      const eRect = el.getBoundingClientRect();
+      return { id, top: eRect.top - cRect.top + sTop };
+    });
+  }, [sectionIds]);
 
   // Smooth scroll to target section (continuous scroll-spy highlight)
   const scrollToSection = useCallback(
@@ -76,7 +107,7 @@ export function CaseStudy({
       );
 
       if (scrollTween.current) scrollTween.current.kill();
-      setActiveSection(id);
+      updateNavActive(id);
       const proxy = { y: container.scrollTop };
       scrollTween.current = gsap.to(proxy, {
         y: targetScroll,
@@ -85,16 +116,16 @@ export function CaseStudy({
         overwrite: "auto",
         onUpdate: () => {
           container.scrollTop = proxy.y;
-          setActiveSection(id);
+          updateNavActive(id);
         },
         onComplete: () => {
           container.scrollTop = targetScroll;
-          setActiveSection(id);
+          updateNavActive(id);
           scrollTween.current = null;
         },
       });
     },
-    [setActiveSection],
+    [updateNavActive],
   );
 
   const close = useCallback(() => {
@@ -179,7 +210,7 @@ export function CaseStudy({
     if (scrollArea.current) {
       scrollArea.current.scrollTop = 0;
     }
-    setActiveSection(validSections[0]?.id ?? "what-it-does");
+    updateNavActive(validSections[0]?.id ?? "what-it-does");
 
     // Collapse any open details or expanded accordions across all projects
     el.querySelectorAll("details[open]").forEach((d) => d.removeAttribute("open"));
@@ -218,10 +249,50 @@ export function CaseStudy({
       }
     };
 
+    let rafId: number | null = null;
+    const onScroll = () => {
+      if (rafId !== null) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        const cont = scrollArea.current;
+        if (!cont) return;
+        const st = cont.scrollTop;
+
+        if (st <= 10) {
+          if (activeSectionRef.current !== sectionIds[0]) {
+            updateNavActive(sectionIds[0]);
+          }
+          return;
+        }
+
+        const maxS = maxScrollRef.current;
+        if (maxS > 0 && st >= maxS - 32) {
+          const lastId = sectionIds[sectionIds.length - 1];
+          if (lastId && activeSectionRef.current !== lastId) {
+            updateNavActive(lastId);
+          }
+          return;
+        }
+
+        const offsets = sectionOffsetsRef.current;
+        let curr = sectionIds[0];
+        for (let i = 0; i < offsets.length; i++) {
+          if (offsets[i].top - 28 <= st) {
+            curr = offsets[i].id;
+          }
+        }
+        if (curr && activeSectionRef.current !== curr) {
+          updateNavActive(curr);
+        }
+      });
+    };
+
     if (container) {
       container.addEventListener("wheel", onWheel, { passive: true });
       container.addEventListener("touchmove", onTouch, { passive: true });
+      container.addEventListener("scroll", onScroll, { passive: true });
     }
+    window.addEventListener("resize", measureOffsets, { passive: true });
 
     setDrawerOpened(false);
 
@@ -236,6 +307,7 @@ export function CaseStudy({
       onComplete: () => {
         openTl.current = null;
         setDrawerOpened(true);
+        measureOffsets();
         closeBtn.current?.focus({ preventScroll: true });
       },
     });
@@ -309,7 +381,10 @@ export function CaseStudy({
       if (container) {
         container.removeEventListener("wheel", onWheel);
         container.removeEventListener("touchmove", onTouch);
+        container.removeEventListener("scroll", onScroll);
       }
+      window.removeEventListener("resize", measureOffsets);
+      if (rafId !== null) cancelAnimationFrame(rafId);
       if (scrollTween.current) {
         scrollTween.current.kill();
         scrollTween.current = null;
@@ -324,7 +399,7 @@ export function CaseStudy({
       }
       window.removeEventListener("keydown", key, true);
     };
-  }, [open, close, c, scrollToSection, updateSpy, setActiveSection]);
+  }, [open, close, c, scrollToSection, measureOffsets, sectionIds, updateNavActive]);
 
   if (!open || typeof document === "undefined") return null;
 
@@ -382,15 +457,17 @@ export function CaseStudy({
           {/* Left sticky section list (plain text, current one underlined) */}
           <aside data-drawer-content className="hidden md:block">
             <nav
+              ref={navRef}
               className="sticky top-2 space-y-4 text-[13px] font-mono tracking-wider"
               aria-label="Sections"
             >
               {validNav.map((item) => {
-                const isActive = activeSection === item.id;
+                const isActive = activeSectionRef.current === item.id;
                 return (
                   <button
                     key={item.id}
                     type="button"
+                    data-nav-id={item.id}
                     aria-current={isActive ? "true" : undefined}
                     onClick={() => scrollToSection(item.id)}
                     className={`block text-left transition-colors cursor-pointer ${
@@ -412,7 +489,10 @@ export function CaseStudy({
             data-drawer-scroll
             data-lenis-prevent
             className="overflow-y-auto min-h-0 h-full pr-3 sm:pr-6 space-y-16 pb-24"
-            style={{ scrollbarWidth: "thin", overscrollBehavior: "contain" }}
+            style={{
+              scrollbarWidth: "thin",
+              overscrollBehavior: "contain",
+            }}
           >
             {validSections.map((sec) => (
               <section
