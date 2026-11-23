@@ -2497,5 +2497,55 @@ html.paged .page:not(.is-active) [data-card] {
     pointer-events: none !important;
     visibility: hidden !important;
   }
+
+  /* Step 35: Mobile One Screen Per Section Snap Framework */
+  html.mobile-site-active {
+    scroll-snap-type: y mandatory;
+    scroll-behavior: auto;
+  }
+
+  .mobile-snap-section {
+    height: 100svh !important;
+    max-height: 100svh !important;
+    scroll-snap-align: start !important;
+    scroll-snap-stop: always !important;
+    overflow: hidden !important;
+  }
+
+  /* Step 35: Short-screen fallback (< 650px): natural height, proximity snapping, never clipped */
+  @media (max-height: 649px) {
+    html.mobile-site-active {
+      scroll-snap-type: y proximity !important;
+    }
+    .mobile-snap-section {
+      min-height: 100svh !important;
+      height: auto !important;
+      max-height: none !important;
+      overflow: visible !important;
+    }
+  }
+
+  /* Step 35: Right-edge Section Dots (5 dots, 5px, active 20px, forest green, 44px tap area) */
+  .mobile-section-dots {
+    position: fixed;
+    right: max(4px, env(safe-area-inset-right));
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 40;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    pointer-events: auto;
+  }
+
+  body.menu-open .mobile-section-dots,
+  body.sprout-panel-open .mobile-section-dots,
+  body.sheet-open .mobile-section-dots {
+    display: none !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    visibility: hidden !important;
+  }
 }
 

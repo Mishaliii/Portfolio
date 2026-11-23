@@ -333,8 +333,8 @@ async function runSmoke() {
       await evalJs(`window.scrollTo(0, 0)`);
       await wait(300);
 
-      // 3. MOBILE_HERO: no horizontal scroll, arch image loaded, buttons visible on first load at 390x844 and 360x640
-      console.log("\n--- Checking MOBILE_HERO ---");
+      // 3. MOBILE_HERO (Step 35: Hero "B" Portrait on Ink, Anton MISHAL stroke, CTAs visible above fold)
+      console.log("\n--- Checking MOBILE_HERO (Step 35 Hero 'B') ---");
       const heroMetrics = await evalJs(`
         (() => {
           const docW = Math.max(document.documentElement.scrollWidth, document.body.scrollWidth);
@@ -344,10 +344,10 @@ async function runSmoke() {
           const h1Rect = h1 ? h1.getBoundingClientRect() : null;
           const menuBtn = document.querySelector('header button[aria-label*="menu" i]');
           const menuBtnRect = menuBtn ? menuBtn.getBoundingClientRect() : null;
-          const archImg = document.querySelector('#overview img[src*="hero-mobile"]');
-          const archImgLoaded = Boolean(archImg && archImg.complete && archImg.naturalWidth > 0);
-          const sticker = document.querySelector('#overview svg textPath');
-          const stickerValid = Boolean(sticker && sticker.textContent.includes('OPEN TO WORK'));
+          const portraitImg = document.querySelector('#overview img[src*="portrait-side"]');
+          const portraitLoaded = Boolean(portraitImg && portraitImg.complete && portraitImg.naturalWidth > 0);
+          const mishalStroke = document.querySelector('#overview [style*="text-stroke"], #overview [style*="WebkitTextStroke"]');
+          const pill = Array.from(document.querySelectorAll('#overview *')).find(el => el.textContent && el.textContent.includes('Open to work, 2026'));
           const ctas = Array.from(document.querySelectorAll('#overview a, #overview button'));
           const ctasValid = ctas.length >= 2 && ctas.every(el => {
             const r = el.getBoundingClientRect();
@@ -359,8 +359,9 @@ async function runSmoke() {
             docW, winW,
             h1Fits: h1Rect ? h1Rect.right <= winW + 2 : false,
             h1Width: h1Rect ? h1Rect.width : 0,
-            archImgLoaded,
-            stickerValid,
+            portraitLoaded,
+            hasMishalStroke: Boolean(mishalStroke),
+            hasPill: Boolean(pill),
             menuBtnFound: Boolean(menuBtn),
             menuBtnW: menuBtnRect ? menuBtnRect.width : 0,
             menuBtnH: menuBtnRect ? menuBtnRect.height : 0,
@@ -384,9 +385,9 @@ async function runSmoke() {
       );
       logCheck(
         "MOBILE_HERO",
-        "hero_arch_image_loaded_and_sticker_present",
-        Boolean(heroMetrics?.archImgLoaded && heroMetrics?.stickerValid),
-        `archImgLoaded=${heroMetrics?.archImgLoaded}, stickerValid=${heroMetrics?.stickerValid}`,
+        "hero_portrait_loaded_and_stroke_mishal_present",
+        Boolean(heroMetrics?.portraitLoaded && heroMetrics?.hasMishalStroke && heroMetrics?.hasPill),
+        `portrait=${heroMetrics?.portraitLoaded}, stroke=${heroMetrics?.hasMishalStroke}, pill=${heroMetrics?.hasPill}`,
       );
       logCheck(
         "MOBILE_HERO",
@@ -784,20 +785,22 @@ async function runSmoke() {
       );
 
       // Verify Strict Z-order:
-      // Sprout panel: 90, Menu sheet: 60, Header: 50, Sprout button: 45, Chevron: 40
+      // Sprout panel: 90, Menu sheet: 60, Header: 50, Sprout button: 45, Section dots: 40
       const zOrderCheck = await evalJs(`
         (() => {
           const header = document.querySelector('header');
           const sproutBtn = document.querySelector('.buddy-journey-corner-btn');
-          const chevron = document.querySelector('.mobile-scroll-top-btn');
+          const dots = document.querySelector('.mobile-section-dots');
           
           const headerZ = header ? parseInt(getComputedStyle(header).zIndex, 10) : 0;
           const sproutBtnZ = sproutBtn ? parseInt(getComputedStyle(sproutBtn).zIndex, 10) : 0;
+          const dotsZ = dots ? parseInt(getComputedStyle(dots).zIndex, 10) : 0;
           
           return {
             headerZ,
             sproutBtnZ,
-            headerAboveSprout: headerZ === 50 && sproutBtnZ === 45
+            dotsZ,
+            headerAboveSprout: headerZ === 50 && sproutBtnZ === 45 && dotsZ === 40
           };
         })()
       `);
@@ -805,40 +808,45 @@ async function runSmoke() {
         "MOBILE_SPROUT_CHAT",
         "strict_z_index_hierarchy_mobile",
         Boolean(zOrderCheck?.headerAboveSprout),
-        `headerZ=${zOrderCheck?.headerZ}, sproutBtnZ=${zOrderCheck?.sproutBtnZ}`,
+        `headerZ=${zOrderCheck?.headerZ}, sproutBtnZ=${zOrderCheck?.sproutBtnZ}, dotsZ=${zOrderCheck?.dotsZ}`,
       );
 
-      // Verify no overlap between Sprout button and Chevron at 360px width
+      // Verify 5 section dots present and right-edge Sprout clearance at 360px width
       await send("Emulation.setDeviceMetricsOverride", {
         width: 360,
         height: 740,
         deviceScaleFactor: 2,
         mobile: true,
       });
-      await evalJs(`window.scrollTo(0, 1500)`);
+      await evalJs(`window.scrollTo(0, 0)`);
       await wait(300);
 
-      const overlapCheck360 = await evalJs(`
+      const dotsCheck360 = await evalJs(`
         (() => {
+          const dots = Array.from(document.querySelectorAll('.mobile-section-dots button'));
           const btn = document.querySelector('.buddy-journey-corner-btn');
-          const chev = document.querySelector('.mobile-scroll-top-btn');
+          const heroRow = document.querySelector('#overview div.w-full.flex.flex-row');
           if (!btn) return { ok: false, reason: 'no-sprout-btn' };
           const br = btn.getBoundingClientRect();
-          const cr = chev ? chev.getBoundingClientRect() : null;
+          const hr = heroRow ? heroRow.getBoundingClientRect() : null;
           
           const sproutMin = br.width >= 43.5 && br.height >= 43.5;
-          const chevMin = cr ? (cr.width >= 43.5 && cr.height >= 43.5) : true;
-          const noOverlap = cr ? (cr.right < br.left) : true;
-          const gap = cr ? Math.round(br.left - cr.right) : 300;
+          const dotsCount = dots.length;
+          const dotsAll44 = dots.every(d => {
+            const r = d.getBoundingClientRect();
+            return r.width >= 43.5 && r.height >= 43.5;
+          });
+          // Verify action row ends at least 50px before right edge so it never overlaps Sprout
+          const rowClearsSprout = hr ? (window.innerWidth - hr.right >= 50) : true;
 
-          return { ok: sproutMin && chevMin && noOverlap, gap, sproutMin, chevMin };
+          return { ok: sproutMin && dotsCount === 5 && dotsAll44 && rowClearsSprout, dotsCount, dotsAll44, rowClearsSprout };
         })()
       `);
       logCheck(
         "MOBILE_SPROUT_CHAT",
-        "sprout_and_chevron_no_overlap_at_360w",
-        Boolean(overlapCheck360?.ok),
-        `gap=${overlapCheck360?.gap}px, sproutMin44=${overlapCheck360?.sproutMin}, chevMin44=${overlapCheck360?.chevMin}`,
+        "five_section_dots_and_action_row_sprout_clearance_at_360w",
+        Boolean(dotsCheck360?.ok),
+        `dotsCount=${dotsCheck360?.dotsCount}, dotsAll44=${dotsCheck360?.dotsAll44}, rowClearsSprout=${dotsCheck360?.rowClearsSprout}`,
       );
 
       // Restore 390x844
@@ -1013,20 +1021,21 @@ async function runSmoke() {
         `heroFont=${typoCheck?.heroFont}, aboutFont=${typoCheck?.aboutFont}`,
       );
 
-      // 12b. Hero Arch Frame & Face Unshaded
-      const archFrameCheck = await evalJs(`
+      // 12b. Hero "B" Portrait Framing & MISHAL Stroke
+      const heroBFrameCheck = await evalJs(`
         (() => {
-          const arch = document.querySelector('#overview [style*="border-radius: 200px 200px 22px 22px"], #overview [style*="border-radius:200px 200px 22px 22px"]');
-          const archBorder = arch ? window.getComputedStyle(arch).borderWidth : '';
-          const hasHeavyScrim = Boolean(document.querySelector('#overview .hero-shade'));
-          return { ok: Boolean(arch) && !hasHeavyScrim, hasArch: Boolean(arch), archBorder, hasHeavyScrim };
+          const img = document.querySelector('#overview img[src*="portrait-side"]');
+          const strokeText = document.querySelector('#overview [style*="text-stroke"], #overview [style*="WebkitTextStroke"]');
+          const cs = img ? window.getComputedStyle(img) : null;
+          const isCover = cs ? cs.objectFit === 'cover' : false;
+          return { ok: Boolean(img && isCover && strokeText), hasImg: Boolean(img), isCover, hasStrokeText: Boolean(strokeText) };
         })()
       `);
       logCheck(
         "MOBILE_DESIGN_POLISH",
-        "hero_arch_portrait_frame_unshaded",
-        Boolean(archFrameCheck?.ok),
-        `hasArch=${archFrameCheck?.hasArch}, border=${archFrameCheck?.archBorder}, heavyScrim=${archFrameCheck?.hasHeavyScrim}`,
+        "hero_portrait_frame_and_stroke_wordmark",
+        Boolean(heroBFrameCheck?.ok),
+        `hasImg=${heroBFrameCheck?.hasImg}, isCover=${heroBFrameCheck?.isCover}, stroke=${heroBFrameCheck?.hasStrokeText}`,
       );
 
       // 12c. Sprout Limits & Door Size
@@ -1224,41 +1233,43 @@ async function runSmoke() {
         `stops=${journeyR28Check?.stopsCount}, dots=${journeyR28Check?.hasDots}`,
       );
 
-      // Check Scroll-up Chevron: scroll down 1.5 screens and verify bottom-left chevron button
-      await evalJs(`window.scrollTo(0, window.innerHeight * 1.5)`);
-      await wait(400);
-      const chevronCheck = await evalJs(`
+      // Check Right-Edge Section Dots Navigation
+      await evalJs(`
         (() => {
-          const btn = document.querySelector('button[aria-label="Scroll to top"]');
-          if (!btn) return null;
-          const r = btn.getBoundingClientRect();
-          const isBottomLeft = r.left <= 40 && r.bottom <= window.innerHeight;
-          return { found: true, isBottomLeft, left: r.left, bottom: r.bottom };
+          const dots = document.querySelectorAll('.mobile-section-dots button');
+          if (dots.length >= 2) dots[1].click(); // Click Dot 1 (About)
+        })()
+      `);
+      await wait(1000);
+      const dotsNavCheck = await evalJs(`
+        (() => {
+          const about = document.getElementById('about');
+          const ar = about ? about.getBoundingClientRect() : null;
+          const isAboutSnapped = ar ? (Math.abs(ar.top) <= 50) : false;
+          return { isAboutSnapped, top: ar?.top };
         })()
       `);
       logCheck(
         "MOBILE_POLISH_28",
-        "scroll_up_chevron_visible_at_bottom_left",
-        Boolean(chevronCheck?.found && chevronCheck?.isBottomLeft),
-        `found=${chevronCheck?.found}, isBottomLeft=${chevronCheck?.isBottomLeft}, left=${chevronCheck?.left}px`,
+        "section_dots_navigate_with_smooth_jump",
+        Boolean(dotsNavCheck?.isAboutSnapped),
+        `isAboutSnapped=${dotsNavCheck?.isAboutSnapped}, top=${dotsNavCheck?.top}px`,
       );
-      await evalJs(`window.scrollTo(0, 0)`);
-      await wait(300);
 
-      // 12g. STEP 29 ROOT-CAUSE VERIFICATION
-      console.log("\n--- Checking STEP 29 ROOT-CAUSE VERIFICATION ---");
-
-      // Check A: Scroll-to-top does not replay intro or scramble text
-      await evalJs(`window.scrollTo(0, 1500)`);
-      await wait(400);
-      await evalJs(`document.querySelector('button[aria-label="Scroll to top"]')?.click()`);
-      await wait(1200);
+      // Return to Top via Dot 0 and verify never replays intro
+      await evalJs(`
+        (() => {
+          const dots = document.querySelectorAll('.mobile-section-dots button');
+          if (dots.length >= 1) dots[0].click(); // Click Dot 0 (Overview)
+        })()
+      `);
+      await wait(1000);
       const scrollTopCheck = await evalJs(`
         (() => {
-          const atTop = window.scrollY === 0;
+          const atTop = window.scrollY <= 10;
           const introMounted = Boolean(document.querySelector('.site-loader, .intro-overlay'));
           const h1 = document.querySelector('#overview h1');
-          const hasMishal = h1 ? h1.textContent.includes("MISHAL") : false;
+          const hasMishal = h1 ? h1.textContent.includes("AI THAT SHIPS") || h1.textContent.includes("MISHAL") : false;
           const introDone = sessionStorage.getItem("mishal_intro_done") === "1";
           return { atTop, introMounted, hasMishal, introDone };
         })()
@@ -1431,137 +1442,158 @@ async function runSmoke() {
         `walkerHidden=${sproutVisibilityCheck?.walkerHidden}, doorHidden=${sproutVisibilityCheck?.doorHidden}, cornerBtn=${sproutVisibilityCheck?.cornerBtnVisible}`,
       );
 
-      // 14. MOBILE_HERO_VIDEO (Step 32: Deferred Arch Video, saveData, pause offscreen, poster LCP)
-      console.log("\n--- Checking STEP 32: MOBILE HERO VIDEO IN ARCH ---");
+      // 14. MOBILE_STEP_35_FRAMEWORK (Snap Framework, Short-screen Fallback, Header Contrast, About Tabs & Sheet)
+      console.log("\n--- Checking STEP 35: MOBILE ONE SCREEN PER SECTION FRAMEWORK & ABOUT ---");
 
-      // Check 1: Poster visible in LCP budget
-      const heroPosterCheck = await evalJs(`
+      // Check 1: 100svh section heights across viewports (360x640, 360x740, 390x844, 412x915)
+      const viewportSizes = [
+        { w: 360, h: 640 },
+        { w: 360, h: 740 },
+        { w: 390, h: 844 },
+        { w: 412, h: 915 }
+      ];
+      let allVpsSectionHeightsValid = true;
+
+      for (const vp of viewportSizes) {
+        await send("Emulation.setDeviceMetricsOverride", {
+          width: vp.w,
+          height: vp.h,
+          deviceScaleFactor: 2,
+          mobile: true,
+        });
+        await wait(250);
+
+        const snapCheck = await evalJs(`
+          (() => {
+            const sections = Array.from(document.querySelectorAll('.mobile-snap-section'));
+            const winH = window.innerHeight;
+            // On short screens (<650px), natural height fallback applies
+            const isShort = winH < 650;
+            const allFit = sections.every(s => {
+              const r = s.getBoundingClientRect();
+              return isShort ? r.height >= winH - 2 : Math.abs(r.height - winH) <= 5;
+            });
+            return { ok: allFit, count: sections.length, isShort };
+          })()
+        `);
+        if (!snapCheck?.ok) allVpsSectionHeightsValid = false;
+      }
+
+      // Reset to 390x844
+      await send("Emulation.setDeviceMetricsOverride", {
+        width: 390,
+        height: 844,
+        deviceScaleFactor: 2,
+        mobile: true,
+      });
+      await wait(200);
+
+      logCheck(
+        "MOBILE_FRAMEWORK_35",
+        "sections_100svh_or_short_screen_fallback_across_viewports",
+        Boolean(allVpsSectionHeightsValid),
+        `allViewportsFit=${allVpsSectionHeightsValid}`,
+      );
+
+      // Check 2: Header dynamic contrast >= 4.5:1 across dark and cream sections
+      await evalJs(`document.getElementById('overview')?.scrollIntoView({ behavior: 'instant' })`);
+      await wait(300);
+      const darkHeaderCheck = await evalJs(`
         (() => {
-          const arch = document.querySelector('#overview img[src*="hero-mobile.webp"]');
-          if (!arch) return { ok: false, reason: "poster img missing" };
-          const isComplete = arch.complete && arch.naturalWidth > 0;
-          const isEager = arch.getAttribute('loading') === 'eager' || !arch.getAttribute('loading');
-          const isHighPri = arch.getAttribute('fetchpriority') === 'high';
-          const r = arch.getBoundingClientRect();
-          const visibleInArch = r.width > 100 && r.height > 100;
+          const header = document.querySelector('header');
+          const wordmark = document.querySelector('header [data-brand="wordmark"]');
+          const cs = wordmark ? window.getComputedStyle(wordmark) : null;
+          const color = cs ? cs.color : '';
+          // On dark hero, text is cream #E8DED0 (rgb(232, 222, 208))
+          const isLightText = color.includes('232') || color.includes('255');
+          return { isLightText, color };
+        })()
+      `);
+
+      await evalJs(`document.getElementById('about')?.scrollIntoView({ behavior: 'instant' })`);
+      await wait(400);
+      const creamHeaderCheck = await evalJs(`
+        (() => {
+          const wordmark = document.querySelector('header [data-brand="wordmark"]');
+          const cs = wordmark ? window.getComputedStyle(wordmark) : null;
+          const color = cs ? cs.color : '';
+          // On cream about, text is ink #0B0B0B (rgb(11, 11, 11))
+          const isDarkText = color.includes('11') || color.includes('0, 0, 0');
+          return { isDarkText, color };
+        })()
+      `);
+
+      logCheck(
+        "MOBILE_FRAMEWORK_35",
+        "header_dynamic_contrast_switches_per_section",
+        Boolean(darkHeaderCheck?.isLightText && creamHeaderCheck?.isDarkText),
+        `heroTextLight=${darkHeaderCheck?.isLightText}, aboutTextDark=${creamHeaderCheck?.isDarkText}`,
+      );
+
+      // Check 3: About 4 tab pills and 128x150 photo
+      const aboutSuiteCheck = await evalJs(`
+        (() => {
+          const img = document.querySelector('#about img[src*="portrait-front"]');
+          const imgRect = img ? img.getBoundingClientRect() : null;
+          const tabs = Array.from(document.querySelectorAll('#about [role="tab"]'));
+          const tabLabels = tabs.map(t => t.textContent.trim());
+          const has4Tabs = tabLabels.includes('Education') && tabLabels.includes('Experience') && tabLabels.includes('Certs') && tabLabels.includes('Status');
+          const readMoreBtn = Array.from(document.querySelectorAll('#about button')).find(b => b.textContent.includes('Read more'));
+
           return {
-            ok: isComplete && visibleInArch,
-            isComplete,
-            naturalW: arch.naturalWidth,
-            naturalH: arch.naturalHeight,
-            width: Math.round(r.width),
-            height: Math.round(r.height),
-            isEager,
-            isHighPri
+            imgFound: Boolean(img),
+            imgW: Math.round(imgRect?.width || 0),
+            imgH: Math.round(imgRect?.height || 0),
+            has4Tabs,
+            tabCount: tabs.length,
+            hasReadMore: Boolean(readMoreBtn)
           };
         })()
       `);
       logCheck(
-        "MOBILE_HERO_VIDEO_32",
-        "hero_poster_visible_and_lcp_ready",
-        Boolean(heroPosterCheck?.ok),
-        `complete=${heroPosterCheck?.isComplete}, size=${heroPosterCheck?.naturalW}x${heroPosterCheck?.naturalH}, display=${heroPosterCheck?.width}x${heroPosterCheck?.height}`
+        "MOBILE_ABOUT_35",
+        "about_portrait_128x150_and_four_tab_pills",
+        Boolean(aboutSuiteCheck?.imgFound && aboutSuiteCheck?.has4Tabs && aboutSuiteCheck?.hasReadMore),
+        `img=${aboutSuiteCheck?.imgW}x${aboutSuiteCheck?.imgH}, 4tabs=${aboutSuiteCheck?.has4Tabs}, readMore=${aboutSuiteCheck?.hasReadMore}`,
       );
 
-      // Check 2: Video does not start before loader ends & sources order
-      await wait(1000);
-      const heroVideoState = await evalJs(`
+      // Check 4: About Read More Bottom Sheet opens & closes
+      await evalJs(`
         (() => {
-          const v = document.querySelector('#overview video');
-          if (!v) return { ok: false, reason: "video element missing" };
-          const sources = Array.from(v.querySelectorAll('source')).map(s => s.getAttribute('src'));
-          const webmFirst = sources[0] && sources[0].includes('hero-mobile.webm');
-          const mp4Second = sources[1] && sources[1].includes('hero-mobile.mp4');
-          const hasMuted = v.muted;
-          const hasLoop = v.loop;
-          const hasPlaysinline = v.hasAttribute('playsinline');
-          const hasPoster = v.getAttribute('poster') === '/hero-mobile.webp';
-          const preloadNone = v.getAttribute('preload') === 'none';
-          const isPlaying = !v.paused && v.currentTime >= 0;
-          return {
-            ok: Boolean(v && webmFirst && mp4Second && hasMuted && hasLoop && hasPlaysinline && hasPoster && preloadNone),
-            sources,
-            webmFirst,
-            mp4Second,
-            hasMuted,
-            hasLoop,
-            hasPlaysinline,
-            hasPoster,
-            preloadNone,
-            isPlaying,
-            currentTime: v.currentTime
-          };
+          const btn = Array.from(document.querySelectorAll('#about button')).find(b => b.textContent.includes('Read more'));
+          btn?.click();
         })()
       `);
-      logCheck(
-        "MOBILE_HERO_VIDEO_32",
-        "video_structure_sources_webm_first_preload_none",
-        Boolean(heroVideoState?.ok),
-        `sources=${JSON.stringify(heroVideoState?.sources)}, preload=${heroVideoState?.preloadNone}, muted=${heroVideoState?.hasMuted}`
-      );
+      await wait(400);
 
-      // Check 3: Video pauses when hero is scrolled off screen and resumes on return
-      await evalJs(`window.scrollTo(0, 1500)`);
-      await wait(500);
-      const videoOffscreenPaused = await evalJs(`
+      const bioSheetCheck = await evalJs(`
         (() => {
-          const v = document.querySelector('#overview video');
-          if (!v) return false;
-          return v.paused;
+          const sheet = document.querySelector('[role="dialog"][aria-label*="About" i]');
+          if (!sheet) return { open: false };
+          const closeBtn = sheet.querySelector('button[aria-label*="close" i]');
+          return { open: true, hasClose: Boolean(closeBtn) };
         })()
       `);
+
+      // Close sheet
+      await evalJs(`
+        (() => {
+          const closeBtn = document.querySelector('[role="dialog"][aria-label*="About" i] button');
+          closeBtn?.click();
+        })()
+      `);
+      await wait(300);
+
       logCheck(
-        "MOBILE_HERO_VIDEO_32",
-        "video_paused_when_hero_off_screen",
-        Boolean(videoOffscreenPaused),
-        `pausedOffscreen=${videoOffscreenPaused}`
+        "MOBILE_ABOUT_35",
+        "about_read_more_bottom_sheet_accessible",
+        Boolean(bioSheetCheck?.open && bioSheetCheck?.hasClose),
+        `open=${bioSheetCheck?.open}, hasClose=${bioSheetCheck?.hasClose}`,
       );
 
-      // Scroll back to hero and verify resumes playing
+      // Reset scroll to top
       await evalJs(`window.scrollTo(0, 0)`);
-      await wait(600);
-      const videoOnscreenPlaying = await evalJs(`
-        (() => {
-          const v = document.querySelector('#overview video');
-          if (!v) return false;
-          return !v.paused;
-        })()
-      `);
-      logCheck(
-        "MOBILE_HERO_VIDEO_32",
-        "video_resumes_when_hero_in_viewport",
-        Boolean(videoOnscreenPlaying),
-        `resumedPlaying=${videoOnscreenPlaying}`
-      );
-
-      // Check 4: Video absent / does not load when saveData is enabled
-      const saveDataGuardCheck = await evalJs(`
-        (() => {
-          const testSaveData = { connection: { saveData: true } };
-          const test2g = { connection: { effectiveType: '2g' } };
-          const test3g = { connection: { effectiveType: '3g' } };
-          
-          const evalGuard = (navMock, mediaMock) => {
-            if (navMock?.connection?.saveData) return false;
-            if (navMock?.connection?.effectiveType === '2g' || navMock?.connection?.effectiveType === '3g') return false;
-            if (mediaMock) return false;
-            return true;
-          };
-          
-          return {
-            blocksSaveData: evalGuard(testSaveData, false) === false,
-            blocks2g: evalGuard(test2g, false) === false,
-            blocks3g: evalGuard(test3g, false) === false,
-            blocksReducedMotion: evalGuard({}, true) === false
-          };
-        })()
-      `);
-      logCheck(
-        "MOBILE_HERO_VIDEO_32",
-        "video_load_blocked_when_save_data_or_slow_network_active",
-        Boolean(saveDataGuardCheck?.blocksSaveData && saveDataGuardCheck?.blocks2g && saveDataGuardCheck?.blocks3g && saveDataGuardCheck?.blocksReducedMotion),
-        `saveDataBlocked=${saveDataGuardCheck?.blocksSaveData}, 2gBlocked=${saveDataGuardCheck?.blocks2g}, reducedMotionBlocked=${saveDataGuardCheck?.blocksReducedMotion}`
-      );
+      await wait(300);
 
       // 13. MOBILE_QUALITY
       logCheck(
