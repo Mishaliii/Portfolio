@@ -200,6 +200,95 @@ function checkMobileIntroDone(): boolean {
   }
 }
 
+function MobileDebugOverlay() {
+  const [data, setData] = useState<{
+    innerH: number;
+    visualH: number;
+    svh100: number;
+    scrollerTag: string;
+    snapType: string;
+    sections: Array<{ id: string; offsetH: number; scrollH: number; clientH: number; top: number }>;
+    snappedId: string;
+  } | null>(null);
+
+  useEffect(() => {
+    const testEl = document.createElement("div");
+    testEl.style.cssText = "position:fixed;top:0;left:0;height:100svh;width:1px;pointer-events:none;visibility:hidden;z-index:-999;";
+    document.body.appendChild(testEl);
+
+    const update = () => {
+      const innerH = window.innerHeight;
+      const visualH = window.visualViewport ? window.visualViewport.height : innerH;
+      const svh100 = testEl.getBoundingClientRect().height;
+
+      const scroller = document.scrollingElement || document.documentElement;
+      const scrollerTag = scroller.tagName.toLowerCase() + (scroller.className ? `.${scroller.className.split(" ")[0]}` : "");
+      const snapType = window.getComputedStyle(scroller).scrollSnapType || "none";
+
+      const sectionEls = Array.from(document.querySelectorAll("section[id]")) as HTMLElement[];
+      const sections = sectionEls.map((s) => ({
+        id: s.id,
+        offsetH: s.offsetHeight,
+        scrollH: s.scrollHeight,
+        clientH: s.clientHeight,
+        top: Math.round(s.getBoundingClientRect().top),
+      }));
+
+      let snappedId = "none";
+      let minDiff = Infinity;
+      sections.forEach((s) => {
+        const diff = Math.abs(s.top);
+        if (diff < minDiff && diff < innerH / 2) {
+          minDiff = diff;
+          snappedId = s.id;
+        }
+      });
+
+      setData({ innerH, visualH, svh100, scrollerTag, snapType, sections, snappedId });
+    };
+
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    window.visualViewport?.addEventListener("resize", update);
+    window.visualViewport?.addEventListener("scroll", update);
+
+    return () => {
+      window.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+      window.visualViewport?.removeEventListener("resize", update);
+      window.visualViewport?.removeEventListener("scroll", update);
+      testEl.remove();
+    };
+  }, []);
+
+  if (!data) return null;
+
+  return (
+    <div
+      id="mobile-debug-overlay"
+      className="fixed top-0 left-0 right-0 z-[9999] pointer-events-none bg-black/90 text-[#00ff88] font-mono text-[9px] p-2 leading-tight border-b border-[#00ff88]/30 shadow-lg"
+      style={{ backdropFilter: "blur(4px)" }}
+    >
+      <div className="flex flex-wrap gap-x-3 gap-y-0.5 mb-1 font-bold">
+        <span>innerH: {data.innerH}px</span>
+        <span>visualH: {Math.round(data.visualH)}px</span>
+        <span>100svh: {Math.round(data.svh100)}px</span>
+        <span>scroller: {data.scrollerTag}</span>
+        <span>snapType: {data.snapType}</span>
+        <span className="text-[#ffdd00]">snapped: #{data.snappedId}</span>
+      </div>
+      <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[8.5px] opacity-90 border-t border-[#00ff88]/20 pt-1">
+        {data.sections.map((s) => (
+          <div key={s.id} className={s.id === data.snappedId ? "text-yellow-300 font-bold" : ""}>
+            #{s.id}: offH={s.offsetH} scrH={s.scrollH} top={s.top}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function MobileSite() {
   const isIntroDone = checkMobileIntroDone();
   const [booted, setBooted] = useState(isIntroDone);
@@ -279,56 +368,52 @@ export function MobileSite() {
     window.dispatchEvent(new CustomEvent("site-loader-done"));
   }, []);
 
-  // Viewport Jitter Safeguard
+  // Step 36: Screen Height CSS Variable (--screen-h)
+  // Set once from visualViewport.height or window.innerHeight.
+  // Update ONLY on orientation change or width change, NEVER on scroll-driven height changes!
   useEffect(() => {
-    let lastW = window.innerWidth;
-    let lastH = window.innerHeight;
-
-    const onResize = (e: UIEvent) => {
-      const curW = window.innerWidth;
-      const curH = window.innerHeight;
-      const dw = Math.abs(curW - lastW);
-      const dh = Math.abs(curH - lastH);
-
-      if (dw === 0 && dh < 120) {
-        e.stopImmediatePropagation?.();
-        return;
-      }
-
-      lastW = curW;
-      lastH = curH;
+    const setScreenH = () => {
+      const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      document.documentElement.style.setProperty("--screen-h", `${Math.round(h)}px`);
     };
 
-    window.addEventListener("resize", onResize, { capture: true, passive: true });
-    return () => window.removeEventListener("resize", onResize, { capture: true });
+    setScreenH();
+
+    let lastW = window.innerWidth;
+    const handleResize = () => {
+      const curW = window.innerWidth;
+      if (curW !== lastW) {
+        lastW = curW;
+        setScreenH();
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+    window.addEventListener("orientationchange", setScreenH);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("orientationchange", setScreenH);
+    };
   }, []);
 
-  // Menu Scroll Lock & Class Toggle
-  useEffect(() => {
-    if (!menuOpen) return;
-    const prevOverflow = document.body.style.overflow;
-    const prevOverscroll = document.body.style.overscrollBehavior;
-    document.body.style.overflow = "hidden";
-    document.body.style.overscrollBehavior = "contain";
-    document.body.classList.add("menu-open");
-    return () => {
-      document.body.style.overflow = prevOverflow;
-      document.body.style.overscrollBehavior = prevOverscroll;
-      document.body.classList.remove("menu-open");
-    };
-  }, [menuOpen]);
+  // Step 36: Menu & Bottom Sheet Scroll Lock with exact scroll position restore
+  const scrollPosRef = useRef(0);
 
-  // Read More Sheet Scroll Lock
   useEffect(() => {
-    if (!bioSheetOpen) return;
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    document.body.classList.add("sheet-open");
-    return () => {
-      document.body.style.overflow = prevOverflow;
-      document.body.classList.remove("sheet-open");
-    };
-  }, [bioSheetOpen]);
+    const isLocked = menuOpen || bioSheetOpen || selectedCaseStudy.open;
+    if (isLocked) {
+      scrollPosRef.current = window.scrollY || document.documentElement.scrollTop;
+      document.documentElement.classList.add("scroll-locked");
+      document.body.classList.toggle("menu-open", menuOpen);
+      document.body.classList.toggle("sheet-open", bioSheetOpen || selectedCaseStudy.open);
+    } else {
+      document.documentElement.classList.remove("scroll-locked");
+      document.body.classList.remove("menu-open", "sheet-open");
+      if (scrollPosRef.current) {
+        window.scrollTo(0, scrollPosRef.current);
+      }
+    }
+  }, [menuOpen, bioSheetOpen, selectedCaseStudy.open]);
 
   // Back gesture / Popstate closes menu or sheet
   useEffect(() => {
@@ -336,8 +421,7 @@ export function MobileSite() {
       if (bioSheetOpen) {
         setBioSheetOpen(false);
       } else if (menuOpen) {
-        setMenuOpen(false);
-        menuButtonRef.current?.focus();
+        closeMenu();
       }
     };
     window.addEventListener("popstate", onPopState);
@@ -605,6 +689,9 @@ export function MobileSite() {
       ref={containerRef}
       className="mobile-site w-full min-h-screen text-[#0B0B0B] bg-[#E8DED0] selection:bg-[#1F5A3A] selection:text-[#E8DED0] font-sans"
     >
+      {typeof window !== "undefined" && new URLSearchParams(window.location.search).get("debug") === "1" && (
+        <MobileDebugOverlay />
+      )}
       {/* 1. Full Screen Liquid Intro Loader */}
       {!booted && loaderMode !== "none" && (
         <Intro
@@ -678,7 +765,7 @@ export function MobileSite() {
         />
       </header>
 
-      {/* 3. Right-Edge Section Dots (5 dots, 5px, active 20px, forest green, 44px tap area, 0.6s GSAP scroll) */}
+      {/* 3. Right-Edge Section Dots (8px inactive 40%, active 8x24px, forest green on cream, cream on dark, 44px tap area) */}
       <nav
         aria-label="Section navigation"
         className="mobile-section-dots"
@@ -697,10 +784,14 @@ export function MobileSite() {
               className="w-11 h-11 min-w-[44px] min-h-[44px] shrink-0 flex items-center justify-center cursor-pointer focus:outline-none"
             >
               <span
-                className={`transition-all duration-300 rounded-full shadow-xs ${
+                className={`transition-all duration-300 rounded-full ${
                   isCurrent
-                    ? "w-[5px] h-[20px] bg-[#1F5A3A]"
-                    : "w-[5px] h-[5px] bg-[#1F5A3A]/40 hover:bg-[#1F5A3A]/70"
+                    ? isDarkSection
+                      ? "w-2 h-6 bg-[#E8DED0]"
+                      : "w-2 h-6 bg-[#1F5A3A]"
+                    : isDarkSection
+                      ? "w-2 h-2 bg-[#E8DED0]/40"
+                      : "w-2 h-2 bg-[#1F5A3A]/40"
                 }`}
               />
             </button>
@@ -857,17 +948,17 @@ export function MobileSite() {
           aria-label="Overview"
           className="mobile-snap-section relative w-full bg-[#0B0B0B] text-[#E8DED0] flex flex-col justify-between overflow-hidden select-none"
         >
-          {/* Top 60svh: Huge MISHAL display stroke wordmark + Looking-up Portrait */}
-          <div className="relative w-full h-[58svh] sm:h-[60svh] shrink-0 overflow-hidden bg-[#0B0B0B]">
-            {/* Huge MISHAL outline behind and over top of head */}
+          {/* Top portrait block: Looking-up portrait, flex-1 (max-h 50vh, min 200px) */}
+          <div className="relative w-full flex-1 min-h-[200px] max-h-[50vh] overflow-hidden bg-[#0B0B0B]">
+            {/* Outlined MISHAL behind and over top of head: clamp(64px, 19vw, 96px) */}
             <div
               className="absolute top-[48px] sm:top-[56px] inset-x-0 z-[5] flex justify-center pointer-events-none select-none overflow-hidden"
               aria-hidden="true"
             >
               <span
-                className="font-display uppercase tracking-[-0.02em] text-[clamp(110px,38vw,160px)] leading-[0.8] text-center m-0 select-none"
+                className="font-display uppercase tracking-[-0.02em] text-[clamp(64px,19vw,96px)] leading-[0.8] text-center m-0 select-none"
                 style={{
-                  WebkitTextStroke: "1.5px rgba(232, 222, 208, 0.33)",
+                  WebkitTextStroke: "1.5px rgba(232, 222, 208, 0.45)",
                   color: "transparent",
                   willChange: "transform",
                 }}
@@ -904,7 +995,7 @@ export function MobileSite() {
           </div>
 
           {/* Bottom Block: Pill, Headline, Role, Two Buttons (All visible in first screen) */}
-          <div className="relative z-20 w-full max-w-sm mx-auto flex flex-col items-center gap-1.5 sm:gap-2 shrink-0 px-4 pt-1 pb-3 sm:pb-4 my-auto">
+          <div className="relative z-20 w-full max-w-sm mx-auto flex flex-col items-center gap-1.5 sm:gap-2 shrink-0 px-4 pt-1 pb-4 sm:pb-5">
             {/* Pill: Open to work, 2026 */}
             <div className="mobile-hero-line flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#1F5A3A]/20 border border-[#1F5A3A]/40">
               <span className="w-2 h-2 rounded-full bg-[#1F5A3A] animate-pulse" aria-hidden="true" />
@@ -917,7 +1008,7 @@ export function MobileSite() {
             <h1
               data-reveal-title
               aria-label="I build AI that ships."
-              className="font-display uppercase tracking-[-0.01em] text-[clamp(26px,7.2vw,34px)] leading-[0.96] text-[#E8DED0] text-center m-0 select-none overflow-hidden max-w-[340px]"
+              className="font-display uppercase tracking-[-0.01em] text-[clamp(24px,6.8vw,32px)] leading-[0.96] text-[#E8DED0] text-center m-0 select-none overflow-hidden max-w-[340px]"
             >
               <span className="sr-only">MISHAL - </span>
               <span className="mobile-hero-line inline-block">I BUILD AI THAT SHIPS.</span>
@@ -929,7 +1020,7 @@ export function MobileSite() {
             </p>
 
             {/* Two buttons (>= 48px, cream fill for View projects, outline for Download CV, ends 60px before right edge) */}
-            <div className="w-[calc(100%-60px)] mr-[60px] flex flex-row gap-2.5 sm:gap-3 pt-1.5">
+            <div className="w-[calc(100%-60px)] mr-[60px] flex flex-row gap-2.5 sm:gap-3 pt-1">
               <button
                 type="button"
                 onClick={() => scrollToSection("works")}
@@ -957,10 +1048,10 @@ export function MobileSite() {
         <section
           id="about"
           aria-label="About"
-          className="mobile-snap-section relative w-full bg-[#E8DED0] text-[#0B0B0B] px-4 sm:px-6 pt-[60px] pb-4 flex flex-col justify-between overflow-hidden select-none"
+          className="mobile-snap-section relative w-full bg-[#E8DED0] text-[#0B0B0B] px-4 sm:px-6 pt-[60px] pb-4 flex flex-col justify-start gap-2.5 sm:gap-3 overflow-hidden select-none"
         >
           {/* Header: 01 About / About me. */}
-          <div data-reveal data-reveal-header className="flex flex-col gap-0.5 border-t border-[#C9A24A]/40 pt-2 shrink-0">
+          <div data-reveal data-reveal-header className="flex flex-col gap-0.5 border-t border-[#C9A24A]/40 pt-2 shrink-0 pr-[60px]">
             <span className="font-mono text-[11px] uppercase tracking-widest text-[#1F5A3A] font-bold">
               01 About
             </span>
@@ -969,9 +1060,9 @@ export function MobileSite() {
             </h2>
           </div>
 
-          {/* Row: 128x150 Portrait beside 3-line bio excerpt & Read more button */}
-          <div data-reveal data-reveal-card className="flex items-start gap-3.5 my-auto shrink-0">
-            <div className="w-[128px] h-[150px] shrink-0 rounded-[14px] overflow-hidden bg-[#171615] border border-[#0B0B0B]/15 shadow-sm">
+          {/* Row: 110x130 Portrait beside 3-line bio excerpt & Read more button */}
+          <div data-reveal data-reveal-card className="flex items-start gap-3 shrink-0 pr-[60px]">
+            <div className="w-[110px] h-[130px] shrink-0 rounded-[12px] overflow-hidden bg-[#171615] border border-[#0B0B0B]/15 shadow-sm">
               <img
                 src={frontImg}
                 alt={about.portraitAlt}
@@ -981,12 +1072,13 @@ export function MobileSite() {
                 style={{ objectPosition: "50% 20%" }}
               />
             </div>
-            <div className="flex-1 flex flex-col justify-between min-h-[150px] py-0.5 pr-2">
-              <p className="font-sans text-[13px] sm:text-[14px] leading-snug text-[#1a1a1a] m-0 line-clamp-3">
+            <div className="flex-1 flex flex-col justify-between min-h-[130px] py-0.5">
+              <p className="font-sans text-[12.5px] sm:text-[13.5px] leading-snug text-[#1a1a1a] m-0 line-clamp-3">
                 I'm an AI/ML engineer from Kollam. I build Python machine learning and computer vision applications and serve them through tested APIs.
               </p>
               <button
                 type="button"
+                data-read-more-trigger="true"
                 onClick={() => setBioSheetOpen(true)}
                 className="font-mono text-[12px] text-[#1F5A3A] font-bold hover:underline self-start flex items-center gap-1 min-h-[36px] cursor-pointer mt-1"
               >
@@ -997,7 +1089,7 @@ export function MobileSite() {
           </div>
 
           {/* 4 Tab Pills: Education, Experience, Certs, Status */}
-          <div data-reveal data-reveal-card className="flex flex-col gap-2 shrink-0 pr-[60px] pb-1">
+          <div data-reveal data-reveal-card className="flex flex-col gap-2 shrink-0 pr-[60px]">
             <div className="flex items-center gap-1.5" role="tablist" aria-label="About tabs">
               {(["Education", "Experience", "Certs", "Status"] as const).map((tab) => {
                 const isActive = activeAboutTab === tab;
@@ -1008,7 +1100,7 @@ export function MobileSite() {
                     role="tab"
                     aria-selected={isActive}
                     onClick={() => handleAboutTabSwitch(tab)}
-                    className={`flex-1 min-h-[44px] px-1 py-1.5 rounded-lg font-mono text-[10px] sm:text-[11px] uppercase tracking-wider font-semibold transition-all cursor-pointer flex items-center justify-center text-center ${
+                    className={`flex-1 min-h-[40px] px-1 py-1 rounded-lg font-mono text-[10px] sm:text-[11px] uppercase tracking-wider font-semibold transition-all cursor-pointer flex items-center justify-center text-center ${
                       isActive
                         ? "bg-[#0B0B0B] text-[#E8DED0] shadow-xs"
                         : "bg-[#0B0B0B]/5 text-[#0B0B0B]/70 border border-[#0B0B0B]/10 hover:bg-[#0B0B0B]/10 hover:text-[#0B0B0B]"
@@ -1022,7 +1114,7 @@ export function MobileSite() {
 
             {/* One Card displaying active tab content from content.ts (0.2s cross-fade) */}
             <div
-              className="p-3 sm:p-3.5 rounded-xl bg-[#0B0B0B]/[0.04] border border-[#0B0B0B]/12 min-h-[96px] sm:min-h-[105px] flex flex-col justify-center transition-opacity duration-200"
+              className="p-2.5 sm:p-3 rounded-xl bg-[#0B0B0B]/[0.04] border border-[#0B0B0B]/12 min-h-[85px] flex flex-col justify-center transition-opacity duration-200"
               style={{ opacity: tabFading ? 0 : 1 }}
               role="tabpanel"
             >
@@ -1031,14 +1123,14 @@ export function MobileSite() {
                   <span className="font-mono text-[10px] uppercase tracking-widest text-[#1F5A3A] font-bold">
                     {about.facts[0].label}
                   </span>
-                  <span className="font-sans text-[13px] sm:text-[14px] font-bold text-[#0B0B0B]">
+                  <span className="font-sans text-[13px] font-bold text-[#0B0B0B]">
                     {about.facts[0].bold}
                   </span>
-                  <span className="font-sans text-[11px] sm:text-[12px] text-[#0B0B0B]/80 leading-snug">
+                  <span className="font-sans text-[11px] text-[#0B0B0B]/80 leading-snug">
                     {about.facts[0].text.replace(/^ · /, "")}
                   </span>
                   {about.facts[0].secondary && (
-                    <span className="font-sans text-[10px] sm:text-[11px] text-[#0B0B0B]/70">
+                    <span className="font-sans text-[10px] text-[#0B0B0B]/70">
                       {about.facts[0].secondary}
                     </span>
                   )}
@@ -1049,14 +1141,14 @@ export function MobileSite() {
                   <span className="font-mono text-[10px] uppercase tracking-widest text-[#1F5A3A] font-bold">
                     {about.facts[1].label}
                   </span>
-                  <span className="font-sans text-[13px] sm:text-[14px] font-bold text-[#0B0B0B]">
+                  <span className="font-sans text-[13px] font-bold text-[#0B0B0B]">
                     {about.facts[1].bold}
                   </span>
-                  <span className="font-sans text-[11px] sm:text-[12px] text-[#0B0B0B]/80 leading-snug">
+                  <span className="font-sans text-[11px] text-[#0B0B0B]/80 leading-snug">
                     {about.facts[1].text.replace(/^ · /, "")}
                   </span>
                   {about.facts[1].secondary && (
-                    <span className="font-sans text-[10px] sm:text-[11px] text-[#0B0B0B]/70 line-clamp-1">
+                    <span className="font-sans text-[10px] text-[#0B0B0B]/70 line-clamp-1">
                       {about.facts[1].secondary}
                     </span>
                   )}
@@ -1067,7 +1159,7 @@ export function MobileSite() {
                   <span className="font-mono text-[10px] uppercase tracking-widest text-[#1F5A3A] font-bold">
                     {about.facts[2].label}
                   </span>
-                  <span className="font-sans text-[12px] sm:text-[13px] font-bold text-[#0B0B0B]">
+                  <span className="font-sans text-[12px] font-bold text-[#0B0B0B]">
                     {about.facts[2].bold}
                   </span>
                   <span className="font-sans text-[11px] text-[#0B0B0B]/80 leading-snug line-clamp-2">
@@ -1081,10 +1173,10 @@ export function MobileSite() {
                     <span className="w-2 h-2 rounded-full bg-[#1F5A3A]" aria-hidden="true" />
                     STATUS & AVAILABILITY
                   </span>
-                  <span className="font-sans text-[13px] sm:text-[14px] font-bold text-[#0B0B0B]">
+                  <span className="font-sans text-[13px] font-bold text-[#0B0B0B]">
                     {site.availability}
                   </span>
-                  <span className="font-sans text-[11px] sm:text-[12px] text-[#0B0B0B]/80">
+                  <span className="font-sans text-[11px] text-[#0B0B0B]/80">
                     Timezone: {site.timezone} · Kerala, India, GCC or remote
                   </span>
                 </div>
@@ -1099,9 +1191,9 @@ export function MobileSite() {
         <section
           id="expertise"
           aria-label="Expertise"
-          className="mobile-snap-section relative w-full bg-[#E8DED0] text-[#0B0B0B] px-4 sm:px-6 pt-[60px] pb-4 flex flex-col justify-between overflow-hidden select-none"
+          className="mobile-snap-section relative w-full bg-[#E8DED0] text-[#0B0B0B] px-4 sm:px-6 pt-[60px] pb-4 flex flex-col justify-start gap-1.5 sm:gap-2 overflow-hidden select-none"
         >
-          <div data-reveal data-reveal-header className="flex flex-col gap-0.5 border-t border-[#C9A24A]/40 pt-2 shrink-0">
+          <div data-reveal data-reveal-header className="flex flex-col gap-0.5 border-t border-[#C9A24A]/40 pt-2 shrink-0 pr-[60px]">
             <span className="font-mono text-[11px] uppercase tracking-widest text-[#1F5A3A] font-bold">
               02 EXPERTISE
             </span>
@@ -1114,20 +1206,20 @@ export function MobileSite() {
           </div>
 
           {/* 4 Skill Clusters inside 100svh */}
-          <div data-reveal data-reveal-card className="flex-1 flex flex-col justify-evenly py-1 pr-[60px]">
+          <div data-reveal data-reveal-card className="flex flex-col gap-1.5 sm:gap-2 py-0.5 pr-[60px] overflow-hidden">
             {expertise.clusters.map((clusterName, clusterIdx) => {
               const clusterSkills = expertise.skills.filter((s) => s.cluster === clusterIdx);
 
               return (
                 <div
                   key={clusterName}
-                  className="p-2 sm:p-2.5 rounded-xl bg-[#0B0B0B]/[0.03] border border-[#0B0B0B]/10 flex flex-col gap-1.5"
+                  className="p-1.5 sm:p-2 rounded-lg bg-[#0B0B0B]/[0.03] border border-[#0B0B0B]/10 flex flex-col gap-1"
                 >
-                  <span className="font-mono text-[10px] uppercase tracking-widest text-[#1F5A3A] font-bold">
+                  <span className="font-mono text-[9.5px] uppercase tracking-widest text-[#1F5A3A] font-bold">
                     {clusterName}
                   </span>
 
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="flex flex-wrap gap-1 sm:gap-1.5">
                     {clusterSkills.map((sk) => {
                       const isSelected = activeSkill === sk.name;
                       return (
@@ -1136,7 +1228,7 @@ export function MobileSite() {
                           type="button"
                           onClick={() => setActiveSkill(isSelected ? null : sk.name)}
                           aria-expanded={isSelected}
-                          className={`min-h-[44px] px-3 py-1.5 rounded-full font-mono text-[11px] sm:text-[12px] tracking-wide transition-all flex items-center gap-1 focus:outline-none cursor-pointer ${
+                          className={`min-h-[44px] px-2.5 py-1 rounded-full font-mono text-[10.5px] sm:text-[11.5px] tracking-wide transition-all flex items-center gap-1 focus:outline-none cursor-pointer ${
                             isSelected
                               ? "bg-[#1F5A3A] text-[#E8DED0] font-bold shadow-xs"
                               : "bg-[#E8DED0] text-[#0B0B0B] border border-[#0B0B0B]/20 hover:border-[#0B0B0B]/50 font-medium"
@@ -1208,9 +1300,9 @@ export function MobileSite() {
         <section
           id="works"
           aria-label="Works"
-          className="mobile-snap-section relative w-full bg-[#E8DED0] text-[#0B0B0B] px-4 sm:px-6 pt-[60px] pb-4 flex flex-col justify-between overflow-hidden select-none"
+          className="mobile-snap-section relative w-full bg-[#E8DED0] text-[#0B0B0B] px-4 sm:px-6 pt-[60px] pb-4 flex flex-col justify-start gap-2 sm:gap-2.5 overflow-hidden select-none"
         >
-          <div data-reveal data-reveal-header className="flex flex-col gap-0.5 border-t border-[#C9A24A]/40 pt-2 shrink-0">
+          <div data-reveal data-reveal-header className="flex flex-col gap-0.5 border-t border-[#C9A24A]/40 pt-2 shrink-0 pr-[60px]">
             <div className="flex items-center justify-between">
               <span className="font-mono text-[11px] uppercase tracking-widest text-[#1F5A3A] font-bold">
                 03 WORKS
@@ -1241,7 +1333,7 @@ export function MobileSite() {
           </div>
 
           {/* 3 Project Cards rendered in container (all 3 in DOM for smoke test, active one shown) */}
-          <div data-reveal data-reveal-card className="flex-1 flex flex-col justify-center py-1 pr-[60px]">
+          <div data-reveal data-reveal-card className="flex flex-col justify-start py-0.5 pr-[60px]">
             {/* Card 1: Dermatology Decision Support */}
             <article
               className={`rounded-xl overflow-hidden bg-[#F4EFE6] border border-[#0B0B0B]/15 flex flex-col shadow-xs transition-opacity duration-200 ${
@@ -1376,9 +1468,9 @@ export function MobileSite() {
         <section
           id="journey"
           aria-label="Journey"
-          className="mobile-snap-section relative w-full bg-[#E8DED0] text-[#0B0B0B] px-4 sm:px-6 pt-[60px] pb-4 flex flex-col justify-between overflow-hidden select-none"
+          className="mobile-snap-section relative w-full bg-[#E8DED0] text-[#0B0B0B] px-4 sm:px-6 pt-[60px] pb-4 flex flex-col justify-start gap-2 sm:gap-2.5 overflow-hidden select-none"
         >
-          <div data-reveal data-reveal-header className="flex flex-col gap-0.5 border-t border-[#C9A24A]/40 pt-2 shrink-0">
+          <div data-reveal data-reveal-header className="flex flex-col gap-0.5 border-t border-[#C9A24A]/40 pt-2 shrink-0 pr-[60px]">
             <span className="font-mono text-[11px] uppercase tracking-widest text-[#1F5A3A] font-bold">
               04 JOURNEY
             </span>
@@ -1388,7 +1480,7 @@ export function MobileSite() {
           </div>
 
           {/* Timeline stops inside 100svh */}
-          <div className="relative pl-5 flex flex-col justify-evenly flex-1 py-1 pr-[60px] before:content-[''] before:absolute before:left-1.5 before:top-2 before:bottom-2 before:w-[1.5px] before:bg-[#C9A24A]/40">
+          <div className="relative pl-5 flex flex-col gap-1.5 sm:gap-2 py-0.5 pr-[60px] before:content-[''] before:absolute before:left-1.5 before:top-2 before:bottom-2 before:w-[1.5px] before:bg-[#C9A24A]/40">
             {journey.stops.map((stop, idx) => (
               <div
                 key={`${stop.year}-${idx}`}
@@ -1401,7 +1493,7 @@ export function MobileSite() {
                   aria-hidden="true"
                 />
                 <div className="flex items-baseline gap-2">
-                  <span className="font-display text-[clamp(22px,5.5vw,28px)] leading-none text-[#1F5A3A] tracking-tight">
+                  <span className="font-display text-[clamp(20px,5vw,26px)] leading-none text-[#1F5A3A] tracking-tight">
                     {stop.year}
                   </span>
                   {stop.tag && (
@@ -1410,8 +1502,8 @@ export function MobileSite() {
                     </span>
                   )}
                 </div>
-                <div className="p-2 sm:p-2.5 rounded-lg bg-[#0B0B0B]/[0.03] border border-[#0B0B0B]/10 flex flex-col gap-0.5 shadow-2xs">
-                  <h3 className="font-sans text-[13px] font-bold text-[#0B0B0B] m-0">
+                <div className="p-1.5 sm:p-2 rounded-lg bg-[#0B0B0B]/[0.03] border border-[#0B0B0B]/10 flex flex-col gap-0.5 shadow-2xs">
+                  <h3 className="font-sans text-[12.5px] sm:text-[13px] font-bold text-[#0B0B0B] m-0">
                     {stop.role}
                   </h3>
                   <span className="font-sans text-[11px] font-medium text-[#1F5A3A]">
@@ -1432,34 +1524,34 @@ export function MobileSite() {
         <section
           id="connect"
           aria-label="Connect"
-          className="mobile-snap-section relative w-full bg-[#0B0B0B] text-[#E8DED0] px-4 sm:px-6 pt-[60px] pb-4 flex flex-col justify-between overflow-hidden select-none"
+          className="mobile-snap-section relative w-full bg-[#0B0B0B] text-[#E8DED0] px-4 sm:px-6 pt-[60px] pb-4 flex flex-col justify-start gap-2 sm:gap-2.5 overflow-hidden select-none"
         >
-          <div data-reveal data-reveal-header className="flex flex-col gap-0.5 border-t border-[#C9A24A]/40 pt-2 shrink-0">
+          <div data-reveal data-reveal-header className="flex flex-col gap-0.5 border-t border-[#C9A24A]/40 pt-2 shrink-0 pr-[60px]">
             <span className="font-mono text-[11px] uppercase tracking-widest text-[#C9A24A] font-bold">
               05 CONNECT
             </span>
             <h2 data-reveal-title className="font-display uppercase tracking-[-0.01em] text-[clamp(28px,7.5vw,36px)] leading-[0.95] text-[#E8DED0] m-0">
               {connect.heading.join(" ")}
             </h2>
-            <p className="font-sans text-[13px] leading-snug text-[#E8DED0]/90 m-0 pt-0.5 pr-[60px]">
+            <p className="font-sans text-[13px] leading-snug text-[#E8DED0]/90 m-0 pt-0.5">
               {connect.sub}
             </p>
           </div>
 
-          <div data-reveal data-reveal-card className="w-full flex-1 flex flex-col justify-evenly py-1 pr-[60px]">
+          <div data-reveal data-reveal-card className="w-full flex flex-col gap-2 sm:gap-2.5 py-0.5 pr-[60px]">
             {/* Email & Action buttons */}
-            <div className="p-3.5 sm:p-4 rounded-xl bg-[#161616] border border-[#E8DED0]/15 flex flex-col gap-2.5 shadow-sm">
+            <div className="p-3 sm:p-3.5 rounded-xl bg-[#161616] border border-[#E8DED0]/15 flex flex-col gap-2 shadow-sm">
               <span className="font-mono text-[10px] uppercase tracking-widest text-[#C9A24A] font-semibold">
                 Direct Email:
               </span>
-              <span className="font-mono text-[14px] sm:text-[16px] text-[#E8DED0] font-bold break-all">
+              <span className="font-mono text-[13px] sm:text-[15px] text-[#E8DED0] font-bold break-all">
                 {site.email}
               </span>
               <div className="grid grid-cols-2 gap-2 pt-0.5">
                 <button
                   type="button"
                   onClick={handleCopyEmail}
-                  className="min-h-[48px] px-3 py-2 rounded-full bg-[#E8DED0] text-[#0B0B0B] font-mono text-[11px] sm:text-[12px] uppercase tracking-wider font-bold hover:bg-[#C9A24A] transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                  className="min-h-[44px] px-3 py-2 rounded-full bg-[#E8DED0] text-[#0B0B0B] font-mono text-[11px] sm:text-[12px] uppercase tracking-wider font-bold hover:bg-[#C9A24A] transition-colors flex items-center justify-center gap-1 cursor-pointer"
                 >
                   {copiedEmail ? (
                     <>
@@ -1476,7 +1568,7 @@ export function MobileSite() {
                 <a
                   href="/cv.pdf"
                   download
-                  className="min-h-[48px] px-3 py-2 rounded-full border border-[#E8DED0]/30 text-[#E8DED0] font-mono text-[11px] sm:text-[12px] uppercase tracking-wider font-semibold hover:bg-[#E8DED0]/10 transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                  className="min-h-[44px] px-3 py-2 rounded-full border border-[#E8DED0]/30 text-[#E8DED0] font-mono text-[11px] sm:text-[12px] uppercase tracking-wider font-semibold hover:bg-[#E8DED0]/10 transition-colors flex items-center justify-center gap-1 cursor-pointer"
                 >
                   <Download className="w-3.5 h-3.5" aria-hidden="true" />
                   <span>{ui.downloadCv}</span>
@@ -1485,8 +1577,8 @@ export function MobileSite() {
             </div>
 
             {/* Profiles */}
-            <div className="flex flex-col gap-1.5">
-              <span className="font-mono text-[11px] uppercase tracking-widest text-[#E8DED0]/60 font-semibold">
+            <div className="flex flex-col gap-1">
+              <span className="font-mono text-[10px] uppercase tracking-widest text-[#E8DED0]/60 font-semibold">
                 Profiles:
               </span>
               <div className="flex flex-wrap gap-2">
@@ -1494,7 +1586,7 @@ export function MobileSite() {
                   href={site.github}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="min-h-[44px] px-4 py-2 rounded-full border border-[#E8DED0]/20 text-[#E8DED0] font-mono text-[12px] hover:border-[#E8DED0]/60 transition-colors flex items-center gap-1.5 cursor-pointer"
+                  className="min-h-[44px] px-3.5 py-1.5 rounded-full border border-[#E8DED0]/20 text-[#E8DED0] font-mono text-[11px] sm:text-[12px] hover:border-[#E8DED0]/60 transition-colors flex items-center gap-1.5 cursor-pointer"
                 >
                   <span>{ui.github}</span>
                   <ExternalLink className="w-3 h-3 opacity-70" aria-hidden="true" />
@@ -1503,7 +1595,7 @@ export function MobileSite() {
                   href={site.linkedin}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="min-h-[44px] px-4 py-2 rounded-full border border-[#E8DED0]/20 text-[#E8DED0] font-mono text-[12px] hover:border-[#E8DED0]/60 transition-colors flex items-center gap-1.5 cursor-pointer"
+                  className="min-h-[44px] px-3.5 py-1.5 rounded-full border border-[#E8DED0]/20 text-[#E8DED0] font-mono text-[11px] sm:text-[12px] hover:border-[#E8DED0]/60 transition-colors flex items-center gap-1.5 cursor-pointer"
                 >
                   <span>{ui.linkedin}</span>
                   <ExternalLink className="w-3 h-3 opacity-70" aria-hidden="true" />
@@ -1512,7 +1604,7 @@ export function MobileSite() {
             </div>
 
             {/* Multilingual Greetings Strip */}
-            <div className="flex items-center gap-3 py-1 border-t border-[#E8DED0]/10 text-[#E8DED0]/60 text-[12px]">
+            <div className="flex items-center gap-2.5 py-1 border-t border-[#E8DED0]/10 text-[#E8DED0]/60 text-[11px]">
               {connect.greetings.map((g) => (
                 <span key={g.lang} dir={g.dir} className="font-medium">
                   {g.text}
@@ -1521,7 +1613,7 @@ export function MobileSite() {
             </div>
 
             {/* Footer Credits */}
-            <div className="pt-2 border-t border-[#E8DED0]/10 flex flex-col gap-0.5 text-[11px] text-[#E8DED0]/50 font-mono">
+            <div className="pt-1.5 border-t border-[#E8DED0]/10 flex flex-col gap-0.5 text-[10.5px] text-[#E8DED0]/50 font-mono">
               <span>{ui.copyright}</span>
               <span>{site.roleYear}</span>
             </div>

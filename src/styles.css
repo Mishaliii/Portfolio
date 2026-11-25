@@ -2475,67 +2475,67 @@ html.paged .page:not(.is-active) [data-card] {
     z-index: 90 !important;
   }
 
-  .mobile-scroll-top-btn {
-    z-index: 40 !important;
-    width: 44px !important;
-    height: 44px !important;
-    min-width: 44px !important;
-    min-height: 44px !important;
-    left: max(16px, env(safe-area-inset-left)) !important;
-    bottom: max(16px, env(safe-area-inset-bottom)) !important;
-    touch-action: manipulation;
-  }
-
-  /* Step 29/30: Hide Sprout button, bubbles, and scroll-to-top chevron while menu or chat panel is open */
+  /* Step 29/30: Hide Sprout button and bubbles while menu or chat panel is open */
   body.menu-open .buddy-layer,
   body.menu-open .buddy-journey-corner-btn,
-  body.menu-open .mobile-scroll-top-btn,
-  body.sprout-panel-open .buddy-journey-corner-btn,
-  body.sprout-panel-open .mobile-scroll-top-btn {
+  body.sprout-panel-open .buddy-journey-corner-btn {
     display: none !important;
     opacity: 0 !important;
     pointer-events: none !important;
     visibility: hidden !important;
   }
 
-  /* Step 35: Mobile One Screen Per Section Snap Framework */
+  /* Step 36: Mobile Foundation - Exactly one scroller on html.mobile-site-active */
   html.mobile-site-active {
-    scroll-snap-type: y mandatory;
+    --screen-h: 100svh;
+    scroll-snap-type: y mandatory !important;
     scroll-behavior: auto;
+    overflow-y: scroll !important;
+    overflow-x: hidden !important;
+    height: 100% !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  html.mobile-site-active body {
+    overflow: visible !important;
+    height: auto !important;
+    min-height: 100% !important;
+    background: #0B0B0B !important;
+  }
+
+  html.mobile-site-active.scroll-locked {
+    overflow: hidden !important;
+    touch-action: none !important;
+  }
+
+  html.mobile-site-active #root,
+  html.mobile-site-active .mobile-site,
+  html.mobile-site-active main {
+    display: contents !important;
   }
 
   .mobile-snap-section {
-    height: 100svh !important;
-    max-height: 100svh !important;
+    height: var(--screen-h, 100svh) !important;
+    min-height: var(--screen-h, 100svh) !important;
+    max-height: var(--screen-h, 100svh) !important;
     scroll-snap-align: start !important;
     scroll-snap-stop: always !important;
     overflow: hidden !important;
+    position: relative;
+    box-sizing: border-box;
   }
 
-  /* Step 35: Short-screen fallback (< 650px): natural height, proximity snapping, never clipped */
-  @media (max-height: 649px) {
-    html.mobile-site-active {
-      scroll-snap-type: y proximity !important;
-    }
-    .mobile-snap-section {
-      min-height: 100svh !important;
-      height: auto !important;
-      max-height: none !important;
-      overflow: visible !important;
-    }
-  }
-
-  /* Step 35: Right-edge Section Dots (5 dots, 5px, active 20px, forest green, 44px tap area) */
+  /* Step 36: Right-edge Section Dots (8px inactive 40%, active 8x24px, 44px tap area, 12px from edge) */
   .mobile-section-dots {
     position: fixed;
-    right: max(4px, env(safe-area-inset-right));
+    right: 12px;
     top: 50%;
     transform: translateY(-50%);
     z-index: 40;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2px;
+    gap: 4px;
     pointer-events: auto;
   }
 
