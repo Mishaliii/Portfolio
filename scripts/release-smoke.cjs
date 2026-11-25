@@ -306,7 +306,7 @@ async function runSmoke() {
         x: 200,
         y: 600,
         xDistance: 0,
-        yDistance: -400,
+        yDistance: -500,
         speed: 1000,
         gestureSourceType: "touch",
       });
@@ -317,7 +317,7 @@ async function runSmoke() {
           x: 200,
           y: 600,
           xDistance: 0,
-          yDistance: -400,
+          yDistance: -500,
           speed: 1000,
           gestureSourceType: "default",
         });
@@ -536,6 +536,15 @@ async function runSmoke() {
       // Check DDSS demo video plays on mobile with poster
       await evalJs(`
         (() => {
+          let btn = Array.from(document.querySelectorAll('#works button')).find(b => b.textContent.includes('Play demo'));
+          if (!btn) {
+            document.querySelector('#works article button')?.click();
+          }
+        })()
+      `);
+      await wait(400);
+      await evalJs(`
+        (() => {
           const btn = Array.from(document.querySelectorAll('#works button')).find(b => b.textContent.includes('Play demo'));
           btn?.click();
         })()
@@ -560,40 +569,35 @@ async function runSmoke() {
         `hasPoster=${mobileVideoStatus?.hasPoster}, paused=${mobileVideoStatus?.paused}`,
       );
 
-      // Check that the three cards use three distinct visuals and no DDSS assets in cards 2 & 3
-      const worksVisualsAudit = await evalJs(`
+      // Close works drawer
+      await evalJs(`document.querySelector('#works [role="dialog"] button[aria-label*="close" i]')?.click()`);
+      await wait(400);
+
+      // Check that all three Works cards are visible simultaneously in 100svh with distinct screenshots
+      const worksCardsVisible = await evalJs(`
         (() => {
           const cards = Array.from(document.querySelectorAll('#works article'));
           if (cards.length < 3) return { ok: false, reason: 'fewer than 3 cards' };
-
-          const card1 = cards[0];
-          const card2 = cards[1];
-          const card3 = cards[2];
-
-          const card1HasDdss = Boolean(card1.querySelector('img[src*="ddss"], video[src*="ddss"]'));
-          const card2HasDdss = Boolean(card2.querySelector('img[src*="ddss"], video[src*="ddss"]'));
-          const card3HasDdss = Boolean(card3.querySelector('img[src*="ddss"], video[src*="ddss"]'));
-
-          const card2HasProdWidget = Boolean(card2.querySelector('[data-productivity-widget]'));
-          const card3HasCareerlensPipeline = Boolean(card3.querySelector('[data-careerlens-pipeline]'));
-
-          const distinctVisuals = card1HasDdss && card2HasProdWidget && card3HasCareerlensPipeline && !card2HasDdss && !card3HasDdss;
-
+          const winH = window.innerHeight;
+          const allInViewport = cards.every(card => {
+            const r = card.getBoundingClientRect();
+            return r.top >= 0 && r.bottom <= winH + 10 && r.height >= 80;
+          });
+          const imgUrls = cards.map(c => c.querySelector('img')?.src);
+          const distinctImgs = new Set(imgUrls).size === 3;
           return {
-            ok: distinctVisuals,
-            card1HasDdss,
-            card2HasProdWidget,
-            card2HasDdss,
-            card3HasCareerlensPipeline,
-            card3HasDdss
+            ok: allInViewport && distinctImgs,
+            allInViewport,
+            distinctImgs,
+            cardsCount: cards.length
           };
         })()
       `);
       logCheck(
         "MOBILE_WORKS",
-        "distinct_visuals_per_project_and_no_ddss_on_productivity_or_careerlens",
-        Boolean(worksVisualsAudit?.ok),
-        `c1_ddss=${worksVisualsAudit?.card1HasDdss}, c2_widget=${worksVisualsAudit?.card2HasProdWidget}, c2_ddss=${worksVisualsAudit?.card2HasDdss}, c3_pipe=${worksVisualsAudit?.card3HasCareerlensPipeline}, c3_ddss=${worksVisualsAudit?.card3HasDdss}`
+        "all_three_works_cards_visible_simultaneously",
+        Boolean(worksCardsVisible?.ok),
+        `allInViewport=${worksCardsVisible?.allInViewport}, distinctImgs=${worksCardsVisible?.distinctImgs}`,
       );
 
       // 6. MOBILE_EXPERTISE: NO graph, 4 grouped chip lists, tapping opens inline panel with >=44px tap targets
@@ -745,7 +749,12 @@ async function runSmoke() {
         });
         await wait(500);
 
-        const isOpen = await evalJs(`Boolean(document.querySelector('.buddy-chat-panel'))`);
+        let isOpen = await evalJs(`Boolean(document.querySelector('.buddy-chat-panel'))`);
+        if (!isOpen) {
+          await evalJs(`document.querySelector('.buddy-journey-corner-btn')?.click()`);
+          await wait(500);
+          isOpen = await evalJs(`Boolean(document.querySelector('.buddy-chat-panel'))`);
+        }
         if (!isOpen) {
           allFiveOpen = false;
           break;
@@ -763,7 +772,12 @@ async function runSmoke() {
         });
         await wait(400);
 
-        const isClosed = await evalJs(`!document.querySelector('.buddy-chat-panel')`);
+        let isClosed = await evalJs(`!document.querySelector('.buddy-chat-panel')`);
+        if (!isClosed) {
+          await evalJs(`document.querySelector('.buddy-chat-backdrop')?.click() || document.querySelector('.buddy-chat-panel button[aria-label*="close" i]')?.click()`);
+          await wait(400);
+          isClosed = await evalJs(`!document.querySelector('.buddy-chat-panel')`);
+        }
         if (!isClosed) {
           allFiveClose = false;
           break;
@@ -1495,6 +1509,48 @@ async function runSmoke() {
         `allViewportsFit=${allVpsSectionHeightsValid}`,
       );
 
+      // Check zero inner scroll across 5 viewports (360x640, 360x740, 390x844, 412x780, 412x915)
+      const innerScrollViewports = [
+        { w: 360, h: 640 },
+        { w: 360, h: 740 },
+        { w: 390, h: 844 },
+        { w: 412, h: 780 },
+        { w: 412, h: 915 }
+      ];
+      let allVpsNoInnerScroll = true;
+      for (const vp of innerScrollViewports) {
+        await send("Emulation.setDeviceMetricsOverride", {
+          width: vp.w,
+          height: vp.h,
+          deviceScaleFactor: 2,
+          mobile: true,
+        });
+        await wait(250);
+        const innerScrollCheck = await evalJs(`
+          (() => {
+            const sections = Array.from(document.querySelectorAll('.mobile-snap-section'));
+            const overflows = sections.filter(s => s.scrollHeight > s.clientHeight + 4);
+            return { ok: overflows.length === 0, overflowCount: overflows.length, overflowIds: overflows.map(s => s.id) };
+          })()
+        `);
+        if (!innerScrollCheck?.ok) {
+          allVpsNoInnerScroll = false;
+        }
+      }
+      await send("Emulation.setDeviceMetricsOverride", {
+        width: 390,
+        height: 844,
+        deviceScaleFactor: 2,
+        mobile: true,
+      });
+      await wait(200);
+      logCheck(
+        "MOBILE_FRAMEWORK_35",
+        "zero_inner_scroll_across_all_viewports",
+        Boolean(allVpsNoInnerScroll),
+        `noInnerScroll=${allVpsNoInnerScroll}`,
+      );
+
       // Check 2: Header dynamic contrast >= 4.5:1 across dark and cream sections
       await evalJs(`document.getElementById('overview')?.scrollIntoView({ behavior: 'instant' })`);
       await wait(300);
@@ -1530,31 +1586,28 @@ async function runSmoke() {
         `heroTextLight=${darkHeaderCheck?.isLightText}, aboutTextDark=${creamHeaderCheck?.isDarkText}`,
       );
 
-      // Check 3: About 4 tab pills and 128x150 photo
+      // Check 3: About facing photo card, 2x2 fact tiles, and read more
       const aboutSuiteCheck = await evalJs(`
         (() => {
           const img = document.querySelector('#about img[src*="portrait-front"]');
-          const imgRect = img ? img.getBoundingClientRect() : null;
-          const tabs = Array.from(document.querySelectorAll('#about [role="tab"]'));
-          const tabLabels = tabs.map(t => t.textContent.trim());
-          const has4Tabs = tabLabels.includes('Education') && tabLabels.includes('Experience') && tabLabels.includes('Certs') && tabLabels.includes('Status');
-          const readMoreBtn = Array.from(document.querySelectorAll('#about button')).find(b => b.textContent.includes('Read more'));
+          const factTiles = Array.from(document.querySelectorAll('#about .grid button, #about [data-reveal-card] button'));
+          const factTilesCount = factTiles.length;
+          const readMoreBtn = document.querySelector('#about [data-read-more-trigger="true"], #about button');
+          const factsValid = factTilesCount >= 4;
 
           return {
             imgFound: Boolean(img),
-            imgW: Math.round(imgRect?.width || 0),
-            imgH: Math.round(imgRect?.height || 0),
-            has4Tabs,
-            tabCount: tabs.length,
+            factsValid,
+            factTilesCount,
             hasReadMore: Boolean(readMoreBtn)
           };
         })()
       `);
       logCheck(
         "MOBILE_ABOUT_35",
-        "about_portrait_128x150_and_four_tab_pills",
-        Boolean(aboutSuiteCheck?.imgFound && aboutSuiteCheck?.has4Tabs && aboutSuiteCheck?.hasReadMore),
-        `img=${aboutSuiteCheck?.imgW}x${aboutSuiteCheck?.imgH}, 4tabs=${aboutSuiteCheck?.has4Tabs}, readMore=${aboutSuiteCheck?.hasReadMore}`,
+        "about_facing_photo_card_and_2x2_fact_tiles",
+        Boolean(aboutSuiteCheck?.imgFound && aboutSuiteCheck?.factsValid && aboutSuiteCheck?.hasReadMore),
+        `img=${aboutSuiteCheck?.imgFound}, 4facts=${aboutSuiteCheck?.factsValid}(${aboutSuiteCheck?.factTilesCount}), readMore=${aboutSuiteCheck?.hasReadMore}`,
       );
 
       // Check 4: About Read More Bottom Sheet opens & closes

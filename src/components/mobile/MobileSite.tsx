@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { gsap } from "gsap";
 import {
   site,
-  hero,
   about,
   expertise,
   works,
@@ -11,10 +10,6 @@ import {
   PROJECTS,
   roleCaseStudy,
   careerlensCaseStudy,
-  careerlensStages,
-  ROLE_FEATURES,
-  SUBJECT_ROWS,
-  type SubjectId,
   type CaseStudyData,
   ui,
 } from "@/content";
@@ -24,6 +19,8 @@ import { CaseStudy } from "@/components/site/CaseStudy";
 import sideImg from "@/assets/portrait-side-composited.webp";
 import frontImg from "@/assets/portrait-front-composited.webp";
 import ddssScreenImg from "@/assets/ddss-screen.webp";
+import ddss3ScreenImg from "@/assets/ddss-3-screen.webp";
+import ddss2ScreenImg from "@/assets/ddss-2-screen.webp";
 import {
   Menu,
   X,
@@ -33,143 +30,7 @@ import {
   ExternalLink,
   Play,
   ArrowUpRight,
-  ChevronDown,
-  ChevronUp,
 } from "lucide-react";
-
-function ProductivityExplorerMobile() {
-  const [selectedId, setSelectedId] = useState<SubjectId>("Sample 1");
-  const subjectData = SUBJECT_ROWS[selectedId];
-
-  return (
-    <div
-      data-productivity-widget
-      className="w-full bg-[#E8DED0] border border-[#0B0B0B]/20 rounded-xl p-3 flex flex-col gap-2.5 shadow-xs select-none"
-    >
-      <div className="flex items-center justify-between border-b border-[#0B0B0B]/15 pb-1.5">
-        <div className="flex items-center gap-1" role="tablist" aria-label="Select sample session">
-          {(["Sample 1", "Sample 2", "Sample 3"] as SubjectId[]).map((id) => (
-            <button
-              key={id}
-              type="button"
-              role="tab"
-              aria-selected={selectedId === id}
-              onClick={() => setSelectedId(id)}
-              className={`px-2.5 py-1 rounded font-mono text-[11px] tracking-wider transition-colors cursor-pointer min-h-[36px] flex items-center justify-center ${
-                selectedId === id
-                  ? "bg-[#0B0B0B] text-[#E8DED0] font-semibold shadow-xs"
-                  : "bg-[#0B0B0B]/5 text-[#6B645A] hover:text-[#0B0B0B]"
-              }`}
-            >
-              {id}
-            </button>
-          ))}
-        </div>
-        <span className="font-mono text-[10px] text-[#1F5A3A] font-bold uppercase tracking-wider">
-          Session
-        </span>
-      </div>
-
-      <div className="flex flex-col gap-1 py-0.5">
-        {ROLE_FEATURES.slice(0, 5).map((feat, idx) => {
-          const val = subjectData.vals[idx];
-          const pct = Math.min(100, Math.max(3, (val / feat.max) * 100));
-          return (
-            <div key={feat.key} className="flex items-center text-[10px] sm:text-[11px] font-mono leading-tight">
-              <span className="w-[100px] sm:w-[120px] truncate text-[#0B0B0B]/80 font-medium">
-                {feat.label}
-              </span>
-              <div className="flex-1 h-[5px] bg-[#0B0B0B]/10 rounded-full overflow-hidden mx-2">
-                <div
-                  className="h-full bg-[#1F5A3A] rounded-full transition-all duration-300 ease-out"
-                  style={{ width: `${pct}%` }}
-                />
-              </div>
-              <span className="w-[32px] text-right font-semibold text-[#0B0B0B]">
-                {val}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="border-t border-[#0B0B0B]/15 pt-1.5 flex items-center justify-between">
-        <div className="flex items-baseline gap-1.5">
-          <span className="font-mono text-[10px] uppercase tracking-wider text-[#6B645A]">
-            Score:
-          </span>
-          <span className="font-mono text-[16px] font-bold text-[#0B0B0B] leading-none">
-            {subjectData.score.toFixed(2)}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-1.5">
-          <span className="font-mono text-[10px] px-2 py-0.5 rounded-full border border-[#0B0B0B]/20 bg-[#0B0B0B]/5 text-[#0B0B0B]">
-            {subjectData.label}
-          </span>
-          <span className="font-mono text-[10px] font-semibold px-2 py-0.5 rounded-full border border-[#1F5A3A]/40 bg-[#1F5A3A]/10 text-[#1F5A3A]">
-            {subjectData.role}
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function CareerLensPipelineMobile() {
-  const [selectedIdx, setSelectedIdx] = useState<number>(0);
-  const activeStage = careerlensStages[selectedIdx] || careerlensStages[0];
-
-  return (
-    <div
-      data-careerlens-pipeline
-      className="w-full bg-[#E8DED0] border border-[#0B0B0B]/20 rounded-xl p-3 flex flex-col gap-2.5 shadow-xs select-none"
-    >
-      <div className="flex items-center justify-between border-b border-[#0B0B0B]/15 pb-1.5">
-        <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#1F5A3A]">
-          {careerlensStages.length} Pipeline Stages
-        </span>
-        <span className="font-mono text-[9px] text-[#6B645A] uppercase tracking-wider">
-          Tap stage to inspect
-        </span>
-      </div>
-
-      <div className="grid grid-cols-4 gap-1.5">
-        {careerlensStages.map((stage, idx) => {
-          const isSelected = selectedIdx === idx;
-          return (
-            <button
-              key={stage.num}
-              type="button"
-              onClick={() => setSelectedIdx(idx)}
-              className={`p-1.5 rounded-md border text-left transition-all min-h-[36px] flex flex-col justify-between cursor-pointer ${
-                isSelected
-                  ? "bg-[#1F5A3A] text-[#E8DED0] border-[#1F5A3A] shadow-xs"
-                  : "bg-[#0B0B0B]/5 text-[#0B0B0B] border-[#0B0B0B]/10 hover:bg-[#0B0B0B]/10"
-              }`}
-            >
-              <span className={`font-mono text-[9px] font-bold ${isSelected ? "text-[#C9A24A]" : "text-[#1F5A3A]"}`}>
-                {stage.num}
-              </span>
-              <span className="font-sans text-[10px] font-bold leading-tight line-clamp-1">
-                {stage.label}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="p-2 rounded-lg bg-[#0B0B0B]/5 border border-[#0B0B0B]/10 flex flex-col gap-0.5">
-        <span className="font-mono text-[10px] font-bold text-[#1F5A3A]">
-          Stage {activeStage.num}: {activeStage.label} ({activeStage.caption})
-        </span>
-        <p className="font-sans text-[11px] text-[#0B0B0B]/85 leading-snug m-0 line-clamp-2">
-          {activeStage.desc}
-        </p>
-      </div>
-    </div>
-  );
-}
 
 const NAV_ITEMS = [
   { id: "overview", num: "00", label: "Overview" },
@@ -186,6 +47,56 @@ const DOT_SECTIONS = [
   { id: "expertise", label: "Expertise" },
   { id: "works", label: "Works" },
   { id: "connect", label: "Connect" },
+];
+
+const FACT_TILES = [
+  {
+    num: "8.33/10",
+    label: "MCA GPA · TKM College",
+    sectionIndex: 0,
+  },
+  {
+    num: "Blue Cast",
+    label: "AI/ML Intern · 2026",
+    sectionIndex: 1,
+  },
+  {
+    num: "768-d",
+    label: "DINOv2 Embeddings",
+    sectionIndex: 1,
+  },
+  {
+    num: "198",
+    label: "Condition Classes",
+    sectionIndex: 1,
+  },
+];
+
+const JOURNEY_STOPS = [
+  {
+    year: "2021",
+    role: "BCA · Musaliar College",
+    line: "Foundation in CS, data structures, and core software engineering.",
+    isAvailable: false,
+  },
+  {
+    year: "2024",
+    role: "MCA · TKM College of Engineering",
+    line: "Master's specialization in AI & ML. GPA 8.33/10.",
+    isAvailable: false,
+  },
+  {
+    year: "2026",
+    role: "AI / ML Developer Intern · Blue Cast Technologies",
+    line: "Production DINOv2 similarity search, FastAPI endpoints, Docker deployment.",
+    isAvailable: false,
+  },
+  {
+    year: "2026",
+    role: "Open to work · AI / ML Roles",
+    line: "Available for full-time engineering roles in Kerala, India, GCC or remote.",
+    isAvailable: true,
+  },
 ];
 
 let mobileIntroCompleted = false;
@@ -294,12 +205,16 @@ export function MobileSite() {
   const [booted, setBooted] = useState(isIntroDone);
   const [loaderMode, setLoaderMode] = useState<"full" | "short" | "none">(isIntroDone ? "none" : "full");
   const [menuOpen, setMenuOpen] = useState(false);
-  const [bioSheetOpen, setBioSheetOpen] = useState(false);
+  const [aboutSheetOpen, setAboutSheetOpen] = useState(false);
+  const [skillSheet, setSkillSheet] = useState<{
+    open: boolean;
+    skill?: string;
+  }>({ open: false });
+  const [workSheet, setWorkSheet] = useState<{
+    open: boolean;
+    projectIndex: number;
+  }>({ open: false, projectIndex: 0 });
   const [activeHash, setActiveHash] = useState("overview");
-  const [activeSkill, setActiveSkill] = useState<string | null>(null);
-  const [activeAboutTab, setActiveAboutTab] = useState<"Education" | "Experience" | "Certs" | "Status">("Education");
-  const [tabFading, setTabFading] = useState(false);
-  const [activeWorksCard, setActiveWorksCard] = useState(0);
   const [selectedCaseStudy, setSelectedCaseStudy] = useState<{
     open: boolean;
     data?: CaseStudyData;
@@ -313,7 +228,15 @@ export function MobileSite() {
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const progressBarRef = useRef<HTMLDivElement>(null);
   const heroImgRef = useRef<HTMLImageElement>(null);
-  const heroScrambleDoneRef = useRef(false);
+  const heroUnderlineRef = useRef<HTMLDivElement>(null);
+  const heroBottomBlockRef = useRef<HTMLDivElement>(null);
+  const heroRoleRef = useRef<HTMLParagraphElement>(null);
+  const heroPillRef = useRef<HTMLDivElement>(null);
+  const heroLettersRef = useRef<HTMLSpanElement[]>([]);
+  const heroTimelineRef = useRef<gsap.core.Timeline | null>(null);
+  const embersContainerRef = useRef<HTMLDivElement>(null);
+  const embersTimelineRef = useRef<gsap.core.Timeline | null>(null);
+  const heroAnimationDoneRef = useRef(false);
   const isMenuClosingRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const animatedSectionsRef = useRef<Set<string>>(new Set());
@@ -369,8 +292,6 @@ export function MobileSite() {
   }, []);
 
   // Step 36: Screen Height CSS Variable (--screen-h)
-  // Set once from visualViewport.height or window.innerHeight.
-  // Update ONLY on orientation change or width change, NEVER on scroll-driven height changes!
   useEffect(() => {
     const setScreenH = () => {
       const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
@@ -379,13 +300,8 @@ export function MobileSite() {
 
     setScreenH();
 
-    let lastW = window.innerWidth;
     const handleResize = () => {
-      const curW = window.innerWidth;
-      if (curW !== lastW) {
-        lastW = curW;
-        setScreenH();
-      }
+      setScreenH();
     };
 
     window.addEventListener("resize", handleResize);
@@ -396,37 +312,44 @@ export function MobileSite() {
     };
   }, []);
 
-  // Step 36: Menu & Bottom Sheet Scroll Lock with exact scroll position restore
+  // Scroll lock for Menu, About Sheet, Skill Sheet, Work Sheet, or Case Study
   const scrollPosRef = useRef(0);
+  const anySheetOpen = aboutSheetOpen || skillSheet.open || workSheet.open || selectedCaseStudy.open;
 
   useEffect(() => {
-    const isLocked = menuOpen || bioSheetOpen || selectedCaseStudy.open;
+    const isLocked = menuOpen || anySheetOpen;
     if (isLocked) {
       scrollPosRef.current = window.scrollY || document.documentElement.scrollTop;
       document.documentElement.classList.add("scroll-locked");
+      document.body.style.overflow = "hidden";
       document.body.classList.toggle("menu-open", menuOpen);
-      document.body.classList.toggle("sheet-open", bioSheetOpen || selectedCaseStudy.open);
+      document.body.classList.toggle("sheet-open", anySheetOpen);
     } else {
       document.documentElement.classList.remove("scroll-locked");
+      document.body.style.overflow = "";
       document.body.classList.remove("menu-open", "sheet-open");
       if (scrollPosRef.current) {
         window.scrollTo(0, scrollPosRef.current);
       }
     }
-  }, [menuOpen, bioSheetOpen, selectedCaseStudy.open]);
+  }, [menuOpen, anySheetOpen]);
 
-  // Back gesture / Popstate closes menu or sheet
+  // Back gesture / Popstate closes active sheet or menu
   useEffect(() => {
     const onPopState = () => {
-      if (bioSheetOpen) {
-        setBioSheetOpen(false);
+      if (aboutSheetOpen) {
+        setAboutSheetOpen(false);
+      } else if (skillSheet.open) {
+        setSkillSheet({ open: false });
+      } else if (workSheet.open) {
+        setWorkSheet({ open: false, projectIndex: 0 });
       } else if (menuOpen) {
         closeMenu();
       }
     };
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
-  }, [menuOpen, bioSheetOpen]);
+  }, [menuOpen, aboutSheetOpen, skillSheet.open, workSheet.open]);
 
   // Menu Helpers
   const openMenu = useCallback(() => {
@@ -482,7 +405,9 @@ export function MobileSite() {
   const scrollToSection = useCallback(
     (id: string) => {
       closeMenu();
-      setBioSheetOpen(false);
+      setAboutSheetOpen(false);
+      setSkillSheet({ open: false });
+      setWorkSheet({ open: false, projectIndex: 0 });
       const el = document.getElementById(id);
       if (!el) return;
 
@@ -518,37 +443,172 @@ export function MobileSite() {
     [closeMenu]
   );
 
-  // Hero "B" headline reveal & slow zoom (plays once on initial boot)
+  // =========================================================================
+  // HERO GSAP ENTRANCE & AMBIENT ANIMATIONS (Step 37)
+  // =========================================================================
   useEffect(() => {
     if (!booted) return;
     const isReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+    // Reset initial states for reduced motion
     if (isReduced) {
-      gsap.set(".mobile-hero-line", { y: 0, opacity: 1 });
       if (heroImgRef.current) gsap.set(heroImgRef.current, { scale: 1 });
+      gsap.set(".hero-letter", { y: 0, opacity: 1 });
+      if (heroPillRef.current) gsap.set(heroPillRef.current, { x: 0, opacity: 1 });
+      if (heroRoleRef.current) gsap.set(heroRoleRef.current, { letterSpacing: "0.14em", opacity: 1 });
+      gsap.set(".hero-headline-line", { y: 0, opacity: 1 });
+      if (heroUnderlineRef.current) gsap.set(heroUnderlineRef.current, { scaleX: 1 });
+      gsap.set(".hero-btn-reveal", { y: 0, opacity: 1 });
       return;
     }
 
-    if (!heroScrambleDoneRef.current) {
-      heroScrambleDoneRef.current = true;
-      // Portrait subtle slow zoom (scale 1.04 to 1 over 6s GSAP)
+    if (!heroAnimationDoneRef.current) {
+      heroAnimationDoneRef.current = true;
+
+      const tl = gsap.timeline();
+      heroTimelineRef.current = tl;
+
+      // 0.0s: Portrait scale 1.12 to 1.00 (1.4s ease out)
       if (heroImgRef.current) {
-        gsap.fromTo(
+        tl.fromTo(
           heroImgRef.current,
-          { scale: 1.04 },
-          { scale: 1, duration: 6, ease: "power1.out" }
+          { scale: 1.12 },
+          { scale: 1, duration: 1.4, ease: "power2.out" },
+          0
         );
       }
-      // Headline lines rise 24px, 0.6s power3.out, stagger 0.08s
-      gsap.fromTo(
-        ".mobile-hero-line",
-        { y: 24, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.6, ease: "power3.out", stagger: 0.08, delay: 0.15 }
+
+      // 0.2s: MISHAL letters rise 28px and fade in with 0.04s stagger
+      const letters = heroLettersRef.current.filter(Boolean);
+      if (letters.length > 0) {
+        tl.fromTo(
+          letters,
+          { y: 28, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.5, ease: "power3.out", stagger: 0.04 },
+          0.2
+        );
+      }
+
+      // 0.5s: Pill fades and slides in from left
+      if (heroPillRef.current) {
+        tl.fromTo(
+          heroPillRef.current,
+          { x: -24, opacity: 0 },
+          { x: 0, opacity: 1, duration: 0.45, ease: "power2.out" },
+          0.5
+        );
+      }
+
+      // 0.6s: Role line letter-spacing tightens from 0.4em to 0.14em
+      if (heroRoleRef.current) {
+        tl.fromTo(
+          heroRoleRef.current,
+          { letterSpacing: "0.4em", opacity: 0 },
+          { letterSpacing: "0.14em", opacity: 1, duration: 0.6, ease: "power2.out" },
+          0.6
+        );
+      }
+
+      // 0.7s: Headline reveals line by line + gold underline sweeps across (scaleX 0 to 1)
+      tl.fromTo(
+        ".hero-headline-line",
+        { y: 40, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.6, ease: "power3.out", stagger: 0.08 },
+        0.7
       );
-    } else {
-      gsap.set(".mobile-hero-line", { y: 0, opacity: 1 });
-      if (heroImgRef.current) gsap.set(heroImgRef.current, { scale: 1 });
+
+      if (heroUnderlineRef.current) {
+        tl.fromTo(
+          heroUnderlineRef.current,
+          { scaleX: 0 },
+          { scaleX: 1, duration: 0.55, ease: "power2.out" },
+          0.85
+        );
+      }
+
+      // 1.0s: Buttons rise 16px and fade in
+      tl.fromTo(
+        ".hero-btn-reveal",
+        { y: 16, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.45, ease: "power2.out", stagger: 0.08 },
+        1.0
+      );
+
+      // Ambient 12 tiny gold embers drifting upward over portrait
+      if (embersContainerRef.current) {
+        const emberEls = embersContainerRef.current.children;
+        const embersTl = gsap.timeline({ repeat: -1 });
+        embersTimelineRef.current = embersTl;
+
+        Array.from(emberEls).forEach((ember, i) => {
+          const duration = 4.5 + (i % 5) * 0.8;
+          const delay = (i * 0.35) % 3;
+          embersTl.fromTo(
+            ember,
+            { y: 180, x: 0, opacity: 0 },
+            {
+              y: -120,
+              x: (i % 2 === 0 ? 1 : -1) * (10 + (i % 4) * 5),
+              opacity: 0.7,
+              duration: duration,
+              ease: "sine.inOut",
+              repeat: -1,
+              repeatDelay: 0.5,
+              delay: delay,
+            },
+            0
+          );
+        });
+      }
     }
+  }, [booted]);
+
+  // Ambient embers & hero animation pause management:
+  // Pause loops when hero < 30% visible, when menu or sheet open, or when tab hidden
+  useEffect(() => {
+    const handleVisibility = () => {
+      const isHidden = document.hidden || menuOpen || anySheetOpen;
+      if (isHidden) {
+        embersTimelineRef.current?.pause();
+      } else {
+        embersTimelineRef.current?.resume();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibility);
+    handleVisibility();
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [menuOpen, anySheetOpen]);
+
+  // Scroll link: Portrait moves 8% slower than scroll, headline fades out
+  useEffect(() => {
+    if (!booted) return;
+    const isReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (isReduced) return;
+
+    let rafId: number;
+    const onScroll = () => {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        const scrollY = window.scrollY;
+        // Only run when within first viewport
+        if (scrollY < window.innerHeight * 1.2) {
+          if (heroImgRef.current) {
+            heroImgRef.current.style.transform = `translate3d(0, ${Math.round(scrollY * 0.08)}px, 0)`;
+          }
+          if (heroBottomBlockRef.current) {
+            const opacity = Math.max(0, 1 - scrollY / 320);
+            heroBottomBlockRef.current.style.opacity = `${opacity}`;
+          }
+        }
+      });
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      cancelAnimationFrame(rafId);
+    };
   }, [booted]);
 
   // Section Entrance Observer (threshold 0.5):
@@ -566,6 +626,13 @@ export function MobileSite() {
           if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
             const id = entry.target.id;
             setActiveHash(id);
+
+            // Pause hero ambient embers if hero is not active
+            if (id !== "overview") {
+              embersTimelineRef.current?.pause();
+            } else if (!menuOpen && !anySheetOpen && !document.hidden) {
+              embersTimelineRef.current?.resume();
+            }
 
             if (!animatedSectionsRef.current.has(id)) {
               animatedSectionsRef.current.add(id);
@@ -611,7 +678,7 @@ export function MobileSite() {
     });
 
     return () => observer.disconnect();
-  }, [booted]);
+  }, [booted, menuOpen, anySheetOpen]);
 
   // Scroll Progress Bar
   useEffect(() => {
@@ -632,16 +699,6 @@ export function MobileSite() {
     onScroll();
     return () => window.removeEventListener("scroll", onScroll);
   }, [booted]);
-
-  // Tab switch with 0.2s cross-fade
-  const handleAboutTabSwitch = (tab: "Education" | "Experience" | "Certs" | "Status") => {
-    if (tab === activeAboutTab) return;
-    setTabFading(true);
-    setTimeout(() => {
-      setActiveAboutTab(tab);
-      setTabFading(false);
-    }, 200);
-  };
 
   // Copy email handler
   const handleCopyEmail = useCallback(() => {
@@ -668,8 +725,12 @@ export function MobileSite() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        if (bioSheetOpen) {
-          setBioSheetOpen(false);
+        if (aboutSheetOpen) {
+          setAboutSheetOpen(false);
+        } else if (skillSheet.open) {
+          setSkillSheet({ open: false });
+        } else if (workSheet.open) {
+          setWorkSheet({ open: false, projectIndex: 0 });
         } else if (selectedCaseStudy.open) {
           closeDrawer();
         } else if (menuOpen) {
@@ -679,7 +740,7 @@ export function MobileSite() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [bioSheetOpen, selectedCaseStudy.open, menuOpen, closeDrawer, closeMenu]);
+  }, [aboutSheetOpen, skillSheet.open, workSheet.open, selectedCaseStudy.open, menuOpen, closeDrawer, closeMenu]);
 
   // Header dynamic theme: light text on dark Hero (#overview) and dark Connect (#connect), ink text on cream sections
   const isDarkSection = activeHash === "overview" || activeHash === "connect";
@@ -883,14 +944,14 @@ export function MobileSite() {
         </div>
       )}
 
-      {/* 5. "Read more" Biography Bottom Sheet */}
-      {bioSheetOpen && (
+      {/* 5. "Read more" / Fact Tile About Bottom Sheet */}
+      {aboutSheetOpen && (
         <div
           role="dialog"
           aria-modal="true"
           aria-label="About Biography and Career Details"
           className="fixed inset-0 z-[80] flex flex-col justify-end bg-black/60 backdrop-blur-xs"
-          onClick={() => setBioSheetOpen(false)}
+          onClick={() => setAboutSheetOpen(false)}
         >
           <div
             className="w-full max-h-[85svh] bg-[#E8DED0] text-[#0B0B0B] rounded-t-2xl p-5 overflow-y-auto flex flex-col gap-4 border-t border-[#0B0B0B]/20 shadow-2xl animate-in slide-in-from-bottom duration-300"
@@ -902,16 +963,18 @@ export function MobileSite() {
               </span>
               <button
                 type="button"
-                onClick={() => setBioSheetOpen(false)}
+                onClick={() => setAboutSheetOpen(false)}
                 className="min-h-[44px] min-w-[44px] px-3 py-1.5 rounded-full border border-[#0B0B0B]/20 font-mono text-[11px] uppercase tracking-wider font-semibold hover:bg-[#0B0B0B]/5 flex items-center justify-center cursor-pointer"
                 aria-label="Close details"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <p className="font-sans text-[15px] leading-relaxed text-[#0B0B0B]/90 m-0">
+
+            <p className="font-sans text-[14.5px] leading-relaxed text-[#0B0B0B]/90 m-0">
               {about.bio}
             </p>
+
             <div className="flex flex-col gap-3 pt-2">
               {about.facts.map((fact, idx) => (
                 <div key={idx} className="p-3 rounded-lg bg-[#0B0B0B]/[0.03] border border-[#0B0B0B]/10 flex flex-col gap-1">
@@ -923,9 +986,11 @@ export function MobileSite() {
                       {fact.bold}
                     </span>
                   )}
-                  <span className="font-sans text-[12px] text-[#0B0B0B]/80 leading-relaxed">
-                    {fact.text.replace(/^ · /, "")}
-                  </span>
+                  {fact.text && (
+                    <span className="font-sans text-[12px] text-[#0B0B0B]/80 leading-relaxed">
+                      {fact.text.replace(/^ · /, "")}
+                    </span>
+                  )}
                   {fact.secondary && (
                     <span className="font-sans text-[12px] text-[#0B0B0B]/70">
                       {fact.secondary}
@@ -938,33 +1003,54 @@ export function MobileSite() {
         </div>
       )}
 
-      {/* MAIN DOCUMENT: ONE SCREEN PER SECTION (100svh scroll snapping) */}
+      {/* ================================================================= */}
+      {/* MAIN DOCUMENT: ONE SCREEN PER SECTION (100svh scroll snapping)    */}
+      {/* ================================================================= */}
       <main inert={!booted} className="w-full">
         {/* ================================================================= */}
-        {/* SECTION 1: HERO "B" (#overview) - Portrait on Ink */}
+        {/* SECTION 1: HERO (#overview) - Looking-up Portrait on Ink          */}
         {/* ================================================================= */}
         <section
           id="overview"
           aria-label="Overview"
           className="mobile-snap-section relative w-full bg-[#0B0B0B] text-[#E8DED0] flex flex-col justify-between overflow-hidden select-none"
+          style={{ height: "var(--screen-h, 100svh)" }}
         >
-          {/* Top portrait block: Looking-up portrait, flex-1 (max-h 50vh, min 200px) */}
-          <div className="relative w-full flex-1 min-h-[200px] max-h-[50vh] overflow-hidden bg-[#0B0B0B]">
-            {/* Outlined MISHAL behind and over top of head: clamp(64px, 19vw, 96px) */}
+          {/* Top 62% Portrait Frame (min 260px space for bottom block on short screens) */}
+          <div
+            className="relative w-full overflow-hidden bg-[#0B0B0B] shrink-0"
+            style={{ height: "min(56%, calc(var(--screen-h, 100svh) - 260px))" }}
+          >
+            {/* Pill: Open to work, 2026 (top-left under header, pulsing green dot) */}
             <div
-              className="absolute top-[48px] sm:top-[56px] inset-x-0 z-[5] flex justify-center pointer-events-none select-none overflow-hidden"
+              ref={heroPillRef}
+              className="absolute top-[64px] left-4 z-[25] flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#1F5A3A]/20 border border-[#1F5A3A]/40 backdrop-blur-xs"
+            >
+              <span className="w-2 h-2 rounded-full bg-[#1F5A3A] green-dot-pulse" aria-hidden="true" />
+              <span className="font-mono text-[10px] sm:text-[11px] uppercase tracking-wider text-[#C9A24A] font-semibold">
+                Open to work, 2026
+              </span>
+            </div>
+
+            {/* Ambient 12 tiny gold embers drifting upward over portrait */}
+            <div
+              ref={embersContainerRef}
+              className="pointer-events-none absolute inset-0 z-[12] overflow-hidden"
               aria-hidden="true"
             >
-              <span
-                className="font-display uppercase tracking-[-0.02em] text-[clamp(64px,19vw,96px)] leading-[0.8] text-center m-0 select-none"
-                style={{
-                  WebkitTextStroke: "1.5px rgba(232, 222, 208, 0.45)",
-                  color: "transparent",
-                  willChange: "transform",
-                }}
-              >
-                MISHAL
-              </span>
+              {Array.from({ length: 12 }).map((_, i) => (
+                <span
+                  key={i}
+                  className="hero-ember absolute rounded-full bg-[#C9A24A]"
+                  style={{
+                    width: `${2 + (i % 3)}px`,
+                    height: `${2 + (i % 3)}px`,
+                    left: `${6 + (i * 8)}%`,
+                    bottom: "5%",
+                    opacity: 0,
+                  }}
+                />
+              ))}
             </div>
 
             {/* Looking-up portrait */}
@@ -981,50 +1067,86 @@ export function MobileSite() {
                   willChange: "transform",
                 }}
               />
-              {/* Gradient fade to ink at the bottom edge */}
+
+              {/* Gradient fade into ink at the bottom edge */}
               <div
                 className="absolute inset-x-0 bottom-0 pointer-events-none"
                 style={{
                   height: "45%",
                   background:
-                    "linear-gradient(to bottom, transparent 0%, rgba(11, 11, 11, 0.7) 60%, #0B0B0B 100%)",
+                    "linear-gradient(to bottom, transparent 0%, rgba(11, 11, 11, 0.4) 40%, rgba(11, 11, 11, 0.85) 75%, #0B0B0B 100%)",
                 }}
                 aria-hidden="true"
               />
             </div>
-          </div>
 
-          {/* Bottom Block: Pill, Headline, Role, Two Buttons (All visible in first screen) */}
-          <div className="relative z-20 w-full max-w-sm mx-auto flex flex-col items-center gap-1.5 sm:gap-2 shrink-0 px-4 pt-1 pb-4 sm:pb-5">
-            {/* Pill: Open to work, 2026 */}
-            <div className="mobile-hero-line flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#1F5A3A]/20 border border-[#1F5A3A]/40">
-              <span className="w-2 h-2 rounded-full bg-[#1F5A3A] animate-pulse" aria-hidden="true" />
-              <span className="font-mono text-[11px] uppercase tracking-wider text-[#C9A24A] font-semibold">
-                Open to work, 2026
+            {/* Huge Outlined MISHAL: Anton, cream stroke 50% opacity, transparent fill, strictly below face/chin across lower torso */}
+            <div
+              className="absolute bottom-[10%] inset-x-0 z-[15] flex justify-center pointer-events-none select-none overflow-hidden"
+              aria-hidden="true"
+            >
+              <span
+                className="font-display uppercase tracking-[-0.02em] text-[clamp(64px,19vw,96px)] leading-[0.8] text-center m-0 select-none"
+              >
+                {"MISHAL".split("").map((letter, idx) => (
+                  <span
+                    key={idx}
+                    ref={(el) => {
+                      if (el) heroLettersRef.current[idx] = el;
+                    }}
+                    className="hero-letter inline-block"
+                    style={{
+                      WebkitTextStroke: "1.5px rgba(232, 222, 208, 0.50)",
+                      color: "transparent",
+                    }}
+                  >
+                    {letter}
+                  </span>
+                ))}
               </span>
             </div>
+          </div>
 
-            {/* Headline: I build AI that ships. */}
-            <h1
-              data-reveal-title
-              aria-label="I build AI that ships."
-              className="font-display uppercase tracking-[-0.01em] text-[clamp(24px,6.8vw,32px)] leading-[0.96] text-[#E8DED0] text-center m-0 select-none overflow-hidden max-w-[340px]"
+          {/* Bottom 38% Content Block */}
+          <div
+            ref={heroBottomBlockRef}
+            className="relative z-20 w-full flex-1 max-w-[390px] mx-auto flex flex-col justify-end px-4 pb-3 sm:pb-4 gap-1 sm:gap-1.5 shrink-0"
+          >
+            {/* Gold mono role line */}
+            <p
+              ref={heroRoleRef}
+              className="font-mono text-[11px] sm:text-[12px] font-semibold text-[#C9A24A] uppercase text-left tracking-[0.14em] m-0"
             >
-              <span className="sr-only">MISHAL - </span>
-              <span className="mobile-hero-line inline-block">I BUILD AI THAT SHIPS.</span>
-            </h1>
-
-            {/* Mono role line: gold */}
-            <p className="mobile-hero-line font-mono text-[11px] sm:text-[12px] uppercase tracking-widest text-[#C9A24A] font-semibold text-center m-0">
               AI / ML Engineer · Kollam, Kerala
             </p>
 
-            {/* Two buttons (>= 48px, cream fill for View projects, outline for Download CV, ends 60px before right edge) */}
-            <div className="w-[calc(100%-60px)] mr-[60px] flex flex-row gap-2.5 sm:gap-3 pt-1">
+            {/* Headline in two lines: Anton, clamp(38px, 12.5vw, 58px), leading 0.92 */}
+            <h1
+              data-reveal-title
+              aria-label="I build AI that ships."
+              className="font-display uppercase tracking-[-0.01em] text-[clamp(38px,12.5vw,58px)] leading-[0.92] text-[#E8DED0] text-left m-0 select-none overflow-hidden"
+            >
+              <span className="sr-only">MISHAL - </span>
+              <div className="overflow-hidden">
+                <span className="hero-headline-line inline-block">I BUILD AI</span>
+              </div>
+              <div className="overflow-hidden relative inline-block">
+                <span className="hero-headline-line inline-block">THAT SHIPS.</span>
+                {/* Gold sweep underline under "SHIPS." */}
+                <div
+                  ref={heroUnderlineRef}
+                  className="absolute bottom-0 left-0 right-0 h-[3px] bg-[#C9A24A] origin-left scale-x-0"
+                  aria-hidden="true"
+                />
+              </div>
+            </h1>
+
+            {/* Two 52px buttons side-by-side (leaving 62px free on the right for Sprout) */}
+            <div className="w-[calc(100%-62px)] mr-[62px] flex flex-row gap-2.5 pt-1.5">
               <button
                 type="button"
                 onClick={() => scrollToSection("works")}
-                className="flex-1 min-h-[48px] px-3 sm:px-4 py-2.5 rounded-full bg-[#E8DED0] text-[#0B0B0B] hover:bg-white active:scale-[0.98] transition-all font-mono text-[11px] sm:text-[12px] uppercase tracking-wider font-bold flex items-center justify-center gap-1 shadow-sm cursor-pointer"
+                className="hero-btn-reveal flex-1 min-h-[52px] h-[52px] px-3.5 py-2.5 rounded-full bg-[#E8DED0] text-[#0B0B0B] btn-sheen btn-pulse-ring active:scale-[0.98] transition-transform font-mono text-[12px] uppercase tracking-wider font-bold flex items-center justify-center gap-1 shadow-sm cursor-pointer"
               >
                 <span>View projects</span>
                 <span aria-hidden="true">↓</span>
@@ -1033,7 +1155,7 @@ export function MobileSite() {
               <a
                 href="/cv.pdf"
                 download
-                className="flex-1 min-h-[48px] px-3 sm:px-4 py-2.5 rounded-full bg-transparent text-[#E8DED0] border-2 border-[#E8DED0] hover:bg-[#E8DED0]/10 active:scale-[0.98] transition-all font-mono text-[11px] sm:text-[12px] uppercase tracking-wider font-semibold flex items-center justify-center gap-1.5 cursor-pointer"
+                className="hero-btn-reveal flex-1 min-h-[52px] h-[52px] px-3.5 py-2.5 rounded-full bg-transparent text-[#E8DED0] border-2 border-[#E8DED0] hover:bg-[#E8DED0]/10 active:scale-[0.98] transition-all font-mono text-[12px] uppercase tracking-wider font-semibold flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <Download className="w-4 h-4" aria-hidden="true" />
                 <span>Download CV</span>
@@ -1043,15 +1165,15 @@ export function MobileSite() {
         </section>
 
         {/* ================================================================= */}
-        {/* SECTION 2: ABOUT (#about) - One Screen Cream Layout */}
+        {/* SECTION 2: ABOUT (#about) - Facing Photo Card & 2x2 Fact Grid    */}
         {/* ================================================================= */}
         <section
           id="about"
           aria-label="About"
-          className="mobile-snap-section relative w-full bg-[#E8DED0] text-[#0B0B0B] px-4 sm:px-6 pt-[60px] pb-4 flex flex-col justify-start gap-2.5 sm:gap-3 overflow-hidden select-none"
+          className="mobile-snap-section relative w-full bg-[#E8DED0] text-[#0B0B0B] px-4 pt-[60px] pb-3 flex flex-col justify-between overflow-hidden select-none"
         >
           {/* Header: 01 About / About me. */}
-          <div data-reveal data-reveal-header className="flex flex-col gap-0.5 border-t border-[#C9A24A]/40 pt-2 shrink-0 pr-[60px]">
+          <div data-reveal data-reveal-header className="flex flex-col gap-0.5 border-t border-[#C9A24A]/40 pt-2 shrink-0 pr-[62px]">
             <span className="font-mono text-[11px] uppercase tracking-widest text-[#1F5A3A] font-bold">
               01 About
             </span>
@@ -1060,27 +1182,32 @@ export function MobileSite() {
             </h2>
           </div>
 
-          {/* Row: 110x130 Portrait beside 3-line bio excerpt & Read more button */}
-          <div data-reveal data-reveal-card className="flex items-start gap-3 shrink-0 pr-[60px]">
-            <div className="w-[110px] h-[130px] shrink-0 rounded-[12px] overflow-hidden bg-[#171615] border border-[#0B0B0B]/15 shadow-sm">
+          {/* Middle: Facing-camera photo card & Bio excerpt */}
+          <div data-reveal data-reveal-card className="flex-1 flex flex-col justify-center gap-2 py-1 pr-[62px]">
+            <div className="relative w-full h-[clamp(170px,26vh,240px)] rounded-[24px] overflow-hidden bg-[#171615] border border-[#0B0B0B]/15 shadow-sm shrink-0">
               <img
                 src={frontImg}
                 alt={about.portraitAlt}
                 loading="lazy"
                 decoding="async"
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover select-none pointer-events-none"
                 style={{ objectPosition: "50% 20%" }}
               />
+              {/* Name chip at bottom-left of photo */}
+              <div className="absolute bottom-2.5 left-2.5 px-3 py-1 rounded-full bg-[#0B0B0B]/75 backdrop-blur-md text-[#E8DED0] font-mono text-[11px] font-semibold border border-[#E8DED0]/20 flex items-center gap-1.5 shadow-sm">
+                <span>Muhammed Mishal · AI/ML</span>
+              </div>
             </div>
-            <div className="flex-1 flex flex-col justify-between min-h-[130px] py-0.5">
-              <p className="font-sans text-[12.5px] sm:text-[13.5px] leading-snug text-[#1a1a1a] m-0 line-clamp-3">
-                I'm an AI/ML engineer from Kollam. I build Python machine learning and computer vision applications and serve them through tested APIs.
+
+            <div className="flex flex-col gap-1">
+              <p className="font-sans text-[12.5px] sm:text-[13px] leading-snug text-[#1a1a1a] m-0 line-clamp-3">
+                {about.bio}
               </p>
               <button
                 type="button"
                 data-read-more-trigger="true"
-                onClick={() => setBioSheetOpen(true)}
-                className="font-mono text-[12px] text-[#1F5A3A] font-bold hover:underline self-start flex items-center gap-1 min-h-[36px] cursor-pointer mt-1"
+                onClick={() => setAboutSheetOpen(true)}
+                className="font-mono text-[12px] text-[#1F5A3A] font-bold hover:underline self-start flex items-center gap-1 min-h-[36px] cursor-pointer"
               >
                 <span>Read more</span>
                 <span aria-hidden="true">→</span>
@@ -1088,112 +1215,35 @@ export function MobileSite() {
             </div>
           </div>
 
-          {/* 4 Tab Pills: Education, Experience, Certs, Status */}
-          <div data-reveal data-reveal-card className="flex flex-col gap-2 shrink-0 pr-[60px]">
-            <div className="flex items-center gap-1.5" role="tablist" aria-label="About tabs">
-              {(["Education", "Experience", "Certs", "Status"] as const).map((tab) => {
-                const isActive = activeAboutTab === tab;
-                return (
-                  <button
-                    key={tab}
-                    type="button"
-                    role="tab"
-                    aria-selected={isActive}
-                    onClick={() => handleAboutTabSwitch(tab)}
-                    className={`flex-1 min-h-[40px] px-1 py-1 rounded-lg font-mono text-[10px] sm:text-[11px] uppercase tracking-wider font-semibold transition-all cursor-pointer flex items-center justify-center text-center ${
-                      isActive
-                        ? "bg-[#0B0B0B] text-[#E8DED0] shadow-xs"
-                        : "bg-[#0B0B0B]/5 text-[#0B0B0B]/70 border border-[#0B0B0B]/10 hover:bg-[#0B0B0B]/10 hover:text-[#0B0B0B]"
-                    }`}
-                  >
-                    {tab}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* One Card displaying active tab content from content.ts (0.2s cross-fade) */}
-            <div
-              className="p-2.5 sm:p-3 rounded-xl bg-[#0B0B0B]/[0.04] border border-[#0B0B0B]/12 min-h-[85px] flex flex-col justify-center transition-opacity duration-200"
-              style={{ opacity: tabFading ? 0 : 1 }}
-              role="tabpanel"
-            >
-              {activeAboutTab === "Education" && (
-                <div className="flex flex-col gap-0.5">
-                  <span className="font-mono text-[10px] uppercase tracking-widest text-[#1F5A3A] font-bold">
-                    {about.facts[0].label}
-                  </span>
-                  <span className="font-sans text-[13px] font-bold text-[#0B0B0B]">
-                    {about.facts[0].bold}
-                  </span>
-                  <span className="font-sans text-[11px] text-[#0B0B0B]/80 leading-snug">
-                    {about.facts[0].text.replace(/^ · /, "")}
-                  </span>
-                  {about.facts[0].secondary && (
-                    <span className="font-sans text-[10px] text-[#0B0B0B]/70">
-                      {about.facts[0].secondary}
-                    </span>
-                  )}
-                </div>
-              )}
-              {activeAboutTab === "Experience" && (
-                <div className="flex flex-col gap-0.5">
-                  <span className="font-mono text-[10px] uppercase tracking-widest text-[#1F5A3A] font-bold">
-                    {about.facts[1].label}
-                  </span>
-                  <span className="font-sans text-[13px] font-bold text-[#0B0B0B]">
-                    {about.facts[1].bold}
-                  </span>
-                  <span className="font-sans text-[11px] text-[#0B0B0B]/80 leading-snug">
-                    {about.facts[1].text.replace(/^ · /, "")}
-                  </span>
-                  {about.facts[1].secondary && (
-                    <span className="font-sans text-[10px] text-[#0B0B0B]/70 line-clamp-1">
-                      {about.facts[1].secondary}
-                    </span>
-                  )}
-                </div>
-              )}
-              {activeAboutTab === "Certs" && (
-                <div className="flex flex-col gap-0.5">
-                  <span className="font-mono text-[10px] uppercase tracking-widest text-[#1F5A3A] font-bold">
-                    {about.facts[2].label}
-                  </span>
-                  <span className="font-sans text-[12px] font-bold text-[#0B0B0B]">
-                    {about.facts[2].bold}
-                  </span>
-                  <span className="font-sans text-[11px] text-[#0B0B0B]/80 leading-snug line-clamp-2">
-                    {about.facts[2].text.replace(/^ · /, "")}
-                  </span>
-                </div>
-              )}
-              {activeAboutTab === "Status" && (
-                <div className="flex flex-col gap-0.5">
-                  <span className="font-mono text-[10px] uppercase tracking-widest text-[#1F5A3A] font-bold flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-[#1F5A3A]" aria-hidden="true" />
-                    STATUS & AVAILABILITY
-                  </span>
-                  <span className="font-sans text-[13px] font-bold text-[#0B0B0B]">
-                    {site.availability}
-                  </span>
-                  <span className="font-sans text-[11px] text-[#0B0B0B]/80">
-                    Timezone: {site.timezone} · Kerala, India, GCC or remote
-                  </span>
-                </div>
-              )}
-            </div>
+          {/* Bottom 2x2 Grid of Fact Tiles (pinned to bottom, opens sheet on tap) */}
+          <div data-reveal data-reveal-card className="grid grid-cols-2 gap-2 shrink-0 pr-[62px]">
+            {FACT_TILES.map((tile, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => setAboutSheetOpen(true)}
+                className="p-2 sm:p-2.5 rounded-xl bg-[#0B0B0B]/[0.05] border border-[#0B0B0B]/12 flex flex-col justify-center text-left cursor-pointer hover:bg-[#0B0B0B]/[0.08] active:scale-[0.98] transition-all min-h-[62px]"
+              >
+                <span className="font-display text-[clamp(18px,4.8vw,22px)] leading-none text-[#1F5A3A] font-bold tracking-tight">
+                  {tile.num}
+                </span>
+                <span className="font-mono text-[10px] sm:text-[11px] text-[#0B0B0B]/80 font-medium leading-tight mt-1 truncate">
+                  {tile.label}
+                </span>
+              </button>
+            ))}
           </div>
         </section>
 
         {/* ================================================================= */}
-        {/* SECTION 3: EXPERTISE (#expertise) - One Screen Framework */}
+        {/* SECTION 3: EXPERTISE (#expertise) - 4 Groups, Tap Opens Sheet     */}
         {/* ================================================================= */}
         <section
           id="expertise"
           aria-label="Expertise"
-          className="mobile-snap-section relative w-full bg-[#E8DED0] text-[#0B0B0B] px-4 sm:px-6 pt-[60px] pb-4 flex flex-col justify-start gap-1.5 sm:gap-2 overflow-hidden select-none"
+          className="mobile-snap-section relative w-full bg-[#E8DED0] text-[#0B0B0B] px-4 pt-[60px] pb-3 flex flex-col justify-start gap-1 overflow-hidden select-none"
         >
-          <div data-reveal data-reveal-header className="flex flex-col gap-0.5 border-t border-[#C9A24A]/40 pt-2 shrink-0 pr-[60px]">
+          <div data-reveal data-reveal-header className="flex flex-col gap-0.5 border-t border-[#C9A24A]/40 pt-2 shrink-0 pr-[62px]">
             <span className="font-mono text-[11px] uppercase tracking-widest text-[#1F5A3A] font-bold">
               02 EXPERTISE
             </span>
@@ -1205,272 +1255,380 @@ export function MobileSite() {
             </p>
           </div>
 
-          {/* 4 Skill Clusters inside 100svh */}
-          <div data-reveal data-reveal-card className="flex flex-col gap-1.5 sm:gap-2 py-0.5 pr-[60px] overflow-hidden">
+          {/* 4 Groups stretch to fill screen without vertical scrolling */}
+          <div data-reveal data-reveal-card className="flex-1 flex flex-col justify-between py-1 pr-[62px]">
             {expertise.clusters.map((clusterName, clusterIdx) => {
               const clusterSkills = expertise.skills.filter((s) => s.cluster === clusterIdx);
 
               return (
                 <div
                   key={clusterName}
-                  className="p-1.5 sm:p-2 rounded-lg bg-[#0B0B0B]/[0.03] border border-[#0B0B0B]/10 flex flex-col gap-1"
+                  className="p-1.5 sm:p-2 rounded-xl bg-[#0B0B0B]/[0.03] border border-[#0B0B0B]/10 flex flex-col gap-1"
                 >
-                  <span className="font-mono text-[9.5px] uppercase tracking-widest text-[#1F5A3A] font-bold">
-                    {clusterName}
-                  </span>
-
-                  <div className="flex flex-wrap gap-1 sm:gap-1.5">
-                    {clusterSkills.map((sk) => {
-                      const isSelected = activeSkill === sk.name;
-                      return (
-                        <button
-                          key={sk.id}
-                          type="button"
-                          onClick={() => setActiveSkill(isSelected ? null : sk.name)}
-                          aria-expanded={isSelected}
-                          className={`min-h-[44px] px-2.5 py-1 rounded-full font-mono text-[10.5px] sm:text-[11.5px] tracking-wide transition-all flex items-center gap-1 focus:outline-none cursor-pointer ${
-                            isSelected
-                              ? "bg-[#1F5A3A] text-[#E8DED0] font-bold shadow-xs"
-                              : "bg-[#E8DED0] text-[#0B0B0B] border border-[#0B0B0B]/20 hover:border-[#0B0B0B]/50 font-medium"
-                          }`}
-                        >
-                          <span>{sk.name}</span>
-                          {isSelected ? (
-                            <ChevronUp className="w-3 h-3 opacity-80" aria-hidden="true" />
-                          ) : (
-                            <ChevronDown className="w-3 h-3 opacity-60" aria-hidden="true" />
-                          )}
-                        </button>
-                      );
-                    })}
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-[10px] uppercase tracking-widest text-[#1F5A3A] font-bold">
+                      {clusterName}
+                    </span>
+                    <span className="font-mono text-[9px] uppercase tracking-wider text-[#6B645A]">
+                      {clusterSkills.length} SKILLS
+                    </span>
                   </div>
 
-                  {clusterSkills.some((s) => s.name === activeSkill) && (
-                    <div
-                      className="mt-1 p-2 rounded-lg bg-[#E8DED0] border border-[#1F5A3A]/40 text-[#0B0B0B] text-[11px]"
-                      role="region"
-                      aria-live="polite"
-                    >
-                      <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-wider text-[#1F5A3A] font-bold mb-0.5">
-                        <span>WHERE I USED {activeSkill}:</span>
-                        <button
-                          type="button"
-                          onClick={() => setActiveSkill(null)}
-                          className="p-0.5 hover:text-[#0B0B0B]"
-                          aria-label="Close skill details"
-                        >
-                          &times;
-                        </button>
-                      </div>
-                      {(() => {
-                        const matchedProjects = Object.entries(PROJECTS).filter(([, p]) =>
-                          p.skills.includes(activeSkill || ""),
-                        );
-                        if (matchedProjects.length > 0) {
-                          return (
-                            <ul className="flex flex-col gap-0.5 list-none p-0 m-0">
-                              {matchedProjects.map(([projTitle, projData]) => (
-                                <li key={projTitle} className="leading-snug text-[#0B0B0B]/90">
-                                  <strong>{projTitle}</strong>{" "}
-                                  <span className="text-[10px] text-[#0B0B0B]/70 font-mono">
-                                    ({projData.status})
-                                  </span>
-                                </li>
-                              ))}
-                            </ul>
-                          );
-                        }
-                        return (
-                          <p className="leading-snug text-[#0B0B0B]/85 m-0">
-                            {activeSkill === "Docker" ? expertise.dockerCore : expertise.core}
-                          </p>
-                        );
-                      })()}
-                    </div>
-                  )}
+                  <div className="flex flex-wrap gap-1 sm:gap-1.5">
+                    {clusterSkills.map((sk) => (
+                      <button
+                        key={sk.id}
+                        type="button"
+                        onClick={() => setSkillSheet({ open: true, skill: sk.name })}
+                        className="min-h-[44px] px-3 py-1 rounded-full font-mono text-[11px] sm:text-[12px] bg-[#E8DED0] text-[#0B0B0B] border border-[#0B0B0B]/20 hover:border-[#1F5A3A] hover:bg-[#1F5A3A]/5 active:scale-[0.98] transition-all flex items-center justify-center font-medium cursor-pointer"
+                      >
+                        {sk.name}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               );
             })}
           </div>
+                  {/* 6. Expertise Skill Detail Bottom Sheet */}
+      {skillSheet.open && (
+        <div
+          role="region"
+          aria-live="polite"
+          aria-label={`Skill details for ${skillSheet.skill}`}
+          className="fixed inset-0 z-[80] flex flex-col justify-end bg-black/60 backdrop-blur-xs"
+          onClick={() => setSkillSheet({ open: false })}
+        >
+          <div
+            className="w-full max-h-[70svh] bg-[#E8DED0] text-[#0B0B0B] rounded-t-2xl p-5 overflow-y-auto flex flex-col gap-3.5 border-t border-[#0B0B0B]/20 shadow-2xl animate-in slide-in-from-bottom duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-[#0B0B0B]/15 pb-2">
+              <span className="font-mono text-[12px] uppercase tracking-widest text-[#1F5A3A] font-bold">
+                WHERE I USED {skillSheet.skill}:
+              </span>
+              <button
+                type="button"
+                onClick={() => setSkillSheet({ open: false })}
+                className="min-h-[44px] min-w-[44px] px-3 py-1.5 rounded-full border border-[#0B0B0B]/20 font-mono text-[11px] uppercase tracking-wider font-semibold hover:bg-[#0B0B0B]/5 flex items-center justify-center cursor-pointer"
+                aria-label="Close skill details"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {(() => {
+              const matchedProjects = Object.entries(PROJECTS).filter(([, p]) =>
+                p.skills.includes(skillSheet.skill || "")
+              );
+
+              if (matchedProjects.length > 0) {
+                return (
+                  <div className="flex flex-col gap-2.5">
+                    {matchedProjects.map(([projTitle, projData]) => (
+                      <div
+                        key={projTitle}
+                        className="p-3 rounded-lg bg-[#0B0B0B]/[0.03] border border-[#0B0B0B]/10 flex flex-col gap-1"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-sans text-[13px] font-bold text-[#0B0B0B]">
+                            {projTitle}
+                          </span>
+                          <span className="font-mono text-[10px] uppercase tracking-wider text-[#1F5A3A] font-semibold">
+                            {projData.status}
+                          </span>
+                        </div>
+                        <p className="font-sans text-[12px] text-[#0B0B0B]/80 leading-snug m-0">
+                          {works.projects.find((p) => p.title.toLowerCase().includes(projTitle.slice(0, 10).toLowerCase()))?.sentence || projData.status}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                );
+              }
+
+              return (
+                <p className="font-sans text-[13px] leading-relaxed text-[#0B0B0B]/85 m-0">
+                  {skillSheet.skill === "Docker" ? expertise.dockerCore : expertise.core}
+                </p>
+              );
+            })()}
+          </div>
+        </div>
+      )}
         </section>
 
         {/* ================================================================= */}
-        {/* SECTION 4: WORKS (#works) - One Screen Framework with Card Tabs */}
+        {/* SECTION 4: WORKS (#works) - Three Stacked Cards, All Visible     */}
         {/* ================================================================= */}
         <section
           id="works"
           aria-label="Works"
-          className="mobile-snap-section relative w-full bg-[#E8DED0] text-[#0B0B0B] px-4 sm:px-6 pt-[60px] pb-4 flex flex-col justify-start gap-2 sm:gap-2.5 overflow-hidden select-none"
+          className="mobile-snap-section relative w-full bg-[#E8DED0] text-[#0B0B0B] px-4 pt-[60px] pb-3 flex flex-col justify-start gap-1 overflow-hidden select-none"
         >
-          <div data-reveal data-reveal-header className="flex flex-col gap-0.5 border-t border-[#C9A24A]/40 pt-2 shrink-0 pr-[60px]">
-            <div className="flex items-center justify-between">
-              <span className="font-mono text-[11px] uppercase tracking-widest text-[#1F5A3A] font-bold">
-                03 WORKS
-              </span>
-              {/* Project Card Selectors */}
-              <div className="flex items-center gap-1" role="tablist" aria-label="Select Project">
-                {[0, 1, 2].map((idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    role="tab"
-                    aria-selected={activeWorksCard === idx}
-                    onClick={() => setActiveWorksCard(idx)}
-                    className={`min-h-[36px] px-2.5 py-1 rounded font-mono text-[10px] font-bold uppercase transition-all cursor-pointer ${
-                      activeWorksCard === idx
-                        ? "bg-[#0B0B0B] text-[#E8DED0]"
-                        : "bg-[#0B0B0B]/10 text-[#0B0B0B]/70 hover:bg-[#0B0B0B]/20"
-                    }`}
-                  >
-                    0{idx + 1}
-                  </button>
-                ))}
-              </div>
-            </div>
+          <div data-reveal data-reveal-header className="flex flex-col gap-0.5 border-t border-[#C9A24A]/40 pt-2 shrink-0 pr-[62px]">
+            <span className="font-mono text-[11px] uppercase tracking-widest text-[#1F5A3A] font-bold">
+              03 WORKS
+            </span>
             <h2 data-reveal-title className="font-display uppercase tracking-[-0.01em] text-[clamp(28px,7.5vw,36px)] leading-[0.95] text-[#0B0B0B] m-0">
               {works.heading}
             </h2>
           </div>
 
-          {/* 3 Project Cards rendered in container (all 3 in DOM for smoke test, active one shown) */}
-          <div data-reveal data-reveal-card className="flex flex-col justify-start py-0.5 pr-[60px]">
+          {/* Three Stacked Cards all visible at once in 100svh */}
+          <div data-reveal data-reveal-card className="flex-1 flex flex-col justify-between py-1 pr-[62px] gap-2">
             {/* Card 1: Dermatology Decision Support */}
             <article
-              className={`rounded-xl overflow-hidden bg-[#F4EFE6] border border-[#0B0B0B]/15 flex flex-col shadow-xs transition-opacity duration-200 ${
-                activeWorksCard === 0 ? "block" : "hidden"
-              }`}
+              onClick={() => setWorkSheet({ open: true, projectIndex: 0 })}
+              className="relative w-full h-[clamp(120px,17vh,165px)] rounded-2xl overflow-hidden border border-[#0B0B0B]/15 shadow-sm cursor-pointer select-none group"
             >
-              <div className="relative w-full aspect-[21/9] sm:aspect-video bg-[#000] overflow-hidden">
-                <img
-                  src={ddssScreenImg}
-                  alt="Dermatology Decision Support system screen"
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                />
-                <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-[#0B0B0B]/80 backdrop-blur-sm border border-[#E8DED0]/20 font-mono text-[10px] text-[#C9A24A] uppercase tracking-wider font-semibold">
-                  Clinical Case Retrieval
-                </div>
+              <img
+                src={ddssScreenImg}
+                alt="Dermatology Decision Support"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                loading="lazy"
+                decoding="async"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30 pointer-events-none" />
+
+              {/* Category pill top-left */}
+              <div className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-xs border border-[#C9A24A]/30 font-mono text-[9.5px] text-[#C9A24A] uppercase tracking-wider font-semibold">
+                Clinical Case Retrieval
               </div>
 
-              <div className="p-3 sm:p-4 flex flex-col gap-1.5">
-                <h3 className="font-display uppercase tracking-[-0.01em] text-[clamp(18px,5vw,22px)] leading-[1.05] text-[#0B0B0B] m-0">
+              {/* Arrow button top-right */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setWorkSheet({ open: true, projectIndex: 0 });
+                }}
+                aria-label="Open case study"
+                className="absolute top-2.5 right-2.5 w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-white/15 backdrop-blur-xs border border-white/20 text-[#E8DED0] flex items-center justify-center group-hover:bg-[#C9A24A] group-hover:text-[#0B0B0B] transition-colors cursor-pointer"
+              >
+                <ArrowUpRight className="w-4 h-4" aria-hidden="true" />
+              </button>
+
+              {/* Title & tags bottom-left */}
+              <div className="absolute bottom-2.5 left-2.5 right-10 flex flex-col gap-0.5">
+                <h3 className="font-display uppercase text-[clamp(17px,4.5vw,21px)] text-[#E8DED0] leading-none m-0">
                   {works.projects[0].title}
                 </h3>
-                <p className="font-sans text-[12px] leading-snug text-[#0B0B0B]/90 m-0 line-clamp-2">
-                  {works.projects[0].sentence}
-                </p>
-                <div className="flex flex-wrap gap-1 pt-0.5">
-                  {["DINOv2", "FAISS", "FastAPI", "Supabase", "pgvector"].map((t) => (
-                    <span
-                      key={t}
-                      className="px-2 py-0.5 rounded bg-[#0B0B0B]/5 border border-[#0B0B0B]/10 font-mono text-[10px] text-[#0B0B0B]/80"
-                    >
-                      {t}
-                    </span>
-                  ))}
-                </div>
-                <div className="flex items-center gap-2 pt-1.5">
-                  <button
-                    type="button"
-                    onClick={(e) => openDrawer(works.caseStudy, e.currentTarget)}
-                    className="min-h-[44px] px-4 py-2 rounded-full bg-[#0B0B0B] text-[#E8DED0] font-mono text-[11px] uppercase tracking-wider font-bold hover:bg-[#1F5A3A] transition-colors flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
-                  >
-                    <span>Deep Dive</span>
-                    <ArrowUpRight className="w-3.5 h-3.5" aria-hidden="true" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveVideoDemo((v) => !v)}
-                    className="min-h-[44px] px-3 py-2 rounded-full border border-[#0B0B0B]/30 text-[#0B0B0B] font-mono text-[11px] uppercase tracking-wider font-medium hover:bg-[#0B0B0B]/10 transition-colors flex items-center justify-center gap-1 cursor-pointer"
-                  >
-                    <Play className="w-3 h-3 fill-current" aria-hidden="true" />
-                    <span>{activeVideoDemo ? "Close" : "Play demo"}</span>
-                  </button>
-                </div>
-                {activeVideoDemo && (
-                  <div className="mt-1 rounded-lg overflow-hidden border border-[#0B0B0B]/20 bg-black">
-                    <video
-                      src="/media/ddss-demo.mp4"
-                      poster="/media/ddss-demo-poster.webp"
-                      controls
-                      autoPlay
-                      playsInline
-                      className="w-full aspect-video"
-                    />
-                  </div>
-                )}
+                <span className="font-mono text-[10px] text-[#E8DED0]/80">
+                  DINOv2 · FAISS · FastAPI · pgvector
+                </span>
               </div>
             </article>
 
             {/* Card 2: Productivity & Role Prediction */}
             <article
-              className={`rounded-xl overflow-hidden bg-[#F4EFE6] border border-[#0B0B0B]/15 flex flex-col shadow-xs transition-opacity duration-200 ${
-                activeWorksCard === 1 ? "block" : "hidden"
-              }`}
+              onClick={() => setWorkSheet({ open: true, projectIndex: 1 })}
+              className="relative w-full h-[clamp(120px,17vh,165px)] rounded-2xl overflow-hidden border border-[#0B0B0B]/15 shadow-sm cursor-pointer select-none group"
             >
-              <div className="p-2 bg-[#E8DED0]/60 border-b border-[#0B0B0B]/10">
-                <ProductivityExplorerMobile />
+              <img
+                src={ddss3ScreenImg}
+                alt="Productivity & Role Prediction"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                loading="lazy"
+                decoding="async"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30 pointer-events-none" />
+
+              <div className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-xs border border-[#C9A24A]/30 font-mono text-[9.5px] text-[#C9A24A] uppercase tracking-wider font-semibold">
+                Behavioral Modeling
               </div>
-              <div className="p-3 sm:p-4 flex flex-col gap-1.5">
-                <h3 className="font-display uppercase tracking-[-0.01em] text-[clamp(18px,5vw,22px)] leading-[1.05] text-[#0B0B0B] m-0">
+
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setWorkSheet({ open: true, projectIndex: 1 });
+                }}
+                aria-label="Open case study"
+                className="absolute top-2.5 right-2.5 w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-white/15 backdrop-blur-xs border border-white/20 text-[#E8DED0] flex items-center justify-center group-hover:bg-[#C9A24A] group-hover:text-[#0B0B0B] transition-colors cursor-pointer"
+              >
+                <ArrowUpRight className="w-4 h-4" aria-hidden="true" />
+              </button>
+
+              <div className="absolute bottom-2.5 left-2.5 right-10 flex flex-col gap-0.5">
+                <h3 className="font-display uppercase text-[clamp(17px,4.5vw,21px)] text-[#E8DED0] leading-none m-0">
                   {works.projects[1].title}
                 </h3>
-                <p className="font-sans text-[12px] leading-snug text-[#0B0B0B]/90 m-0 line-clamp-2">
-                  {works.projects[1].sentence}
-                </p>
-                <div className="pt-1.5">
-                  <button
-                    type="button"
-                    onClick={(e) => openDrawer(roleCaseStudy, e.currentTarget)}
-                    className="min-h-[44px] px-4 py-2 rounded-full bg-[#0B0B0B] text-[#E8DED0] font-mono text-[11px] uppercase tracking-wider font-bold hover:bg-[#1F5A3A] transition-colors flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
-                  >
-                    <span>Deep Dive</span>
-                    <ArrowUpRight className="w-3.5 h-3.5" aria-hidden="true" />
-                  </button>
-                </div>
+                <span className="font-mono text-[10px] text-[#E8DED0]/80">
+                  XGBoost · SHAP · Scikit-learn
+                </span>
               </div>
             </article>
 
             {/* Card 3: CareerLens AI */}
             <article
-              className={`rounded-xl overflow-hidden bg-[#F4EFE6] border border-[#0B0B0B]/15 flex flex-col shadow-xs transition-opacity duration-200 ${
-                activeWorksCard === 2 ? "block" : "hidden"
-              }`}
+              onClick={() => setWorkSheet({ open: true, projectIndex: 2 })}
+              className="relative w-full h-[clamp(120px,17vh,165px)] rounded-2xl overflow-hidden border border-[#0B0B0B]/15 shadow-sm cursor-pointer select-none group"
             >
-              <div className="p-2 bg-[#E8DED0]/60 border-b border-[#0B0B0B]/10">
-                <CareerLensPipelineMobile />
+              <img
+                src={ddss2ScreenImg}
+                alt="CareerLens AI"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                loading="lazy"
+                decoding="async"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30 pointer-events-none" />
+
+              <div className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-xs border border-[#C9A24A]/30 font-mono text-[9.5px] text-[#C9A24A] uppercase tracking-wider font-semibold">
+                Career Intelligence
               </div>
-              <div className="p-3 sm:p-4 flex flex-col gap-1.5">
-                <h3 className="font-display uppercase tracking-[-0.01em] text-[clamp(18px,5vw,22px)] leading-[1.05] text-[#0B0B0B] m-0">
+
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setWorkSheet({ open: true, projectIndex: 2 });
+                }}
+                aria-label="Open case study"
+                className="absolute top-2.5 right-2.5 w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-white/15 backdrop-blur-xs border border-white/20 text-[#E8DED0] flex items-center justify-center group-hover:bg-[#C9A24A] group-hover:text-[#0B0B0B] transition-colors cursor-pointer"
+              >
+                <ArrowUpRight className="w-4 h-4" aria-hidden="true" />
+              </button>
+
+              <div className="absolute bottom-2.5 left-2.5 right-10 flex flex-col gap-0.5">
+                <h3 className="font-display uppercase text-[clamp(17px,4.5vw,21px)] text-[#E8DED0] leading-none m-0">
                   {works.projects[2].title}
                 </h3>
-                <p className="font-sans text-[12px] leading-snug text-[#0B0B0B]/90 m-0 line-clamp-2">
-                  {works.projects[2].sentence}
-                </p>
-                <div className="pt-1.5">
-                  <button
-                    type="button"
-                    onClick={(e) => openDrawer(careerlensCaseStudy, e.currentTarget)}
-                    className="min-h-[44px] px-4 py-2 rounded-full bg-[#0B0B0B] text-[#E8DED0] font-mono text-[11px] uppercase tracking-wider font-bold hover:bg-[#1F5A3A] transition-colors flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
-                  >
-                    <span>Deep Dive</span>
-                    <ArrowUpRight className="w-3.5 h-3.5" aria-hidden="true" />
-                  </button>
-                </div>
+                <span className="font-mono text-[10px] text-[#E8DED0]/80">
+                  BERT · spaCy · Streamlit
+                </span>
               </div>
             </article>
           </div>
+                  {/* 7. Works Project Detail Bottom Sheet */}
+      {workSheet.open && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Project details for ${works.projects[workSheet.projectIndex]?.title}`}
+          data-drawer-content="true"
+          className="fixed inset-0 z-[80] flex flex-col justify-end bg-black/60 backdrop-blur-xs"
+          onClick={() => setWorkSheet({ open: false, projectIndex: 0 })}
+        >
+          <div
+            className="w-full max-h-[85svh] bg-[#E8DED0] text-[#0B0B0B] rounded-t-2xl p-5 overflow-y-auto flex flex-col gap-4 border-t border-[#0B0B0B]/20 shadow-2xl animate-in slide-in-from-bottom duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {(() => {
+              const proj = works.projects[workSheet.projectIndex] || works.projects[0];
+              const category =
+                workSheet.projectIndex === 0
+                  ? "Clinical Case Retrieval"
+                  : workSheet.projectIndex === 1
+                  ? "Behavioral Modeling"
+                  : "Career Intelligence";
+              const tags =
+                workSheet.projectIndex === 0
+                  ? ["DINOv2", "FAISS", "FastAPI", "Supabase", "pgvector"]
+                  : workSheet.projectIndex === 1
+                  ? ["XGBoost", "SHAP", "Scikit-learn", "Streamlit"]
+                  : ["BERT", "spaCy", "Streamlit", "FAISS"];
+              const caseStudyData =
+                workSheet.projectIndex === 0
+                  ? works.caseStudy
+                  : workSheet.projectIndex === 1
+                  ? roleCaseStudy
+                  : careerlensCaseStudy;
+
+              return (
+                <>
+                  <div className="flex items-center justify-between border-b border-[#0B0B0B]/15 pb-2">
+                    <span className="font-mono text-[11px] uppercase tracking-widest text-[#1F5A3A] font-bold">
+                      {category}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setWorkSheet({ open: false, projectIndex: 0 })}
+                      className="min-h-[44px] min-w-[44px] px-3 py-1.5 rounded-full border border-[#0B0B0B]/20 font-mono text-[11px] uppercase tracking-wider font-semibold hover:bg-[#0B0B0B]/5 flex items-center justify-center cursor-pointer"
+                      aria-label="Close project details"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <h2 className="display font-display uppercase text-[clamp(22px,6vw,26px)] leading-[1.15] text-[#0B0B0B] m-0">
+                      {proj.title}
+                    </h2>
+                    <h3 className="display font-display uppercase text-[15px] leading-[1.15] text-[#1F5A3A] m-0">
+                      Project Overview
+                    </h3>
+                    <p className="font-sans text-[13px] leading-relaxed text-[#0B0B0B]/85 mt-1 m-0">
+                      {proj.sentence}
+                    </p>
+                  </div>
+
+                  {workSheet.projectIndex === 0 && (
+                    <div className="flex flex-col gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setActiveVideoDemo((v) => !v)}
+                        className="min-h-[44px] px-4 py-2 rounded-full border border-[#0B0B0B]/30 text-[#0B0B0B] font-mono text-[12px] uppercase tracking-wider font-semibold hover:bg-[#0B0B0B]/10 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <Play className="w-3.5 h-3.5 fill-current" aria-hidden="true" />
+                        <span>{activeVideoDemo ? "Close video demo" : "Play demo"}</span>
+                      </button>
+                      {activeVideoDemo && (
+                        <div className="rounded-xl overflow-hidden border border-[#0B0B0B]/20 bg-black">
+                          <video
+                            src="/media/ddss-demo.mp4"
+                            poster="/media/ddss-demo-poster.webp"
+                            controls
+                            autoPlay
+                            playsInline
+                            className="w-full aspect-video"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap gap-1.5">
+                    {tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="px-2.5 py-1 rounded bg-[#0B0B0B]/5 border border-[#0B0B0B]/12 font-mono text-[11px] text-[#0B0B0B]/80 font-medium"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+
+                  <div className="pt-2 border-t border-[#0B0B0B]/15">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        setWorkSheet({ open: false, projectIndex: 0 });
+                        openDrawer(caseStudyData, e.currentTarget);
+                      }}
+                      className="w-full min-h-[48px] px-4 py-2.5 rounded-full bg-[#0B0B0B] text-[#E8DED0] font-mono text-[12px] uppercase tracking-wider font-bold hover:bg-[#1F5A3A] transition-colors flex items-center justify-center gap-2 shadow-xs cursor-pointer"
+                    >
+                      <span>Deep Dive</span>
+                      <ArrowUpRight className="w-4 h-4" aria-hidden="true" />
+                    </button>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
         </section>
 
         {/* ================================================================= */}
-        {/* SECTION 5: JOURNEY (#journey) - One Screen Framework */}
+        {/* SECTION 5: JOURNEY (#journey) - Continuous Gold Line, 4 Stops     */}
         {/* ================================================================= */}
         <section
           id="journey"
           aria-label="Journey"
-          className="mobile-snap-section relative w-full bg-[#E8DED0] text-[#0B0B0B] px-4 sm:px-6 pt-[60px] pb-4 flex flex-col justify-start gap-2 sm:gap-2.5 overflow-hidden select-none"
+          className="mobile-snap-section relative w-full bg-[#E8DED0] text-[#0B0B0B] px-4 pt-[60px] pb-3 flex flex-col justify-start gap-1 overflow-hidden select-none"
         >
-          <div data-reveal data-reveal-header className="flex flex-col gap-0.5 border-t border-[#C9A24A]/40 pt-2 shrink-0 pr-[60px]">
+          <div data-reveal data-reveal-header className="flex flex-col gap-0.5 border-t border-[#C9A24A]/40 pt-2 shrink-0 pr-[62px]">
             <span className="font-mono text-[11px] uppercase tracking-widest text-[#1F5A3A] font-bold">
               04 JOURNEY
             </span>
@@ -1479,37 +1637,44 @@ export function MobileSite() {
             </h2>
           </div>
 
-          {/* Timeline stops inside 100svh */}
-          <div className="relative pl-5 flex flex-col gap-1.5 sm:gap-2 py-0.5 pr-[60px] before:content-[''] before:absolute before:left-1.5 before:top-2 before:bottom-2 before:w-[1.5px] before:bg-[#C9A24A]/40">
-            {journey.stops.map((stop, idx) => (
+          {/* Continuous gold line with 4 stops filling available height, unboxed */}
+          <div className="relative pl-6 flex-1 flex flex-col justify-between py-2 pr-[62px] before:content-[''] before:absolute before:left-2 before:top-3 before:bottom-3 before:w-[2px] before:bg-[#C9A24A]/50">
+            {JOURNEY_STOPS.map((stop, idx) => (
               <div
-                key={`${stop.year}-${idx}`}
+                key={idx}
                 data-reveal
                 data-reveal-journey
                 className="relative flex flex-col gap-0.5"
               >
-                <div
-                  className="absolute -left-[18px] top-1.5 w-2.5 h-2.5 rounded-full bg-[#1F5A3A] border-2 border-[#E8DED0] shadow-xs"
-                  aria-hidden="true"
-                />
-                <div className="flex items-baseline gap-2">
-                  <span className="font-display text-[clamp(20px,5vw,26px)] leading-none text-[#1F5A3A] tracking-tight">
+                {/* Node on continuous vertical line */}
+                {stop.isAvailable ? (
+                  <div
+                    className="absolute -left-[21px] top-1 w-3.5 h-3.5 rounded-full bg-[#1F5A3A] ring-4 ring-[#1F5A3A]/25 shadow-xs"
+                    aria-hidden="true"
+                  />
+                ) : (
+                  <div
+                    className="absolute -left-[19px] top-1.5 w-2.5 h-2.5 rounded-full bg-[#1F5A3A] border-2 border-[#E8DED0] shadow-xs"
+                    aria-hidden="true"
+                  />
+                )}
+
+                <div className="flex items-center gap-2">
+                  <span className="font-display text-[clamp(20px,5vw,24px)] leading-none text-[#1F5A3A] tracking-tight">
                     {stop.year}
                   </span>
-                  {stop.tag && (
-                    <span className="px-1.5 py-0.5 rounded text-[10px] font-mono uppercase bg-[#1F5A3A]/10 text-[#1F5A3A] font-semibold">
-                      {stop.tag}
+                  {stop.isAvailable && (
+                    <span className="px-2 py-0.5 rounded-full font-mono text-[10px] uppercase font-bold text-[#1F5A3A] bg-[#1F5A3A]/10 border border-[#1F5A3A]/30">
+                      Available
                     </span>
                   )}
                 </div>
-                <div className="p-1.5 sm:p-2 rounded-lg bg-[#0B0B0B]/[0.03] border border-[#0B0B0B]/10 flex flex-col gap-0.5 shadow-2xs">
-                  <h3 className="font-sans text-[12.5px] sm:text-[13px] font-bold text-[#0B0B0B] m-0">
+
+                <div className="flex flex-col">
+                  <span className="font-sans text-[12.5px] sm:text-[13px] font-bold text-[#0B0B0B] leading-tight">
                     {stop.role}
-                  </h3>
-                  <span className="font-sans text-[11px] font-medium text-[#1F5A3A]">
-                    {stop.place}
                   </span>
-                  <p className="font-sans text-[11px] leading-snug text-[#0B0B0B]/85 m-0 line-clamp-2">
+                  <p className="font-sans text-[11.5px] leading-snug text-[#0B0B0B]/80 m-0 mt-0.5 line-clamp-2">
                     {stop.line}
                   </p>
                 </div>
@@ -1519,39 +1684,41 @@ export function MobileSite() {
         </section>
 
         {/* ================================================================= */}
-        {/* SECTION 6: CONNECT (#connect) - One Screen Dark Layout */}
+        {/* SECTION 6: CONNECT (#connect) - Centered Email Card on Ink        */}
         {/* ================================================================= */}
         <section
           id="connect"
           aria-label="Connect"
-          className="mobile-snap-section relative w-full bg-[#0B0B0B] text-[#E8DED0] px-4 sm:px-6 pt-[60px] pb-4 flex flex-col justify-start gap-2 sm:gap-2.5 overflow-hidden select-none"
+          className="mobile-snap-section relative w-full bg-[#0B0B0B] text-[#E8DED0] px-4 pt-[60px] pb-3 flex flex-col justify-between overflow-hidden select-none"
         >
-          <div data-reveal data-reveal-header className="flex flex-col gap-0.5 border-t border-[#C9A24A]/40 pt-2 shrink-0 pr-[60px]">
+          {/* Header */}
+          <div data-reveal data-reveal-header className="flex flex-col gap-0.5 border-t border-[#C9A24A]/40 pt-2 shrink-0 pr-[62px]">
             <span className="font-mono text-[11px] uppercase tracking-widest text-[#C9A24A] font-bold">
               05 CONNECT
             </span>
             <h2 data-reveal-title className="font-display uppercase tracking-[-0.01em] text-[clamp(28px,7.5vw,36px)] leading-[0.95] text-[#E8DED0] m-0">
               {connect.heading.join(" ")}
             </h2>
-            <p className="font-sans text-[13px] leading-snug text-[#E8DED0]/90 m-0 pt-0.5">
-              {connect.sub}
+            <p className="font-sans text-[12.5px] leading-snug text-[#E8DED0]/90 m-0 pt-0.5">
+              Direct email, response within one business day.
             </p>
           </div>
 
-          <div data-reveal data-reveal-card className="w-full flex flex-col gap-2 sm:gap-2.5 py-0.5 pr-[60px]">
-            {/* Email & Action buttons */}
-            <div className="p-3 sm:p-3.5 rounded-xl bg-[#161616] border border-[#E8DED0]/15 flex flex-col gap-2 shadow-sm">
+          {/* Middle: Centered Email Card & Actions */}
+          <div data-reveal data-reveal-card className="flex-1 flex flex-col justify-center gap-2.5 py-1 pr-[62px]">
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-[#161616] border border-[#E8DED0]/15 flex flex-col gap-2.5 shadow-sm text-center">
               <span className="font-mono text-[10px] uppercase tracking-widest text-[#C9A24A] font-semibold">
                 Direct Email:
               </span>
-              <span className="font-mono text-[13px] sm:text-[15px] text-[#E8DED0] font-bold break-all">
+              <span className="font-mono text-[clamp(14px,3.8vw,16px)] text-[#E8DED0] font-bold whitespace-nowrap overflow-hidden text-ellipsis select-all">
                 {site.email}
               </span>
-              <div className="grid grid-cols-2 gap-2 pt-0.5">
+
+              <div className="grid grid-cols-2 gap-2 pt-1">
                 <button
                   type="button"
                   onClick={handleCopyEmail}
-                  className="min-h-[44px] px-3 py-2 rounded-full bg-[#E8DED0] text-[#0B0B0B] font-mono text-[11px] sm:text-[12px] uppercase tracking-wider font-bold hover:bg-[#C9A24A] transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                  className="min-h-[46px] px-3 py-2 rounded-full bg-[#E8DED0] text-[#0B0B0B] font-mono text-[11px] sm:text-[12px] uppercase tracking-wider font-bold hover:bg-[#C9A24A] transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
                 >
                   {copiedEmail ? (
                     <>
@@ -1568,7 +1735,7 @@ export function MobileSite() {
                 <a
                   href="/cv.pdf"
                   download
-                  className="min-h-[44px] px-3 py-2 rounded-full border border-[#E8DED0]/30 text-[#E8DED0] font-mono text-[11px] sm:text-[12px] uppercase tracking-wider font-semibold hover:bg-[#E8DED0]/10 transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                  className="min-h-[46px] px-3 py-2 rounded-full border border-[#E8DED0]/40 text-[#E8DED0] font-mono text-[11px] sm:text-[12px] uppercase tracking-wider font-semibold hover:bg-[#E8DED0]/10 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <Download className="w-3.5 h-3.5" aria-hidden="true" />
                   <span>{ui.downloadCv}</span>
@@ -1576,44 +1743,40 @@ export function MobileSite() {
               </div>
             </div>
 
-            {/* Profiles */}
-            <div className="flex flex-col gap-1">
-              <span className="font-mono text-[10px] uppercase tracking-widest text-[#E8DED0]/60 font-semibold">
-                Profiles:
-              </span>
-              <div className="flex flex-wrap gap-2">
-                <a
-                  href={site.github}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="min-h-[44px] px-3.5 py-1.5 rounded-full border border-[#E8DED0]/20 text-[#E8DED0] font-mono text-[11px] sm:text-[12px] hover:border-[#E8DED0]/60 transition-colors flex items-center gap-1.5 cursor-pointer"
-                >
-                  <span>{ui.github}</span>
-                  <ExternalLink className="w-3 h-3 opacity-70" aria-hidden="true" />
-                </a>
-                <a
-                  href={site.linkedin}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="min-h-[44px] px-3.5 py-1.5 rounded-full border border-[#E8DED0]/20 text-[#E8DED0] font-mono text-[11px] sm:text-[12px] hover:border-[#E8DED0]/60 transition-colors flex items-center gap-1.5 cursor-pointer"
-                >
-                  <span>{ui.linkedin}</span>
-                  <ExternalLink className="w-3 h-3 opacity-70" aria-hidden="true" />
-                </a>
-              </div>
+            {/* Social profiles */}
+            <div className="flex gap-2">
+              <a
+                href={site.github}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="min-h-[44px] flex-1 px-3 py-2 rounded-full border border-[#E8DED0]/20 text-[#E8DED0] font-mono text-[11px] sm:text-[12px] hover:border-[#E8DED0]/60 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <span>{ui.github}</span>
+                <ExternalLink className="w-3 h-3 opacity-70" aria-hidden="true" />
+              </a>
+              <a
+                href={site.linkedin}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="min-h-[44px] flex-1 px-3 py-2 rounded-full border border-[#E8DED0]/20 text-[#E8DED0] font-mono text-[11px] sm:text-[12px] hover:border-[#E8DED0]/60 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <span>{ui.linkedin}</span>
+                <ExternalLink className="w-3 h-3 opacity-70" aria-hidden="true" />
+              </a>
             </div>
+          </div>
 
-            {/* Multilingual Greetings Strip */}
-            <div className="flex items-center gap-2.5 py-1 border-t border-[#E8DED0]/10 text-[#E8DED0]/60 text-[11px]">
-              {connect.greetings.map((g) => (
+          {/* Bottom: Multilingual Greetings Strip & Footer */}
+          <div className="shrink-0 flex flex-col gap-1.5 border-t border-[#E8DED0]/10 pt-2 pr-[62px]">
+            <div className="flex items-center justify-between text-[#E8DED0]/60 text-[11px]">
+              {connect.greetings.slice(0, 4).map((g) => (
                 <span key={g.lang} dir={g.dir} className="font-medium">
                   {g.text}
                 </span>
               ))}
             </div>
 
-            {/* Footer Credits */}
-            <div className="pt-1.5 border-t border-[#E8DED0]/10 flex flex-col gap-0.5 text-[10.5px] text-[#E8DED0]/50 font-mono">
+            <div className="flex items-center justify-between text-[10px] text-[#E8DED0]/50 font-mono">
               <span>{ui.copyright}</span>
               <span>{site.roleYear}</span>
             </div>

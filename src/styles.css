@@ -2374,25 +2374,25 @@ html.paged .page:not(.is-active) [data-card] {
   .about-bio {
     font-size: 14px !important;
     line-height: 1.5 !important;
-    color: #0B0B0B !important;
+    color: #0b0b0b !important;
   }
   .about-fact dt {
     font-size: 12px !important;
-    color: #1F5A3A !important;
+    color: #1f5a3a !important;
   }
   .journey-stop-place,
   .journey-stop-line,
   .journey-stop-tag,
   .journey-card {
     font-size: 14px !important;
-    color: #0B0B0B !important;
+    color: #0b0b0b !important;
   }
   .expertise-block .muted,
   .expertise-detail .muted,
   .expertise-block p,
   .expertise-item-desc {
     font-size: 14px !important;
-    color: #0B0B0B !important;
+    color: #0b0b0b !important;
   }
 
   /* 8. Sprout on mobile: small door, compact walker, 2-line bubble anchored near Sprout */
@@ -2500,7 +2500,7 @@ html.paged .page:not(.is-active) [data-card] {
     overflow: visible !important;
     height: auto !important;
     min-height: 100% !important;
-    background: #0B0B0B !important;
+    background: #0b0b0b !important;
   }
 
   html.mobile-site-active.scroll-locked {
@@ -2539,6 +2539,18 @@ html.paged .page:not(.is-active) [data-card] {
     pointer-events: auto;
   }
 
+  .mobile-section-dots button {
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+    flex-shrink: 0 !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
   body.menu-open .mobile-section-dots,
   body.sprout-panel-open .mobile-section-dots,
   body.sheet-open .mobile-section-dots {
@@ -2547,5 +2559,64 @@ html.paged .page:not(.is-active) [data-card] {
     pointer-events: none !important;
     visibility: hidden !important;
   }
-}
 
+  /* Step 37: Hero Animation & Interactive Effects */
+  .hero-letter {
+    display: inline-block;
+    will-change: transform, opacity;
+  }
+
+  .green-dot-pulse {
+    animation: green-pulse 2s ease-in-out infinite;
+  }
+  @keyframes green-pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.4); opacity: 0.5; }
+  }
+
+  .btn-sheen {
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-sheen::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 60%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    transform: skewX(-20deg);
+    animation: btn-sheen-sweep 4s infinite 1.5s;
+    pointer-events: none;
+  }
+  @keyframes btn-sheen-sweep {
+    0% { left: -100%; }
+    20% { left: 200%; }
+    100% { left: 200%; }
+  }
+
+  .btn-pulse-ring {
+    animation: btn-pulse-ring 6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  @keyframes btn-pulse-ring {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(232, 222, 208, 0); }
+    50% { box-shadow: 0 0 0 8px rgba(232, 222, 208, 0.25); }
+  }
+
+  /* Short-screen fallback for mobile: height under 650px */
+  @media (max-height: 649px) {
+    .mobile-snap-section {
+      height: auto !important;
+      min-height: var(--screen-h, 100svh) !important;
+      max-height: none !important;
+    }
+    #overview.mobile-snap-section {
+      height: var(--screen-h, 100svh) !important;
+      max-height: var(--screen-h, 100svh) !important;
+    }
+    html.mobile-site-active {
+      scroll-snap-type: y proximity !important;
+    }
+  }
+}
