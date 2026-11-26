@@ -2560,9 +2560,43 @@ html.paged .page:not(.is-active) [data-card] {
     visibility: hidden !important;
   }
 
-  /* Step 37: Hero Animation & Interactive Effects */
+  /* Step 37 & 38: Hero Animation & Initial Hidden States */
+  .hero-portrait-initial {
+    opacity: 0;
+    transform: scale(1.04);
+    will-change: transform, opacity;
+  }
+
   .hero-letter {
     display: inline-block;
+    will-change: transform, opacity;
+  }
+  .hero-letter-initial {
+    opacity: 0;
+    transform: translateY(35px);
+  }
+
+  .hero-pill-initial {
+    opacity: 0;
+    transform: translateY(-8px);
+    will-change: transform, opacity;
+  }
+
+  .hero-role-initial {
+    opacity: 0;
+    transform: translateY(12px);
+    will-change: transform, opacity;
+  }
+
+  .hero-headline-initial {
+    opacity: 0;
+    transform: translateY(100%);
+    will-change: transform, opacity;
+  }
+
+  .hero-btn-initial {
+    opacity: 0;
+    transform: translateY(16px);
     will-change: transform, opacity;
   }
 
@@ -2612,8 +2646,8 @@ html.paged .page:not(.is-active) [data-card] {
       max-height: none !important;
     }
     #overview.mobile-snap-section {
-      height: var(--screen-h, 100svh) !important;
-      max-height: var(--screen-h, 100svh) !important;
+      height: min(var(--screen-h, 100svh), 100svh) !important;
+      max-height: min(var(--screen-h, 100svh), 100svh) !important;
     }
     html.mobile-site-active {
       scroll-snap-type: y proximity !important;

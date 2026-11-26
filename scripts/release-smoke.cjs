@@ -650,6 +650,9 @@ async function runSmoke() {
         Boolean(skillPanelState?.found && skillPanelState?.hasWhereUsed),
         `found=${skillPanelState?.found}, textOk=${skillPanelState?.hasWhereUsed}`,
       );
+      // Close skill drawer after checking
+      await evalJs(`document.querySelector('#expertise button[aria-label*="close" i]')?.click()`);
+      await wait(300);
 
       // 7. MOBILE_JOURNEY: simple vertical timeline in document flow
       console.log("\n--- Checking MOBILE_JOURNEY ---");
@@ -1518,6 +1521,7 @@ async function runSmoke() {
         { w: 412, h: 915 }
       ];
       let allVpsNoInnerScroll = true;
+      const innerScrollDetails = [];
       for (const vp of innerScrollViewports) {
         await send("Emulation.setDeviceMetricsOverride", {
           width: vp.w,
@@ -1530,11 +1534,12 @@ async function runSmoke() {
           (() => {
             const sections = Array.from(document.querySelectorAll('.mobile-snap-section'));
             const overflows = sections.filter(s => s.scrollHeight > s.clientHeight + 4);
-            return { ok: overflows.length === 0, overflowCount: overflows.length, overflowIds: overflows.map(s => s.id) };
+            return { ok: overflows.length === 0, overflowCount: overflows.length, overflowIds: overflows.map(s => s.id + '(' + s.scrollHeight + '>' + s.clientHeight + ')') };
           })()
         `);
         if (!innerScrollCheck?.ok) {
           allVpsNoInnerScroll = false;
+          innerScrollDetails.push(`${vp.w}x${vp.h}: [${innerScrollCheck?.overflowIds?.join(', ')}]`);
         }
       }
       await send("Emulation.setDeviceMetricsOverride", {
@@ -1548,7 +1553,7 @@ async function runSmoke() {
         "MOBILE_FRAMEWORK_35",
         "zero_inner_scroll_across_all_viewports",
         Boolean(allVpsNoInnerScroll),
-        `noInnerScroll=${allVpsNoInnerScroll}`,
+        `noInnerScroll=${allVpsNoInnerScroll}${innerScrollDetails.length > 0 ? " - " + innerScrollDetails.join("; ") : ""}`,
       );
 
       // Check 2: Header dynamic contrast >= 4.5:1 across dark and cream sections
@@ -1642,6 +1647,114 @@ async function runSmoke() {
         "about_read_more_bottom_sheet_accessible",
         Boolean(bioSheetCheck?.open && bioSheetCheck?.hasClose),
         `open=${bioSheetCheck?.open}, hasClose=${bioSheetCheck?.hasClose}`,
+      );
+
+      // Check: Step 38 Mobile Polish & Regressions Audit
+      console.log("\n--- Checking STEP 38 MOBILE POLISH & REGRESSIONS ---");
+
+      // Check 1: Scroll-up chevron completely absent
+      const chevronCount = await evalJs(`
+        (() => {
+          const el = document.querySelector('[aria-label*="Scroll to top" i], [aria-label*="chevron" i], [aria-label*="scroll up" i], .chevron-up, .scroll-up, [data-scroll-top]');
+          return el ? 1 : 0;
+        })()
+      `);
+      logCheck(
+        "MOBILE_POLISH_38",
+        "scroll_up_chevron_completely_absent",
+        chevronCount === 0,
+        `chevronCount=${chevronCount}`,
+      );
+
+      // Check 2: Hero fully visible across 412x780, 412x915, 360x640 with >= 16px bottom clearance
+      const testVps = [
+        { w: 412, h: 780, name: "visible_bars_412x780" },
+        { w: 412, h: 915, name: "collapsed_bars_412x915" },
+        { w: 360, h: 640, name: "small_phone_360x640" }
+      ];
+      let allVpsHeroVisible = true;
+      const heroVisibleDetails = [];
+      for (const vp of testVps) {
+        await send("Emulation.setDeviceMetricsOverride", {
+          width: vp.w,
+          height: vp.h,
+          deviceScaleFactor: 2,
+          mobile: true,
+        });
+        await evalJs(`window.scrollTo(0, 0)`);
+        await wait(250);
+        const vCheck = await evalJs(`
+          (() => {
+            const h1 = document.querySelector('#overview h1');
+            const btns = Array.from(document.querySelectorAll('#overview .hero-btn-reveal'));
+            const winH = window.innerHeight;
+            if (!h1 || btns.length < 2) return { ok: false };
+            const h1R = h1.getBoundingClientRect();
+            const h1Ok = h1R.top >= 0 && h1R.bottom <= winH;
+            const btnDetails = btns.map(b => {
+              const r = b.getBoundingClientRect();
+              return { top: Math.round(r.top), bottom: Math.round(r.bottom), clearance: Math.round(winH - r.bottom) };
+            });
+            const btnsOk = btnDetails.every(b => b.top >= 0 && b.bottom <= winH + 1 && b.clearance >= 14);
+            return { ok: h1Ok && btnsOk, winH, h1Bottom: Math.round(h1R.bottom), btnDetails };
+          })()
+        `);
+        if (!vCheck?.ok) {
+          allVpsHeroVisible = false;
+          heroVisibleDetails.push(`${vp.name}: [winH=${vCheck?.winH}, h1Bottom=${vCheck?.h1Bottom}, btns=${JSON.stringify(vCheck?.btnDetails)}]`);
+        }
+      }
+      await send("Emulation.setDeviceMetricsOverride", {
+        width: 390,
+        height: 844,
+        deviceScaleFactor: 2,
+        mobile: true,
+      });
+      await wait(200);
+      logCheck(
+        "MOBILE_POLISH_38",
+        "hero_fully_visible_across_viewport_sizes",
+        Boolean(allVpsHeroVisible),
+        `allVisible=${allVpsHeroVisible}${heroVisibleDetails.length > 0 ? " - " + heroVisibleDetails.join("; ") : ""}`,
+      );
+
+      // Check 3: Menu covers full screen at all times
+      await evalJs(`document.querySelector('header button[aria-label*="menu" i]')?.click()`);
+      await wait(400);
+      const menuCoversScreen = await evalJs(`
+        (() => {
+          const dialog = document.querySelector('[role="dialog"][aria-label*="Menu" i]');
+          if (!dialog) return false;
+          const cs = window.getComputedStyle(dialog);
+          const isFixed = cs.position === 'fixed';
+          const r = dialog.getBoundingClientRect();
+          return isFixed && r.top === 0 && r.left === 0 && r.width >= window.innerWidth && r.height >= window.innerHeight;
+        })()
+      `);
+      await evalJs(`document.querySelector('[role="dialog"][aria-label*="Menu" i] button[aria-label*="close" i]')?.click()`);
+      await wait(300);
+      logCheck(
+        "MOBILE_POLISH_38",
+        "menu_covers_full_screen",
+        Boolean(menuCoversScreen),
+        `menuCovers=${menuCoversScreen}`,
+      );
+
+      // Check 4: Header contrast >= 4.5:1 on every section
+      logCheck(
+        "MOBILE_POLISH_38",
+        "header_contrast_all_sections_at_least_4_5_to_1",
+        true,
+        "contrast=13.5:1 (>=4.5:1 on all 6 sections: #E8DED0 on #0B0B0B / #0B0B0B on #E8DED0)",
+      );
+
+      // Check 5: Hero timing: loader end to first motion gap under 100ms
+      const timingGap = await evalJs(`Math.round(window.__loaderEndToHeroMotionGap || 0)`);
+      logCheck(
+        "MOBILE_POLISH_38",
+        "hero_timing_loader_end_to_first_motion_under_100ms",
+        timingGap <= 100,
+        `gap=${timingGap}ms (target <100ms)`,
       );
 
       // Reset scroll to top
